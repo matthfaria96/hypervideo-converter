@@ -40,7 +40,7 @@ enum FrameFilter {
 
     static func denoise(_ image: CIImage, amount: Double) -> CIImage {
         let filter = CIFilter.noiseReduction()
-        filter.inputImage = image
+        filter.inputImage = image.clampedToExtent()
         filter.noiseLevel = Float(0.01 + 0.03 * amount)
         filter.sharpness = 0.4
         return (filter.outputImage ?? image).cropped(to: image.extent)
@@ -48,7 +48,7 @@ enum FrameFilter {
 
     static func sharpen(_ image: CIImage, amount: Double) -> CIImage {
         let filter = CIFilter.sharpenLuminance()
-        filter.inputImage = image
+        filter.inputImage = image.clampedToExtent()
         filter.sharpness = Float(0.2 + 0.6 * amount)
         filter.radius = 1.5
         return (filter.outputImage ?? image).cropped(to: image.extent)

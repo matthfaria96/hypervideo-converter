@@ -110,6 +110,24 @@ struct TranscodeIntegrationTests {
         #expect(try await MediaInspector.inspect(bare).chapters.isEmpty)
     }
 
+    @Test func stalledEncodeFailsInsteadOfHanging() async throws {
+        let dir = try Self.tempDir()
+        let source = try await SyntheticClip.make(in: dir, size: CGSize(width: 1920, height: 1080), seconds: 6)
+        var settings = EncodeSettings()
+        settings.videoCodec = .proRes422HQ
+        settings.container = .mov
+        let out = dir.appendingPathComponent("stalled.mov")
+        // A limit far below the gap between two frames makes the watchdog fire right away.
+        let engine = TranscodeEngine(stallTimeout: .milliseconds(1))
+        let started = ContinuousClock.now
+        await #expect(throws: TranscodeError.self) {
+            try await engine.run(source: source, destination: out, settings: settings) { _ in }
+        }
+        #expect(ContinuousClock.now - started < .seconds(5))
+        let leftovers = try FileManager.default.contentsOfDirectory(atPath: dir.path).filter { !$0.hasPrefix("source") }
+        #expect(leftovers.isEmpty, "\(leftovers)")
+    }
+
     @Test func alternateTracksPlayOneAtATime() async throws {
         let dir = try Self.tempDir()
         let source = try await SyntheticClip.make(in: dir, size: CGSize(width: 640, height: 360), seconds: 2,
@@ -124,9 +142,10 @@ struct TranscodeIntegrationTests {
         #expect(try await Self.enabled(asset, .audio) == [true, false])
         #expect(try await Self.enabled(asset, .subtitle) == [false, false])
         #expect(try await asset.loadMediaSelectionGroup(for: .audible)?.options.count == 2)
-        // Each tx3g track is offered twice (all text and forced-only), so compare languages.
+        // Each tx3g track is offered twice (all text and forced-only), and macOS may add
+        // a machine-translated option in the system language, so check containment.
         let legible = try #require(try await asset.loadMediaSelectionGroup(for: .legible))
-        #expect(Set(legible.options.compactMap(\.extendedLanguageTag)) == ["en", "fr"])
+        #expect(Set(["en", "fr"]).isSubset(of: legible.options.compactMap(\.extendedLanguageTag)))
     }
 
     @Test func extraAudioEncodingAddsASecondVersionOfEachTrack() async throws {

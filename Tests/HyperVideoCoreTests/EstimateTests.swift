@@ -92,6 +92,15 @@ struct OutputEstimateTests {
         #expect(try #require(OutputEstimate.bytes(info: info, settings: settings)) == 54_400_000)
     }
 
+    @Test func passthroughVideoNeedsNoAudioBitrate() throws {
+        var source = info
+        source.audioTracks = source.audioTracks.map { var t = $0; t.bitrate = nil; return t }
+        var settings = EncodeSettings()
+        settings.videoCodec = .passthrough
+        settings.audioCodec = .passthrough
+        #expect(try #require(OutputEstimate.bytes(info: source, settings: settings)) == 102_400_000)
+    }
+
     @Test func constantQualityIsUnpredictable() {
         #expect(OutputEstimate.bytes(info: info, settings: EncodeSettings()) == nil)
     }

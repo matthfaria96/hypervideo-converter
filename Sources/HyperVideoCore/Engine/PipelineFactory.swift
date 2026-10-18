@@ -179,6 +179,7 @@ struct PipelineFactory {
         let input = AVAssetWriterInput(mediaType: track.mediaType, outputSettings: nil, sourceFormatHint: formats.first)
         input.extendedLanguageTag = language
         input.languageCode = code
+        input.mediaDataLocation = .beforeMainMediaDataNotInterleaved
         guard reader.canAdd(output), writer.canAdd(input) else { return nil }
         return try attach(output: output, input: input, label: "subtitle\(index)", reportsProgress: false)
     }
@@ -200,6 +201,7 @@ struct PipelineFactory {
         let input = AVAssetWriterInput(mediaType: .text, outputSettings: nil, sourceFormatHint: format)
         input.marksOutputTrackAsEnabled = false
         input.expectsMediaDataInRealTime = false
+        input.mediaDataLocation = .beforeMainMediaDataNotInterleaved
         let association = AVAssetTrack.AssociationType.chapterList.rawValue
         guard writer.canAdd(input), main.canAddTrackAssociation(withTrackOf: input, type: association) else { return nil }
         writer.add(input)

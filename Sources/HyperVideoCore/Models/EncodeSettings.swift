@@ -193,12 +193,10 @@ public struct EncodeSettings: Codable, Hashable, Sendable {
         if videoCodec.isProRes && container != .mov {
             issues.append("Apple ProRes requires the QuickTime (MOV) container.")
         }
-        if (audioCodec == .alac || extraAudio?.codec == .alac) && container != .mov {
+        if audioEncodings.contains(where: { $0.codec == .alac }) && container != .mov {
             issues.append("Apple Lossless audio requires the QuickTime (MOV) container.")
         }
-        if extraAudio != nil && audioCodec == .none {
-            issues.append("An extra audio version needs the main audio to be on.")
-        }
+
         if case .averageBitrate(let kbps) = rateControl, kbps < 100 {
             issues.append("Video bitrate must be at least 100 kbit/s.")
         }
@@ -208,10 +206,8 @@ public struct EncodeSettings: Codable, Hashable, Sendable {
         if videoCodec == .passthrough && (!crop.isZero || maxResolution != .source || rotation != .none || flipHorizontal || frameRate != .source) {
             issues.append("Passthrough video can't be cropped, scaled, rotated or retimed.")
         }
-        // Automatic deinterlacing simply doesn't run on passthrough, so only explicit filters conflict.
-        if videoCodec == .passthrough && filters.isActive(sourceIsInterlaced: false) {
-            issues.append("Passthrough video can't be filtered.")
-        }
+        // Filters are ignored for passthrough video (nothing is decoded), like an extra
+        // audio version while audio is off, so neither can leave a hidden control blocking the encode.
         return issues
     }
 

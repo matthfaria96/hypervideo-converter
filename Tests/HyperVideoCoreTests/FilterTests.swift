@@ -52,12 +52,20 @@ struct FrameFilterTests {
         }
     }
 
-    @Test func passthroughRejectsExplicitFilters() {
+    @Test func filtersNeverBlockPassthrough() {
         var settings = EncodeSettings()
-        settings.videoCodec = .passthrough
-        #expect(settings.isValid)
         settings.filters.deinterlace = .always
-        #expect(!settings.isValid)
+        settings.filters.denoise = .strong
+        settings.videoCodec = .passthrough
+        #expect(settings.isValid, "the filter controls are hidden for passthrough")
+    }
+
+    @Test func denoiseAndSharpenKeepFrameEdges() {
+        let gray = CIImage(color: CIColor(red: 0.5, green: 0.5, blue: 0.5)).cropped(to: CGRect(x: 0, y: 0, width: 16, height: 16))
+        for filtered in [FrameFilter.denoise(gray, amount: 1), FrameFilter.sharpen(gray, amount: 1)] {
+            let edge = pixels(filtered.composited(over: CIImage(color: .black)).cropped(to: gray.extent), size: gray.extent.size)
+            #expect(abs(Int(edge[0]) - 128) <= 2, "corner \(edge[0])")
+        }
     }
 }
 

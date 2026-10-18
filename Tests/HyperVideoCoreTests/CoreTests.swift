@@ -122,8 +122,10 @@ struct SettingsTests {
         #expect(!settings.isValid)
         settings.container = .mov
         #expect(settings.isValid)
+        settings.container = .mp4
         settings.audioCodec = .none
-        #expect(!settings.isValid, "an extra version needs a main audio track")
+        #expect(settings.isValid, "an extra version is ignored while audio is off")
+        #expect(settings.audioEncodings.isEmpty)
     }
 
     @Test func defaultsAreValid() {

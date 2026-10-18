@@ -54,15 +54,14 @@ public enum OutputEstimate {
     /// size depends on the content.
     public static func bytes(info: MediaInfo, settings: EncodeSettings) -> Int64? {
         let duration = settings.outputDuration(sourceDuration: info.duration)
-        guard let audio = audioBitsPerSecond(info: info, settings: settings) else { return nil }
-        let audioBytes = audio / 8 * duration
 
         switch (settings.videoCodec, settings.rateControl) {
         case (.passthrough, _):
             guard info.duration > 0 else { return nil }
             return Int64((Double(info.fileBytes) * duration / info.duration).rounded())
         case (_, .averageBitrate(let kbps)) where settings.videoCodec.supportsRateControl:
-            return Int64((Double(kbps) * 1_000 / 8 * duration + audioBytes).rounded())
+            guard let audio = audioBitsPerSecond(info: info, settings: settings) else { return nil }
+            return Int64((Double(kbps) * 1_000 / 8 * duration + audio / 8 * duration).rounded())
         default:
             return nil
         }

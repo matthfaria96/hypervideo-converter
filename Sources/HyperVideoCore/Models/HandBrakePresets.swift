@@ -64,10 +64,9 @@ public enum HandBrakePresets {
         applyAudio(p, to: &s, notes: &notes)
         s.subtitles = SubtitleSelection(rawValue: p.string("SubtitleTrackSelectionBehavior") ?? "") ?? .none
         s.optimizeForWeb = p.bool("Optimize") ?? s.optimizeForWeb
-        s.keepMetadata = p.bool("ChapterMarkers") ?? s.keepMetadata
 
         // Combinations only QuickTime can hold.
-        if s.videoCodec.isProRes || s.audioCodec == .alac { s.container = .mov }
+        if s.videoCodec.isProRes || s.audioEncodings.contains(where: { $0.codec == .alac }) { s.container = .mov }
 
         let name = p.string("PresetName").flatMap { $0.isEmpty ? nil : $0 } ?? "HandBrake Preset"
         let preset = Preset(

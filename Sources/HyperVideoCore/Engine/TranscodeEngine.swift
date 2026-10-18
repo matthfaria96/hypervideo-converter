@@ -6,6 +6,7 @@ public enum TranscodeError: LocalizedError {
     case cannotConfigure(String)
     case readerFailed(String)
     case writerFailed(String)
+    case stalled
 
     public var errorDescription: String? {
         switch self {
@@ -14,13 +15,21 @@ public enum TranscodeError: LocalizedError {
         case .cannotConfigure(let what): "These settings aren't supported for this source: \(what)."
         case .readerFailed(let detail): "Couldn't decode the source: \(detail)"
         case .writerFailed(let detail): "Couldn't write the output: \(detail)"
+        case .stalled: "The conversion stopped making progress, so it was stopped. Try again, or choose fewer subtitle or audio tracks."
         }
     }
 }
 
 /// Native transcoder built on AVAssetReader/AVAssetWriter with VideoToolbox hardware encoders.
 public struct TranscodeEngine: Sendable {
-    public init() {}
+    /// How long every track may go without writing a sample before the encode is
+    /// treated as stuck. AVFoundation can deadlock when the reader and the writer's
+    /// interleaving wait on each other; this turns a frozen queue into an error.
+    let stallTimeout: Duration
+
+    public init(stallTimeout: Duration = .seconds(60)) {
+        self.stallTimeout = stallTimeout
+    }
 
     /// Encodes `source` to `destination`, returning the output size in bytes.
     public func run(
@@ -61,15 +70,32 @@ public struct TranscodeEngine: Sendable {
         writer.startSession(atSourceTime: range.start)
 
         let cancel = CancelFlag()
+        let stalled = CancelFlag()
+        let activity = ActivityClock()
+        let stopper = Stopper(reader: reader, pumps: pumps)
+        let watchdog = Task { [stallTimeout] in
+            let interval = min(max(stallTimeout / 2, .milliseconds(1)), .seconds(1))
+            while !Task.isCancelled {
+                try? await Task.sleep(for: interval)
+                if activity.idle > stallTimeout {
+                    stalled.set()
+                    cancel.set()
+                    stopper.stop()
+                    return
+                }
+            }
+        }
         await withTaskCancellationHandler {
             await withTaskGroup(of: Void.self) { group in
                 for pump in pumps {
-                    group.addTask { await pump.run(range: range, cancel: cancel, progress: progress) }
+                    group.addTask { await pump.run(range: range, cancel: cancel, activity: activity, progress: progress) }
                 }
             }
         } onCancel: {
             cancel.set()
+            stopper.stop()
         }
+        watchdog.cancel()
 
         let userCancelled = Task.isCancelled
         if userCancelled || cancel.isSet || reader.status == .failed || writer.status == .failed {
@@ -78,6 +104,7 @@ public struct TranscodeEngine: Sendable {
             reader.cancelReading()
             writer.cancelWriting()
             if userCancelled { throw CancellationError() }
+            if stalled.isSet { throw TranscodeError.stalled }
             if let writerError { throw TranscodeError.writerFailed(writerError) }
             throw TranscodeError.readerFailed(readerError ?? "unknown error")
         }
@@ -106,5 +133,22 @@ public struct TranscodeEngine: Sendable {
             start: CMTime(seconds: start, preferredTimescale: 600),
             end: CMTime(seconds: max(end, start), preferredTimescale: 600)
         )
+    }
+}
+
+/// Unblocks every pump: cancelling the reader makes a pump waiting for the next
+/// sample see the end of the track, and `abort` releases pumps the writer never calls.
+private final class Stopper: @unchecked Sendable {
+    private let reader: AVAssetReader
+    private let pumps: [SamplePump]
+
+    init(reader: AVAssetReader, pumps: [SamplePump]) {
+        self.reader = reader
+        self.pumps = pumps
+    }
+
+    func stop() {
+        reader.cancelReading()
+        pumps.forEach { $0.abort() }
     }
 }
