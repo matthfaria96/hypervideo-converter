@@ -1,0 +1,82 @@
+import AVKit
+import HyperVideoCore
+import SwiftUI
+
+/// Built-in player with In/Out marking, so trimming needs no guesswork.
+struct TrimTab: View {
+    let info: MediaInfo
+    @Binding var settings: EncodeSettings
+    @Environment(AppModel.self) private var model
+
+    private var player: AVPlayer? { model.ui.previewPlayer }
+
+    private var start: Double { settings.trim?.start ?? 0 }
+    private var end: Double { settings.trim?.end ?? info.duration }
+
+    var body: some View {
+        VStack(spacing: 16) {
+            GlassSection(title: "Preview", symbol: "play.rectangle") {
+                VideoPlayer(player: player)
+                    .aspectRatio(aspectRatio, contentMode: .fit)
+                    .frame(maxHeight: 380)
+                    .clipShape(.rect(cornerRadius: 14))
+            }
+
+            GlassSection(title: "Trim", symbol: "timeline.selection") {
+                HStack(spacing: 16) {
+                    marker("Start", value: start)
+                    Image(systemName: "arrow.right").foregroundStyle(.tertiary)
+                    marker("End", value: end)
+                    Spacer()
+                    Text("Length \(Format.duration(max(0, end - start)))")
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                }
+                GlassEffectContainer(spacing: 8) {
+                    HStack(spacing: 8) {
+                        Button("Set Start", systemImage: "chevron.left.to.line") { setStart(currentTime) }
+                        Button("Set End", systemImage: "chevron.right.to.line") { setEnd(currentTime) }
+                        Button("Play Selection", systemImage: "play.fill") { playSelection() }
+                        Spacer()
+                        Button("Clear", systemImage: "xmark") { settings.trim = nil }
+                            .disabled(settings.trim == nil)
+                    }
+                    .buttonStyle(.glass)
+                }
+            }
+        }
+        .onAppear { _ = model.ui.player(for: info.url) }
+        .onDisappear { player?.pause() }
+    }
+
+    private var aspectRatio: CGFloat {
+        guard let size = info.displaySize, size.height > 0 else { return 16 / 9 }
+        return size.width / size.height
+    }
+
+    private var currentTime: Double { player?.currentTime().seconds ?? 0 }
+
+    private func marker(_ title: String, value: Double) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title).font(.caption).foregroundStyle(.secondary)
+            Text(Format.duration(value)).font(.title3.weight(.semibold)).monospacedDigit()
+        }
+    }
+
+    private func setStart(_ time: Double) {
+        let clamped = min(max(0, time), end - 0.1)
+        settings.trim = TrimRange(start: clamped, end: settings.trim?.end)
+    }
+
+    private func setEnd(_ time: Double) {
+        let clamped = max(min(info.duration, time), start + 0.1)
+        settings.trim = TrimRange(start: start, end: clamped >= info.duration ? nil : clamped)
+    }
+
+    private func playSelection() {
+        guard let player else { return }
+        player.currentItem?.forwardPlaybackEndTime = CMTime(seconds: end, preferredTimescale: 600)
+        player.seek(to: CMTime(seconds: start, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero)
+        player.play()
+    }
+}
