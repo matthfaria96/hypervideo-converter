@@ -68,12 +68,23 @@ final class PresetStore {
         store.save(custom)
     }
 
-    func importPresets(from url: URL) throws -> Int {
-        let imported = try JSONDecoder().decode([Preset].self, from: Data(contentsOf: url))
-            .map { Preset(name: $0.name, category: $0.category, symbol: $0.symbol, summary: $0.summary, settings: $0.settings) }
+    /// Imports a HyperVideo export or a HandBrake preset export. Returns how many
+    /// presets were added and notes on HandBrake settings that had to change.
+    func importPresets(from url: URL) throws -> (count: Int, notes: [String]) {
+        let data = try Data(contentsOf: url)
+        let imported: [Preset]
+        var notes: [String] = []
+        if HandBrakePresets.isHandBrakeExport(data) {
+            let converted = try HandBrakePresets.parse(data)
+            imported = converted.map(\.preset)
+            notes = converted.flatMap(\.notes)
+        } else {
+            imported = try JSONDecoder().decode([Preset].self, from: data)
+                .map { Preset(name: $0.name, category: $0.category, symbol: $0.symbol, summary: $0.summary, settings: $0.settings) }
+        }
         custom = custom + imported
         store.save(custom)
-        return imported.count
+        return (imported.count, notes)
     }
 
     func exportPresets(to url: URL) throws {

@@ -54,6 +54,7 @@ struct PresetInspector: View {
 
                 Menu("More", systemImage: "ellipsis") {
                     Button("Import Presets…", systemImage: "square.and.arrow.down") { importPresets() }
+                        .help("HyperVideo or HandBrake preset exports (.json)")
                     Button("Export My Presets…", systemImage: "square.and.arrow.up") { exportPresets() }
                         .disabled(model.presets.custom.isEmpty)
                 }
@@ -104,10 +105,16 @@ struct PresetInspector: View {
         panel.allowedContentTypes = [.json]
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
-            let count = try model.presets.importPresets(from: url)
-            model.alertMessage = "Imported \(count) preset\(count == 1 ? "" : "s")."
+            let (count, notes) = try model.presets.importPresets(from: url)
+            var message = "Imported \(count) preset\(count == 1 ? "" : "s")."
+            if !notes.isEmpty {
+                let shown = notes.prefix(6).joined(separator: "\n")
+                let more = notes.count > 6 ? "\n…and \(notes.count - 6) more adjustments." : ""
+                message += "\n\nAdjusted to what HyperVideo supports:\n" + shown + more
+            }
+            model.alertMessage = message
         } catch {
-            model.alertMessage = "That file isn't a HyperVideo preset export."
+            model.alertMessage = "That file isn't a HyperVideo or HandBrake preset export."
         }
     }
 
