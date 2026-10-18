@@ -34,15 +34,15 @@ struct SourceDetailView: View {
         if let source {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    if !dbg("hdr") { SourceHeaderView(source: source, presetName: model.presetName(for: source)) }
+                    SourceHeaderView(source: source, presetName: model.presetName(for: source))
                     if let error = source.errorMessage {
                         StatusBanner(messages: [error])
                     } else if let info = source.info {
-                        if !dbg("tp") { tabPicker }
+                        tabPicker
                         if !source.settings.validationIssues.isEmpty {
                             StatusBanner(messages: source.settings.validationIssues)
                         }
-                        if dbg("tc") { Text("tab") } else { GlassSection(title: "T", symbol: "film") { HStack { Text("a"); Spacer() } } }
+                        tabContent(info: info)
                     } else {
                         Label("Analyzing media…", systemImage: "rays")
                             .symbolEffect(.rotate)
@@ -53,12 +53,12 @@ struct SourceDetailView: View {
                 .padding(24)
                 .containerRelativeFrame(.horizontal)
             }
-            .scrollEdgeEffectStyle(dbg("see") ? nil : .soft, for: .all)
+            .scrollEdgeEffectStyle(.soft, for: .all)
             .safeAreaInset(edge: .bottom) {
-                if !dbg("bar") { DestinationBar(source: source) }
+                DestinationBar(source: source)
             }
             .navigationTitle(source.name)
-            .navigationSubtitle(dbg("ns") ? "" : model.presetName(for: source))
+            .navigationSubtitle(model.presetName(for: source))
             .animation(.smooth, value: tab)
         }
     }
@@ -127,5 +127,3 @@ private struct DestinationBar: View {
         .padding(.vertical, 12)
     }
 }
-
-func dbg(_ k: String) -> Bool { (ProcessInfo.processInfo.environment["HVC_OFF"] ?? "").split(separator: ",").contains(Substring(k)) }

@@ -16,7 +16,7 @@ struct TrimTab: View {
     var body: some View {
         VStack(spacing: 16) {
             GlassSection(title: "Preview", symbol: "play.rectangle") {
-                VideoPlayer(player: player)
+                PlayerView(player: player)
                     .aspectRatio(aspectRatio, contentMode: .fit)
                     .frame(maxHeight: 380)
                     .clipShape(.rect(cornerRadius: 14))
@@ -78,5 +78,24 @@ struct TrimTab: View {
         player.currentItem?.forwardPlaybackEndTime = CMTime(seconds: end, preferredTimescale: 600)
         player.seek(to: CMTime(seconds: start, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero)
         player.play()
+    }
+}
+
+/// AppKit's player view. SwiftUI's `VideoPlayer` lives in a cross-import overlay that
+/// doesn't link AVKit itself, so with a SwiftPM build its AVPlayerView superclass
+/// can't be resolved at runtime and the app aborts when the view appears.
+private struct PlayerView: NSViewRepresentable {
+    let player: AVPlayer?
+
+    func makeNSView(context: Context) -> AVPlayerView {
+        let view = AVPlayerView()
+        view.controlsStyle = .inline
+        view.showsFullScreenToggleButton = true
+        view.player = player
+        return view
+    }
+
+    func updateNSView(_ view: AVPlayerView, context: Context) {
+        if view.player !== player { view.player = player }
     }
 }

@@ -11,14 +11,15 @@ struct ContentView: View {
             SidebarView()
                 .navigationSplitViewColumnWidth(min: 230, ideal: 260, max: 340)
         } detail: {
-            // A fixed minimum keeps the split view from re-measuring content in a loop.
+            // Report a small ideal width to the split view. If the detail's ideal width
+            // is wider than the space left between sidebar and inspector, AppKit's
+            // split view loops on constraint updates until it throws.
             detail
-                .frame(minWidth: 480, maxWidth: .infinity, maxHeight: .infinity)
-                .inspector(isPresented: $model.showsPresetInspector) {
-                    PresetInspector()
-                        .frame(minWidth: 260, maxWidth: .infinity, maxHeight: .infinity)
-                        .inspectorColumnWidth(min: 260, ideal: 290, max: 360)
-                }
+                .frame(minWidth: 0, idealWidth: 400, maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .inspector(isPresented: $model.showsPresetInspector) {
+            PresetInspector()
+                .inspectorColumnWidth(min: 260, ideal: 290, max: 360)
         }
         .toolbar { toolbarContent }
         .fileImporter(isPresented: $model.isImporting, allowedContentTypes: [.audiovisualContent],
