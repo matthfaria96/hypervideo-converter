@@ -34,6 +34,19 @@ final class QueueStore {
         return values.isEmpty ? nil : values.reduce(0, +) / Double(values.count)
     }
 
+    /// Speed and time left for a running job.
+    func rate(for job: EncodeJob, now: Date = Date()) -> EncodeRate? {
+        guard case .running(let progress) = job.state, let started = startTimes[job.id] else { return nil }
+        return EncodeRate(progress: progress, elapsed: now.timeIntervalSince(started),
+                          mediaDuration: job.mediaDuration, frameRate: job.frameRate)
+    }
+
+    /// Time until every running job is done, once their rates have settled.
+    var remainingForRunning: TimeInterval? {
+        let now = Date()
+        return jobs.compactMap { rate(for: $0, now: now)?.remaining }.max()
+    }
+
     private var maxConcurrent: Int {
         let value = UserDefaults.standard.integer(forKey: PreferenceKey.maxConcurrentJobs)
         return min(max(value, 1), 4)

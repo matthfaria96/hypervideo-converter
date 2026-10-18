@@ -108,7 +108,7 @@ public enum MediaInspector {
     }
 
     private static func audioInfo(for track: AVAssetTrack) async throws -> AudioTrackInfo {
-        let (formats, language) = try await track.load(.formatDescriptions, .extendedLanguageTag)
+        let (formats, language, rate) = try await track.load(.formatDescriptions, .extendedLanguageTag, .estimatedDataRate)
         var channels = 2
         var sampleRate = 48_000.0
         var codec = "Audio"
@@ -120,7 +120,7 @@ public enum MediaInspector {
             }
         }
         return AudioTrackInfo(id: Int(track.trackID), codec: codec, channels: channels,
-                              sampleRate: sampleRate, language: language)
+                              sampleRate: sampleRate, language: language, bitrate: rate > 0 ? Double(rate) : nil)
     }
 
     private static func fileSize(_ url: URL) -> Int64 {

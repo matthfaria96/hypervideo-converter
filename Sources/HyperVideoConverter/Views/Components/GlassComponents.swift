@@ -91,6 +91,11 @@ enum Format {
             : String(format: "%.0f kbit/s", bitsPerSecond / 1_000)
     }
 
+    /// Encode speed relative to playback, e.g. "3.2×".
+    static func speed(_ multiple: Double) -> String {
+        "\(multiple.formatted(.number.precision(.fractionLength(multiple < 10 ? 1 : 0))))×"
+    }
+
     static func size(_ size: CGSize) -> String { "\(Int(size.width)) × \(Int(size.height))" }
 
     static func fps(_ value: Double) -> String {

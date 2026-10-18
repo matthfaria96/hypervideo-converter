@@ -153,7 +153,7 @@ final class AppModel {
         var jobs: [EncodeJob] = []
         var skipped: [String] = []
         for item in sources where ids.contains(item.id) {
-            guard item.info != nil, item.settings.isValid else {
+            guard let info = item.info, item.settings.isValid else {
                 skipped.append(item.name)
                 continue
             }
@@ -161,8 +161,11 @@ final class AppModel {
                 for: item.url, in: destinationFolder, container: item.settings.container, suffix: suffix, taken: taken
             )
             taken.insert(destination)
-            jobs.append(EncodeJob(source: item.url, destination: destination, settings: item.settings,
-                                  presetName: presetName(for: item)))
+            jobs.append(EncodeJob(
+                source: item.url, destination: destination, settings: item.settings, presetName: presetName(for: item),
+                mediaDuration: item.settings.outputDuration(sourceDuration: info.duration),
+                frameRate: item.settings.outputFrameRate(sourceFrameRate: info.frameRate)
+            ))
         }
         if !skipped.isEmpty { alertMessage = "Skipped (not ready or invalid settings): \(skipped.joined(separator: ", "))" }
         guard !jobs.isEmpty else { return }

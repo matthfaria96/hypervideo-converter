@@ -49,6 +49,11 @@ struct QueueView: View {
                     Text(progress, format: .percent.precision(.fractionLength(0)))
                         .monospacedDigit()
                         .foregroundStyle(.secondary)
+                    if let remaining = queue.remainingForRunning {
+                        Text("· about \(Format.duration(remaining)) left")
+                            .monospacedDigit()
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 Spacer()
                 Button("Clear Finished", systemImage: "checkmark.circle.badge.xmark") { queue.clearFinished() }
@@ -103,17 +108,37 @@ private struct JobCard: View {
         case .queued:
             Text("Waiting").font(.caption).foregroundStyle(.secondary)
         case .running(let progress):
-            HStack {
-                ProgressView(value: progress)
-                Text(progress, format: .percent.precision(.fractionLength(0))).monospacedDigit().font(.caption)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    ProgressView(value: progress)
+                    Text(progress, format: .percent.precision(.fractionLength(0))).monospacedDigit().font(.caption)
+                }
+                Text(rateDescription(model.queue.rate(for: job)))
+                    .font(.caption).monospacedDigit().foregroundStyle(.secondary)
             }
         case .completed(let bytes, let elapsed):
-            Text("\(Format.bytes(bytes)) · finished in \(Format.duration(elapsed))").font(.caption).foregroundStyle(.secondary)
+            Text(completedDescription(bytes: bytes, elapsed: elapsed)).font(.caption).foregroundStyle(.secondary)
         case .failed(let message):
             Text(message).font(.caption).foregroundStyle(.red).lineLimit(2)
         case .cancelled:
             Text("Cancelled").font(.caption).foregroundStyle(.secondary)
         }
+    }
+
+    private func rateDescription(_ rate: EncodeRate?) -> String {
+        guard let rate, let remaining = rate.remaining else { return "Estimating time left…" }
+        let parts = [
+            rate.speed.map(Format.speed),
+            rate.framesPerSecond.map { "\(Int($0.rounded())) fps" },
+            "\(Format.duration(remaining)) left"
+        ]
+        return parts.compactMap { $0 }.joined(separator: " · ")
+    }
+
+    private func completedDescription(bytes: Int64, elapsed: TimeInterval) -> String {
+        let summary = "\(Format.bytes(bytes)) · finished in \(Format.duration(elapsed))"
+        guard let duration = job.mediaDuration, elapsed > 0 else { return summary }
+        return summary + " · \(Format.speed(duration / elapsed)) realtime"
     }
 
     @ViewBuilder

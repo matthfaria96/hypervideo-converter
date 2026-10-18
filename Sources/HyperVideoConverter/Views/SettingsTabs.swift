@@ -74,10 +74,7 @@ struct SummaryTab: View {
         ).renderSize
     }
 
-    private var outputDuration: Double {
-        guard let trim = settings.trim else { return info.duration }
-        return max(0, min(trim.end ?? info.duration, info.duration) - trim.start)
-    }
+    private var outputDuration: Double { settings.outputDuration(sourceDuration: info.duration) }
 
     private var audioSource: String {
         guard let first = info.audioTracks.first else { return "None" }
@@ -98,19 +95,9 @@ struct SummaryTab: View {
         }
     }
 
-    /// Only bitrate-driven encodes have a predictable size.
+    /// Only bitrate-driven and passthrough encodes have a predictable size.
     private var estimatedSize: String {
-        let audioTracks = settings.audioTracks == .all ? info.audioTracks.count : min(1, info.audioTracks.count)
-        let audioKbps = settings.audioCodec == .aac ? settings.audioBitrateKbps * audioTracks : 0
-        switch (settings.videoCodec, settings.rateControl) {
-        case (.passthrough, _):
-            return "≈ " + Format.bytes(Int64(Double(info.fileBytes) * outputDuration / max(info.duration, 0.001)))
-        case (_, .averageBitrate(let kbps)) where settings.videoCodec.supportsRateControl:
-            let bytes = Double(kbps + audioKbps) * 1_000 / 8 * outputDuration
-            return "≈ " + Format.bytes(Int64(bytes))
-        default:
-            return "Depends on content"
-        }
+        OutputEstimate.bytes(info: info, settings: settings).map { "≈ " + Format.bytes($0) } ?? "Depends on content"
     }
 
     private func compareRow(_ title: String, _ before: String, _ after: String) -> some View {

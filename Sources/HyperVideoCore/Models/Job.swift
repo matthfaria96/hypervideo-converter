@@ -28,8 +28,14 @@ public struct EncodeJob: Codable, Hashable, Identifiable, Sendable {
     public var presetName: String
     public var state: JobState
     public var createdAt: Date
+    /// Output length in seconds and frame rate, used to report encode speed.
+    public var mediaDuration: Double?
+    public var frameRate: Double?
 
-    public init(source: URL, destination: URL, settings: EncodeSettings, presetName: String) {
+    public init(
+        source: URL, destination: URL, settings: EncodeSettings, presetName: String,
+        mediaDuration: Double? = nil, frameRate: Double? = nil
+    ) {
         self.id = UUID()
         self.source = source
         self.destination = destination
@@ -37,6 +43,8 @@ public struct EncodeJob: Codable, Hashable, Identifiable, Sendable {
         self.presetName = presetName
         self.state = .queued
         self.createdAt = Date()
+        self.mediaDuration = mediaDuration
+        self.frameRate = frameRate
     }
 
     public func with(state: JobState) -> EncodeJob {
