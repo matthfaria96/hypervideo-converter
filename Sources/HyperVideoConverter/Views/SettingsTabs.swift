@@ -31,6 +31,9 @@ struct SummaryTab: View {
                     compareRow("Video", info.videoCodec ?? "—", info.hasVideo ? settings.videoCodec.displayName : "—")
                     compareRow("Frame rate", info.frameRate.map(Format.fps) ?? "—", settings.frameRate.displayName)
                     compareRow("Audio", audioSource, audioOutput)
+                    if !info.subtitleTracks.isEmpty {
+                        compareRow("Subtitles", "\(info.subtitleTracks.count)", "\(keptSubtitles)")
+                    }
                     compareRow("Duration", Format.duration(info.duration), Format.duration(outputDuration))
                     compareRow("Size", Format.bytes(info.fileBytes), estimatedSize)
                 }
@@ -55,6 +58,11 @@ struct SummaryTab: View {
     private var audioSource: String {
         guard let first = info.audioTracks.first else { return "None" }
         return "\(first.codec) \(first.channelDescription)" + (info.audioTracks.count > 1 ? " +\(info.audioTracks.count - 1)" : "")
+    }
+
+    private var keptSubtitles: Int {
+        SubtitleTrackInfo.kept(info.subtitleTracks, kind: \.kind, selection: settings.subtitles,
+                               container: settings.container).count
     }
 
     private var audioOutput: String {

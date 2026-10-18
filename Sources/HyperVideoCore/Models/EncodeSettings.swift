@@ -162,6 +162,8 @@ public struct EncodeSettings: Codable, Hashable, Sendable {
     public var audioBitrateKbps: Int = 160
     public var audioTracks: AudioTrackSelection = .first
 
+    public var subtitles: SubtitleSelection = .all
+
     public var trim: TrimRange?
     public var optimizeForWeb = true
     public var keepMetadata = true
@@ -190,4 +192,39 @@ public struct EncodeSettings: Codable, Hashable, Sendable {
     }
 
     public var isValid: Bool { validationIssues.isEmpty }
+}
+
+// Decodes every field leniently, so presets and queues saved by older versions
+// keep loading after new settings are added.
+extension EncodeSettings {
+    private enum CodingKeys: String, CodingKey {
+        case container, videoCodec, rateControl, frameRate, maxResolution, crop, rotation, flipHorizontal
+        case prioritizeSpeed, allowBFrames, keyframeIntervalSeconds
+        case audioCodec, audioMixdown, audioBitrateKbps, audioTracks, subtitles
+        case trim, optimizeForWeb, keepMetadata
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let d = EncodeSettings()
+        container = try c.decodeIfPresent(ContainerFormat.self, forKey: .container) ?? d.container
+        videoCodec = try c.decodeIfPresent(VideoCodec.self, forKey: .videoCodec) ?? d.videoCodec
+        rateControl = try c.decodeIfPresent(RateControl.self, forKey: .rateControl) ?? d.rateControl
+        frameRate = try c.decodeIfPresent(FrameRate.self, forKey: .frameRate) ?? d.frameRate
+        maxResolution = try c.decodeIfPresent(MaxResolution.self, forKey: .maxResolution) ?? d.maxResolution
+        crop = try c.decodeIfPresent(Crop.self, forKey: .crop) ?? d.crop
+        rotation = try c.decodeIfPresent(Rotation.self, forKey: .rotation) ?? d.rotation
+        flipHorizontal = try c.decodeIfPresent(Bool.self, forKey: .flipHorizontal) ?? d.flipHorizontal
+        prioritizeSpeed = try c.decodeIfPresent(Bool.self, forKey: .prioritizeSpeed) ?? d.prioritizeSpeed
+        allowBFrames = try c.decodeIfPresent(Bool.self, forKey: .allowBFrames) ?? d.allowBFrames
+        keyframeIntervalSeconds = try c.decodeIfPresent(Double.self, forKey: .keyframeIntervalSeconds) ?? d.keyframeIntervalSeconds
+        audioCodec = try c.decodeIfPresent(AudioCodec.self, forKey: .audioCodec) ?? d.audioCodec
+        audioMixdown = try c.decodeIfPresent(AudioMixdown.self, forKey: .audioMixdown) ?? d.audioMixdown
+        audioBitrateKbps = try c.decodeIfPresent(Int.self, forKey: .audioBitrateKbps) ?? d.audioBitrateKbps
+        audioTracks = try c.decodeIfPresent(AudioTrackSelection.self, forKey: .audioTracks) ?? d.audioTracks
+        subtitles = try c.decodeIfPresent(SubtitleSelection.self, forKey: .subtitles) ?? d.subtitles
+        trim = try c.decodeIfPresent(TrimRange.self, forKey: .trim)
+        optimizeForWeb = try c.decodeIfPresent(Bool.self, forKey: .optimizeForWeb) ?? d.optimizeForWeb
+        keepMetadata = try c.decodeIfPresent(Bool.self, forKey: .keepMetadata) ?? d.keepMetadata
+    }
 }

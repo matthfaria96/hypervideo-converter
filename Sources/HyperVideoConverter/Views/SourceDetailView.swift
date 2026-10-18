@@ -2,7 +2,8 @@ import HyperVideoCore
 import SwiftUI
 
 enum SettingsTab: String, CaseIterable, Identifiable {
-    case summary = "Summary", video = "Video", dimensions = "Dimensions", audio = "Audio", trim = "Trim & Preview"
+    case summary = "Summary", video = "Video", dimensions = "Dimensions", audio = "Audio"
+    case subtitles = "Subtitles", trim = "Trim & Preview"
     var id: String { rawValue }
     var symbol: String {
         switch self {
@@ -10,6 +11,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .video: "film"
         case .dimensions: "crop"
         case .audio: "waveform"
+        case .subtitles: "captions.bubble"
         case .trim: "timeline.selection"
         }
     }
@@ -63,15 +65,32 @@ struct SourceDetailView: View {
         }
     }
 
+    /// Titled segments when they fit, icons only in narrow windows.
     private var tabPicker: some View {
+        ViewThatFits(in: .horizontal) {
+            tabPicker(showsTitles: true)
+            tabPicker(showsTitles: false)
+        }
+    }
+
+    private func tabPicker(showsTitles: Bool) -> some View {
         Picker("Settings", selection: Bindable(model.ui).detailTab) {
             ForEach(SettingsTab.allCases) { tab in
-                Label(tab.rawValue, systemImage: tab.symbol).tag(tab)
+                Group {
+                    if showsTitles {
+                        Label(tab.rawValue, systemImage: tab.symbol)
+                    } else {
+                        Image(systemName: tab.symbol).accessibilityLabel(tab.rawValue)
+                    }
+                }
+                .help(tab.rawValue)
+                .tag(tab)
             }
         }
         .pickerStyle(.segmented)
         .labelsHidden()
         .controlSize(.large)
+        .fixedSize()
     }
 
     @ViewBuilder
@@ -81,6 +100,7 @@ struct SourceDetailView: View {
         case .video: VideoTab(info: info, settings: settings)
         case .dimensions: DimensionsTab(info: info, settings: settings)
         case .audio: AudioTab(info: info, settings: settings)
+        case .subtitles: SubtitlesTab(info: info, settings: settings)
         case .trim: TrimTab(info: info, settings: settings)
         }
     }

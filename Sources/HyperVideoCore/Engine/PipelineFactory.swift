@@ -15,7 +15,17 @@ struct PipelineFactory {
         for (index, track) in try await selectedAudioTracks().enumerated() {
             pumps.append(try await audioPump(for: track, index: index, reportsProgress: pumps.isEmpty))
         }
+        for (index, track) in try await selectedSubtitleTracks().enumerated() {
+            if let pump = try await subtitlePump(for: track, index: index) { pumps.append(pump) }
+        }
         return pumps
+    }
+
+    private func selectedSubtitleTracks() async throws -> [AVAssetTrack] {
+        guard settings.subtitles != .none else { return [] }
+        let tracks = try await MediaInspector.subtitleTracks(in: asset)
+        return SubtitleTrackInfo.kept(tracks, kind: \.1, selection: settings.subtitles, container: settings.container)
+            .map(\.0)
     }
 
     private func selectedAudioTracks() async throws -> [AVAssetTrack] {
@@ -113,6 +123,21 @@ struct PipelineFactory {
         }
         input.extendedLanguageTag = language
         return try attach(output: output, input: input, label: "audio\(index)", reportsProgress: reportsProgress)
+    }
+
+    // MARK: Subtitles
+
+    /// Copies a text subtitle or caption track unchanged. Returns nil when the writer
+    /// can't store this format in the chosen container, so one exotic track doesn't
+    /// fail the whole encode.
+    private func subtitlePump(for track: AVAssetTrack, index: Int) async throws -> SamplePump? {
+        let (formats, language, code) = try await track.load(.formatDescriptions, .extendedLanguageTag, .languageCode)
+        let output = AVAssetReaderTrackOutput(track: track, outputSettings: nil)
+        let input = AVAssetWriterInput(mediaType: track.mediaType, outputSettings: nil, sourceFormatHint: formats.first)
+        input.extendedLanguageTag = language
+        input.languageCode = code
+        guard reader.canAdd(output), writer.canAdd(input) else { return nil }
+        return try attach(output: output, input: input, label: "subtitle\(index)", reportsProgress: false)
     }
 
     // MARK: Plumbing

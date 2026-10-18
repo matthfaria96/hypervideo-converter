@@ -47,7 +47,25 @@ public enum MediaInspector {
             audioInfos.append(try await audioInfo(for: track))
         }
         info.audioTracks = audioInfos
+        info.subtitleTracks = try await subtitleInfos(in: asset)
         return info
+    }
+
+    /// Text subtitles first, then closed captions, each in track order.
+    static func subtitleTracks(in asset: AVAsset) async throws -> [(AVAssetTrack, SubtitleTrackInfo.Kind)] {
+        let subtitles = try await asset.loadTracks(withMediaType: .subtitle)
+        let captions = try await asset.loadTracks(withMediaType: .closedCaption)
+        return subtitles.map { ($0, .subtitle) } + captions.map { ($0, .closedCaption) }
+    }
+
+    private static func subtitleInfos(in asset: AVAsset) async throws -> [SubtitleTrackInfo] {
+        var infos: [SubtitleTrackInfo] = []
+        for (track, kind) in try await subtitleTracks(in: asset) {
+            let (formats, language, code) = try await track.load(.formatDescriptions, .extendedLanguageTag, .languageCode)
+            let format = formats.first.map { FourCC.string(CMFormatDescriptionGetMediaSubType($0)) } ?? "Text"
+            infos.append(SubtitleTrackInfo(id: Int(track.trackID), kind: kind, format: format, language: language ?? code))
+        }
+        return infos
     }
 
     public static func colorSpace(of format: CMFormatDescription) -> OutputSettingsBuilder.ColorSpace? {

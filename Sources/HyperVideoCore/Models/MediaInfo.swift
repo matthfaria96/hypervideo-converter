@@ -41,11 +41,13 @@ public struct MediaInfo: Codable, Hashable, Sendable {
     public var videoBitrate: Double?
     public var dynamicRange: DynamicRange
     public var audioTracks: [AudioTrackInfo]
+    public var subtitleTracks: [SubtitleTrackInfo]
     public var fileBytes: Int64
 
     public init(
         url: URL, duration: Double, displaySize: CGSize?, frameRate: Double?, videoCodec: String?,
-        videoBitrate: Double?, dynamicRange: DynamicRange, audioTracks: [AudioTrackInfo], fileBytes: Int64
+        videoBitrate: Double?, dynamicRange: DynamicRange, audioTracks: [AudioTrackInfo],
+        subtitleTracks: [SubtitleTrackInfo] = [], fileBytes: Int64
     ) {
         self.url = url
         self.duration = duration
@@ -55,6 +57,7 @@ public struct MediaInfo: Codable, Hashable, Sendable {
         self.videoBitrate = videoBitrate
         self.dynamicRange = dynamicRange
         self.audioTracks = audioTracks
+        self.subtitleTracks = subtitleTracks
         self.fileBytes = fileBytes
     }
 
@@ -74,6 +77,7 @@ public enum FourCC {
         "ap4h": "ProRes 4444", "apch": "ProRes 422 HQ", "apcn": "ProRes 422", "apcs": "ProRes 422 LT",
         "apco": "ProRes 422 Proxy", "av01": "AV1", "vp09": "VP9", "mp4v": "MPEG-4",
         "jpeg": "Motion JPEG", "aac": "AAC", "mp4a": "AAC", "alac": "ALAC", "ac-3": "AC-3",
-        "ec-3": "E-AC-3", "lpcm": "PCM", ".mp3": "MP3", "opus": "Opus", "fLaC": "FLAC"
+        "ec-3": "E-AC-3", "lpcm": "PCM", ".mp3": "MP3", "opus": "Opus", "fLaC": "FLAC",
+        "tx3g": "Timed Text", "text": "QuickTime Text", "wvtt": "WebVTT", "c608": "CEA-608", "c708": "CEA-708"
     ]
 }

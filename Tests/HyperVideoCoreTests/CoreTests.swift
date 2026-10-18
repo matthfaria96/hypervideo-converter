@@ -67,6 +67,34 @@ struct GeometryTests {
     }
 }
 
+@Suite("Subtitles")
+struct SubtitleTests {
+    let tracks = [
+        SubtitleTrackInfo(id: 3, kind: .closedCaption, format: "CEA-608", language: "en"),
+        SubtitleTrackInfo(id: 4, kind: .subtitle, format: "Timed Text", language: "en"),
+        SubtitleTrackInfo(id: 5, kind: .subtitle, format: "Timed Text", language: "fr")
+    ]
+
+    @Test func closedCaptionsOnlySurviveInMOV() {
+        #expect(SubtitleTrackInfo.kept(tracks, kind: \.kind, selection: .all, container: .mp4).map(\.id) == [4, 5])
+        #expect(SubtitleTrackInfo.kept(tracks, kind: \.kind, selection: .all, container: .mov).map(\.id) == [3, 4, 5])
+    }
+
+    @Test func firstPicksFirstSupportedTrack() {
+        #expect(SubtitleTrackInfo.kept(tracks, kind: \.kind, selection: .first, container: .m4v).map(\.id) == [4])
+        #expect(SubtitleTrackInfo.kept(tracks, kind: \.kind, selection: .none, container: .mov).isEmpty)
+    }
+
+    @Test func settingsSavedBeforeSubtitlesStillDecode() throws {
+        var legacy = try JSONSerialization.jsonObject(with: JSONEncoder().encode(EncodeSettings())) as! [String: Any]
+        legacy.removeValue(forKey: "subtitles")
+        legacy["videoCodec"] = "h264"
+        let decoded = try JSONDecoder().decode(EncodeSettings.self, from: JSONSerialization.data(withJSONObject: legacy))
+        #expect(decoded.subtitles == .all)
+        #expect(decoded.videoCodec == .h264)
+    }
+}
+
 @Suite("Settings")
 struct SettingsTests {
     @Test func defaultsAreValid() {
