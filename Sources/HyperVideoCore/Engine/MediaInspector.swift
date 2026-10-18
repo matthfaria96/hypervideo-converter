@@ -48,7 +48,27 @@ public enum MediaInspector {
         }
         info.audioTracks = audioInfos
         info.subtitleTracks = try await subtitleInfos(in: asset)
+        info.chapters = try await chapters(of: asset)
         return info
+    }
+
+    /// Chapter titles in the user's preferred language, else the first language present.
+    static func chapters(of asset: AVAsset) async throws -> [Chapter] {
+        let locales = try await asset.load(.availableChapterLocales)
+        guard let fallback = locales.first else { return [] }
+        var groups = try await asset.loadChapterMetadataGroups(bestMatchingPreferredLanguages: Locale.preferredLanguages)
+        if groups.isEmpty {
+            groups = try await asset.loadChapterMetadataGroups(withTitleLocale: fallback, containingItemsWithCommonKeys: [])
+        }
+        var chapters: [Chapter] = []
+        for (index, group) in groups.enumerated() {
+            let titleItem = AVMetadataItem.metadataItems(from: group.items, filteredByIdentifier: .commonIdentifierTitle).first
+            let title = try await titleItem?.load(.stringValue) ?? "Chapter \(index + 1)"
+            let range = group.timeRange
+            guard range.start.isNumeric, range.duration.isNumeric else { continue }
+            chapters.append(Chapter(title: title, start: range.start.seconds, duration: range.duration.seconds))
+        }
+        return chapters
     }
 
     /// Text subtitles first, then closed captions, each in track order.

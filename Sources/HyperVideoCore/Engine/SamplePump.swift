@@ -8,20 +8,30 @@ final class CancelFlag: Sendable {
     func set() { state.withLock { $0 = true } }
 }
 
-/// Moves samples from one reader output into one writer input on a private queue.
-/// AVFoundation objects aren't Sendable, but each pump touches them only from `queue`.
+/// Moves samples from a source (a reader output or a prepared list) into one writer
+/// input on a private queue. AVFoundation objects aren't Sendable, but each pump
+/// touches them only from `queue`.
 final class SamplePump: @unchecked Sendable {
-    let output: AVAssetReaderOutput
     let input: AVAssetWriterInput
     let reportsProgress: Bool
+    private let next: () -> CMSampleBuffer?
     private let queue: DispatchQueue
     private var finished = false
     private var lastReported = -1.0
 
     init(output: AVAssetReaderOutput, input: AVAssetWriterInput, label: String, reportsProgress: Bool) {
-        self.output = output
         self.input = input
         self.reportsProgress = reportsProgress
+        self.next = { output.copyNextSampleBuffer() }
+        self.queue = DispatchQueue(label: "HyperVideo.pump.\(label)", qos: .userInitiated)
+    }
+
+    /// Appends samples built up front, such as chapter titles.
+    init(samples: [CMSampleBuffer], input: AVAssetWriterInput, label: String) {
+        var remaining = samples.makeIterator()
+        self.input = input
+        self.reportsProgress = false
+        self.next = { remaining.next() }
         self.queue = DispatchQueue(label: "HyperVideo.pump.\(label)", qos: .userInitiated)
     }
 
@@ -34,7 +44,7 @@ final class SamplePump: @unchecked Sendable {
             input.requestMediaDataWhenReady(on: queue) { [self] in
                 guard !finished else { return }
                 while input.isReadyForMoreMediaData {
-                    guard !cancel.isSet, let buffer = output.copyNextSampleBuffer() else {
+                    guard !cancel.isSet, let buffer = next() else {
                         finish(continuation)
                         return
                     }

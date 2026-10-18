@@ -95,6 +95,25 @@ struct SubtitleTests {
     }
 }
 
+@Suite("Chapters")
+struct ChapterTests {
+    let chapters = [
+        Chapter(title: "A", start: 0, duration: 10),
+        Chapter(title: "B", start: 10, duration: 10),
+        Chapter(title: "C", start: 20, duration: 10)
+    ]
+
+    @Test func trimCutsOverlappingChapters() {
+        let kept = Chapter.clipped(chapters, start: 5, end: 15)
+        #expect(kept == [Chapter(title: "A", start: 5, duration: 5), Chapter(title: "B", start: 10, duration: 5)])
+    }
+
+    @Test func sliversAreDropped() {
+        #expect(Chapter.clipped(chapters, start: 9.99, end: 30).map(\.title) == ["B", "C"])
+        #expect(Chapter.clipped(chapters, start: 0, end: 30) == chapters)
+    }
+}
+
 @Suite("Settings")
 struct SettingsTests {
     @Test func defaultsAreValid() {

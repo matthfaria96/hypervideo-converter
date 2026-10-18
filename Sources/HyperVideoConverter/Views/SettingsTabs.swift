@@ -20,7 +20,7 @@ struct SummaryTab: View {
                 SettingRow(title: "Web optimized", help: "Moves the index to the start for fast streaming") {
                     Toggle("Web optimized", isOn: $settings.optimizeForWeb).labelsHidden().toggleStyle(.switch)
                 }
-                SettingRow(title: "Keep metadata", help: "Title, dates, location and other tags") {
+                SettingRow(title: "Keep metadata", help: "Title, dates, location, chapters and other tags") {
                     Toggle("Keep metadata", isOn: $settings.keepMetadata).labelsHidden().toggleStyle(.switch)
                 }
             }
@@ -34,11 +34,35 @@ struct SummaryTab: View {
                     if !info.subtitleTracks.isEmpty {
                         compareRow("Subtitles", "\(info.subtitleTracks.count)", "\(keptSubtitles)")
                     }
+                    if !info.chapters.isEmpty {
+                        compareRow("Chapters", "\(info.chapters.count)", "\(keptChapters.count)")
+                    }
                     compareRow("Duration", Format.duration(info.duration), Format.duration(outputDuration))
                     compareRow("Size", Format.bytes(info.fileBytes), estimatedSize)
                 }
             }
+
+            if !keptChapters.isEmpty {
+                GlassSection(title: "Chapters", symbol: "list.bullet.indent") {
+                    ForEach(Array(keptChapters.enumerated()), id: \.offset) { index, chapter in
+                        HStack {
+                            Text("\(index + 1)").monospacedDigit().foregroundStyle(.tertiary).frame(width: 24, alignment: .trailing)
+                            Text(chapter.title).lineLimit(1)
+                            Spacer()
+                            Text(Format.duration(chapter.start - outputStart)).monospacedDigit().foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
         }
+    }
+
+    private var outputStart: Double { settings.trim?.start ?? 0 }
+
+    /// Chapters as they will appear in the output: cut to the trim, dropped without metadata.
+    private var keptChapters: [Chapter] {
+        guard settings.keepMetadata else { return [] }
+        return Chapter.clipped(info.chapters, start: outputStart, end: outputStart + outputDuration)
     }
 
     private var outputSize: CGSize? {

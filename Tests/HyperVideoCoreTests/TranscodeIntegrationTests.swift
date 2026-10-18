@@ -86,6 +86,29 @@ struct TranscodeIntegrationTests {
         }
     }
 
+    @Test func chaptersFollowTrimAndMetadataSetting() async throws {
+        let dir = try Self.tempDir()
+        let source = try await SyntheticClip.make(in: dir, size: CGSize(width: 640, height: 360), seconds: 3,
+                                                  chapters: ["One", "Two", "Three"])
+        let sourceInfo = try await MediaInspector.inspect(source)
+        #expect(sourceInfo.chapters.map(\.title) == ["One", "Two", "Three"])
+
+        var settings = EncodeSettings()
+        settings.videoCodec = .h264
+        settings.trim = TrimRange(start: 0.5, end: 2.5)
+        let out = dir.appendingPathComponent("chapters.mp4")
+        _ = try await TranscodeEngine().run(source: source, destination: out, settings: settings) { _ in }
+        let chapters = try await MediaInspector.inspect(out).chapters
+        #expect(chapters.map(\.title) == ["One", "Two", "Three"])
+        #expect(zip(chapters.map(\.start), [0, 0.5, 1.5]).allSatisfy { abs($0 - $1) < 0.05 }, "\(chapters)")
+
+        settings.keepMetadata = false
+        let bare = dir.appendingPathComponent("bare.mov")
+        settings.container = .mov
+        _ = try await TranscodeEngine().run(source: source, destination: bare, settings: settings) { _ in }
+        #expect(try await MediaInspector.inspect(bare).chapters.isEmpty)
+    }
+
     static func tempDir() throws -> URL {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("HVCTests-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
@@ -102,8 +125,11 @@ final class ProgressLog: @unchecked Sendable {
 
 enum SyntheticClip {
     /// Writes an H.264 + stereo AAC clip with moving gradient frames and a sine tone,
-    /// plus one tx3g subtitle track (one cue per second) per entry in `subtitleLanguages`.
-    static func make(in dir: URL, size: CGSize, seconds: Int, subtitleLanguages: [String] = []) async throws -> URL {
+    /// plus one tx3g subtitle track (one cue per second) per entry in `subtitleLanguages`
+    /// and a one-second chapter per entry in `chapters`.
+    static func make(
+        in dir: URL, size: CGSize, seconds: Int, subtitleLanguages: [String] = [], chapters: [String] = []
+    ) async throws -> URL {
         let url = dir.appendingPathComponent("source-\(Int(size.width)).mov")
         let writer = try AVAssetWriter(outputURL: url, fileType: .mov)
         let video = AVAssetWriterInput(mediaType: .video, outputSettings: [
@@ -129,8 +155,22 @@ enum SyntheticClip {
             return input
         }
         var cues = Array(repeating: 0, count: subtitles.count)
+        let chapterFormat = SyntheticSubtitles.format(mediaType: kCMMediaType_Text)
+        let chapterInput = AVAssetWriterInput(mediaType: .text, outputSettings: nil, sourceFormatHint: chapterFormat)
+        if !chapters.isEmpty {
+            chapterInput.marksOutputTrackAsEnabled = false
+            writer.add(chapterInput)
+            video.addTrackAssociation(withTrackOf: chapterInput, type: AVAssetTrack.AssociationType.chapterList.rawValue)
+        }
         writer.startWriting()
         writer.startSession(atSourceTime: .zero)
+        if !chapters.isEmpty {
+            for (index, title) in chapters.enumerated() {
+                while !chapterInput.isReadyForMoreMediaData { try await Task.sleep(for: .milliseconds(2)) }
+                chapterInput.append(try SyntheticSubtitles.cue(title, at: Double(index), format: chapterFormat))
+            }
+            chapterInput.markAsFinished()
+        }
 
         let fps = 30, chunk = 1_024
         let totalFrames = fps * seconds, totalAudio = 48_000 * seconds
@@ -211,58 +251,14 @@ enum SyntheticClip {
     }
 }
 
-/// Builds 3GPP timed text (tx3g) samples: a 16-bit big-endian length followed by UTF-8 text.
+/// Subtitle and chapter samples for synthetic clips, built with the engine's tx3g writer.
 enum SyntheticSubtitles {
-    static func format() -> CMFormatDescription {
-        let white: [CFString: Any] = [
-            kCMTextFormatDescriptionColor_Red: 255, kCMTextFormatDescriptionColor_Green: 255,
-            kCMTextFormatDescriptionColor_Blue: 255, kCMTextFormatDescriptionColor_Alpha: 255
-        ]
-        let extensions: [CFString: Any] = [
-            kCMTextFormatDescriptionExtension_DisplayFlags: 0,
-            kCMTextFormatDescriptionExtension_HorizontalJustification: 1,
-            kCMTextFormatDescriptionExtension_VerticalJustification: -1,
-            kCMTextFormatDescriptionExtension_BackgroundColor: [
-                kCMTextFormatDescriptionColor_Red: 0, kCMTextFormatDescriptionColor_Green: 0,
-                kCMTextFormatDescriptionColor_Blue: 0, kCMTextFormatDescriptionColor_Alpha: 0
-            ],
-            kCMTextFormatDescriptionExtension_DefaultTextBox: [
-                kCMTextFormatDescriptionRect_Top: 0, kCMTextFormatDescriptionRect_Left: 0,
-                kCMTextFormatDescriptionRect_Bottom: 0, kCMTextFormatDescriptionRect_Right: 0
-            ],
-            kCMTextFormatDescriptionExtension_DefaultStyle: [
-                kCMTextFormatDescriptionStyle_StartChar: 0, kCMTextFormatDescriptionStyle_EndChar: 0,
-                kCMTextFormatDescriptionStyle_Font: 1, kCMTextFormatDescriptionStyle_FontFace: 0,
-                kCMTextFormatDescriptionStyle_FontSize: 18, kCMTextFormatDescriptionStyle_ForegroundColor: white
-            ],
-            kCMTextFormatDescriptionExtension_FontTable: ["1": "Sans-Serif"]
-        ]
-        var format: CMFormatDescription?
-        CMFormatDescriptionCreate(allocator: nil, mediaType: kCMMediaType_Subtitle, mediaSubType: kCMTextFormatType_3GText,
-                                  extensions: extensions as CFDictionary, formatDescriptionOut: &format)
-        return format!
+    static func format(mediaType: CMMediaType = kCMMediaType_Subtitle) -> CMFormatDescription {
+        TimedText.format(mediaType: mediaType)!
     }
 
     static func cue(_ text: String, at seconds: Double, format: CMFormatDescription) throws -> CMSampleBuffer {
-        let utf8 = Array(text.utf8)
-        let bytes = [UInt8(utf8.count >> 8), UInt8(utf8.count & 0xFF)] + utf8
-        var block: CMBlockBuffer?
-        CMBlockBufferCreateWithMemoryBlock(allocator: nil, memoryBlock: nil, blockLength: bytes.count, blockAllocator: nil,
-                                           customBlockSource: nil, offsetToData: 0, dataLength: bytes.count, flags: 0, blockBufferOut: &block)
-        guard let block else { throw TranscodeError.noTracks }
-        bytes.withUnsafeBytes { _ = CMBlockBufferReplaceDataBytes(with: $0.baseAddress!, blockBuffer: block, offsetIntoDestination: 0, dataLength: bytes.count) }
-
-        var timing = CMSampleTimingInfo(
-            duration: CMTime(value: 1, timescale: 1),
-            presentationTimeStamp: CMTime(seconds: seconds, preferredTimescale: 600),
-            decodeTimeStamp: .invalid
-        )
-        var size = bytes.count
-        var sample: CMSampleBuffer?
-        CMSampleBufferCreateReady(allocator: nil, dataBuffer: block, formatDescription: format, sampleCount: 1,
-                                  sampleTimingEntryCount: 1, sampleTimingArray: &timing,
-                                  sampleSizeEntryCount: 1, sampleSizeArray: &size, sampleBufferOut: &sample)
-        guard let sample else { throw TranscodeError.noTracks }
+        guard let sample = TimedText.sample(text, start: seconds, duration: 1, format: format) else { throw TranscodeError.noTracks }
         return sample
     }
 }
