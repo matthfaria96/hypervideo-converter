@@ -110,6 +110,48 @@ struct TranscodeIntegrationTests {
         #expect(try await MediaInspector.inspect(bare).chapters.isEmpty)
     }
 
+    @Test func alternateTracksPlayOneAtATime() async throws {
+        let dir = try Self.tempDir()
+        let source = try await SyntheticClip.make(in: dir, size: CGSize(width: 640, height: 360), seconds: 2,
+                                                  audioLanguages: ["en", "fr"], subtitleLanguages: ["en", "fr"])
+        var settings = EncodeSettings()
+        settings.videoCodec = .h264
+        settings.audioTracks = .all
+        let out = dir.appendingPathComponent("alternates.mp4")
+        _ = try await TranscodeEngine().run(source: source, destination: out, settings: settings) { _ in }
+
+        let asset = AVURLAsset(url: out)
+        #expect(try await Self.enabled(asset, .audio) == [true, false])
+        #expect(try await Self.enabled(asset, .subtitle) == [false, false])
+        #expect(try await asset.loadMediaSelectionGroup(for: .audible)?.options.count == 2)
+        // Each tx3g track is offered twice (all text and forced-only), so compare languages.
+        let legible = try #require(try await asset.loadMediaSelectionGroup(for: .legible))
+        #expect(Set(legible.options.compactMap(\.extendedLanguageTag)) == ["en", "fr"])
+    }
+
+    @Test func extraAudioEncodingAddsASecondVersionOfEachTrack() async throws {
+        let dir = try Self.tempDir()
+        let source = try await SyntheticClip.make(in: dir, size: CGSize(width: 640, height: 360), seconds: 2,
+                                                  audioLanguages: ["pt-BR"])
+        var settings = EncodeSettings()
+        settings.videoCodec = .h264
+        settings.audioMixdown = .stereo
+        settings.extraAudio = AudioEncoding(codec: .aac, mixdown: .mono, bitrateKbps: 64)
+        let out = dir.appendingPathComponent("two-versions.mp4")
+        _ = try await TranscodeEngine().run(source: source, destination: out, settings: settings) { _ in }
+
+        let info = try await MediaInspector.inspect(out)
+        #expect(info.audioTracks.map(\.channels) == [2, 1])
+        #expect(info.audioTracks.map(\.language) == ["pt-BR", "pt-BR"])
+        #expect(try await Self.enabled(AVURLAsset(url: out), .audio) == [true, false])
+    }
+
+    static func enabled(_ asset: AVAsset, _ type: AVMediaType) async throws -> [Bool] {
+        var flags: [Bool] = []
+        for track in try await asset.loadTracks(withMediaType: type) { flags.append(try await track.load(.isEnabled)) }
+        return flags
+    }
+
     static func tempDir() throws -> URL {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("HVCTests-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
@@ -125,11 +167,12 @@ final class ProgressLog: @unchecked Sendable {
 }
 
 enum SyntheticClip {
-    /// Writes an H.264 + stereo AAC clip with moving gradient frames and a sine tone,
-    /// plus one tx3g subtitle track (one cue per second) per entry in `subtitleLanguages`
-    /// and a one-second chapter per entry in `chapters`.
+    /// Writes an H.264 clip with moving gradient frames and one stereo AAC sine-tone
+    /// track per entry in `audioLanguages`, plus one tx3g subtitle track (one cue per
+    /// second) per entry in `subtitleLanguages` and a one-second chapter per entry in `chapters`.
     static func make(
-        in dir: URL, size: CGSize, seconds: Int, subtitleLanguages: [String] = [], chapters: [String] = []
+        in dir: URL, size: CGSize, seconds: Int, audioLanguages: [String?] = [nil],
+        subtitleLanguages: [String] = [], chapters: [String] = []
     ) async throws -> URL {
         let url = dir.appendingPathComponent("source-\(Int(size.width)).mov")
         let writer = try AVAssetWriter(outputURL: url, fileType: .mov)
@@ -140,13 +183,17 @@ enum SyntheticClip {
             kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
             kCVPixelBufferWidthKey as String: Int(size.width), kCVPixelBufferHeightKey as String: Int(size.height)
         ])
-        let audio = AVAssetWriterInput(mediaType: .audio, outputSettings: [
-            AVFormatIDKey: kAudioFormatMPEG4AAC, AVSampleRateKey: 48_000, AVNumberOfChannelsKey: 2, AVEncoderBitRateKey: 128_000
-        ])
+        let audios = audioLanguages.map { language in
+            let input = AVAssetWriterInput(mediaType: .audio, outputSettings: [
+                AVFormatIDKey: kAudioFormatMPEG4AAC, AVSampleRateKey: 48_000, AVNumberOfChannelsKey: 2, AVEncoderBitRateKey: 128_000
+            ])
+            input.extendedLanguageTag = language
+            input.expectsMediaDataInRealTime = false
+            return input
+        }
         video.expectsMediaDataInRealTime = false
-        audio.expectsMediaDataInRealTime = false
         writer.add(video)
-        writer.add(audio)
+        audios.forEach(writer.add)
         let subtitleFormat = SyntheticSubtitles.format()
         let subtitles = subtitleLanguages.map { language in
             let input = AVAssetWriterInput(mediaType: .subtitle, outputSettings: nil, sourceFormatHint: subtitleFormat)
@@ -175,9 +222,10 @@ enum SyntheticClip {
 
         let fps = 30, chunk = 1_024
         let totalFrames = fps * seconds, totalAudio = 48_000 * seconds
-        var frame = 0, audioPos = 0
-        // Interleave both inputs; the writer stalls one if the other falls behind.
-        while frame < totalFrames || audioPos < totalAudio || cues.contains(where: { $0 < seconds }) {
+        var frame = 0
+        var audioPositions = Array(repeating: 0, count: audios.count)
+        // Interleave all inputs; the writer stalls one if another falls behind.
+        while frame < totalFrames || audioPositions.contains(where: { $0 < totalAudio }) || cues.contains(where: { $0 < seconds }) {
             var progressed = false
             for (index, input) in subtitles.enumerated() where cues[index] < seconds && input.isReadyForMoreMediaData {
                 let cue = cues[index]
@@ -197,10 +245,10 @@ enum SyntheticClip {
                 if frame == totalFrames { video.markAsFinished() }
                 progressed = true
             }
-            if audioPos < totalAudio, audio.isReadyForMoreMediaData {
-                if let sample = try sineBuffer(start: audioPos, frames: chunk) { audio.append(sample) }
-                audioPos += chunk
-                if audioPos >= totalAudio { audio.markAsFinished() }
+            for (index, audio) in audios.enumerated() where audioPositions[index] < totalAudio && audio.isReadyForMoreMediaData {
+                if let sample = try sineBuffer(start: audioPositions[index], frames: chunk) { audio.append(sample) }
+                audioPositions[index] += chunk
+                if audioPositions[index] >= totalAudio { audio.markAsFinished() }
                 progressed = true
             }
             if !progressed { try await Task.sleep(for: .milliseconds(2)) }

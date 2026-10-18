@@ -80,6 +80,19 @@ public enum AudioTrackSelection: String, Codable, CaseIterable, Identifiable, Se
     public var displayName: String { self == .first ? "First Track" : "All Tracks" }
 }
 
+/// One way of encoding an audio track.
+public struct AudioEncoding: Codable, Hashable, Sendable {
+    public var codec: AudioCodec
+    public var mixdown: AudioMixdown
+    public var bitrateKbps: Int
+
+    public init(codec: AudioCodec, mixdown: AudioMixdown, bitrateKbps: Int) {
+        self.codec = codec
+        self.mixdown = mixdown
+        self.bitrateKbps = bitrateKbps
+    }
+}
+
 public enum MaxResolution: Int, Codable, CaseIterable, Identifiable, Sendable {
     case source = 0, uhd2160 = 2160, qhd1440 = 1440, fhd1080 = 1080, hd720 = 720, sd576 = 576, sd480 = 480
 
@@ -162,6 +175,9 @@ public struct EncodeSettings: Codable, Hashable, Sendable {
     public var audioMixdown: AudioMixdown = .stereo
     public var audioBitrateKbps: Int = 160
     public var audioTracks: AudioTrackSelection = .first
+    /// A second version of every kept audio track, such as AAC stereo for
+    /// compatibility next to a surround passthrough.
+    public var extraAudio: AudioEncoding?
 
     public var subtitles: SubtitleSelection = .all
 
@@ -177,8 +193,11 @@ public struct EncodeSettings: Codable, Hashable, Sendable {
         if videoCodec.isProRes && container != .mov {
             issues.append("Apple ProRes requires the QuickTime (MOV) container.")
         }
-        if audioCodec == .alac && container != .mov {
+        if (audioCodec == .alac || extraAudio?.codec == .alac) && container != .mov {
             issues.append("Apple Lossless audio requires the QuickTime (MOV) container.")
+        }
+        if extraAudio != nil && audioCodec == .none {
+            issues.append("An extra audio version needs the main audio to be on.")
         }
         if case .averageBitrate(let kbps) = rateControl, kbps < 100 {
             issues.append("Video bitrate must be at least 100 kbit/s.")
@@ -197,6 +216,14 @@ public struct EncodeSettings: Codable, Hashable, Sendable {
     }
 
     public var isValid: Bool { validationIssues.isEmpty }
+
+    /// Every encoding applied to each kept audio track, main version first.
+    public var audioEncodings: [AudioEncoding] {
+        guard audioCodec != .none else { return [] }
+        let main = AudioEncoding(codec: audioCodec, mixdown: audioMixdown, bitrateKbps: audioBitrateKbps)
+        guard let extraAudio, extraAudio.codec != .none else { return [main] }
+        return [main, extraAudio]
+    }
 }
 
 // Decodes every field leniently, so presets and queues saved by older versions
@@ -205,7 +232,7 @@ extension EncodeSettings {
     private enum CodingKeys: String, CodingKey {
         case container, videoCodec, rateControl, frameRate, maxResolution, crop, rotation, flipHorizontal
         case prioritizeSpeed, allowBFrames, keyframeIntervalSeconds, filters
-        case audioCodec, audioMixdown, audioBitrateKbps, audioTracks, subtitles
+        case audioCodec, audioMixdown, audioBitrateKbps, audioTracks, extraAudio, subtitles
         case trim, optimizeForWeb, keepMetadata
     }
 
@@ -228,6 +255,7 @@ extension EncodeSettings {
         audioMixdown = try c.decodeIfPresent(AudioMixdown.self, forKey: .audioMixdown) ?? d.audioMixdown
         audioBitrateKbps = try c.decodeIfPresent(Int.self, forKey: .audioBitrateKbps) ?? d.audioBitrateKbps
         audioTracks = try c.decodeIfPresent(AudioTrackSelection.self, forKey: .audioTracks) ?? d.audioTracks
+        extraAudio = try c.decodeIfPresent(AudioEncoding.self, forKey: .extraAudio)
         subtitles = try c.decodeIfPresent(SubtitleSelection.self, forKey: .subtitles) ?? d.subtitles
         trim = try c.decodeIfPresent(TrimRange.self, forKey: .trim)
         optimizeForWeb = try c.decodeIfPresent(Bool.self, forKey: .optimizeForWeb) ?? d.optimizeForWeb

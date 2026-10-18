@@ -82,6 +82,16 @@ struct OutputEstimateTests {
         #expect(try #require(OutputEstimate.bytes(info: info, settings: settings)) == 25_600_000)
     }
 
+    @Test func extraAudioEncodingCountsTowardsSize() throws {
+        var settings = EncodeSettings()
+        settings.rateControl = .averageBitrate(4_000)
+        settings.audioCodec = .aac
+        settings.audioBitrateKbps = 160
+        settings.extraAudio = AudioEncoding(codec: .passthrough, mixdown: .stereo, bitrateKbps: 0)
+        // 100 s × (4000 + 160) kbit/s + first source track passed through at 192 kbit/s
+        #expect(try #require(OutputEstimate.bytes(info: info, settings: settings)) == 54_400_000)
+    }
+
     @Test func constantQualityIsUnpredictable() {
         #expect(OutputEstimate.bytes(info: info, settings: EncodeSettings()) == nil)
     }

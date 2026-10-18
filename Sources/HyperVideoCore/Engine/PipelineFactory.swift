@@ -12,16 +12,38 @@ struct PipelineFactory {
         if let video = try await asset.loadTracks(withMediaType: .video).first {
             pumps.append(try await videoPump(for: video))
         }
+        var audio: [AVAssetWriterInput] = []
         for (index, track) in try await selectedAudioTracks().enumerated() {
-            pumps.append(try await audioPump(for: track, index: index, reportsProgress: pumps.isEmpty))
+            for (version, encoding) in settings.audioEncodings.enumerated() {
+                let pump = try await audioPump(for: track, encoding: encoding, label: "audio\(index).\(version)",
+                                               reportsProgress: pumps.isEmpty)
+                pumps.append(pump)
+                audio.append(pump.input)
+            }
         }
+        var subtitles: [AVAssetWriterInput] = []
         for (index, track) in try await selectedSubtitleTracks().enumerated() {
-            if let pump = try await subtitlePump(for: track, index: index) { pumps.append(pump) }
+            if let pump = try await subtitlePump(for: track, index: index) {
+                pumps.append(pump)
+                subtitles.append(pump.input)
+            }
         }
         if let main = pumps.first?.input, let pump = try await chapterPump(attachedTo: main) {
             pumps.append(pump)
         }
+        groupAlternates(audio, defaultInput: audio.first)
+        groupAlternates(subtitles.filter { $0.mediaType == .subtitle }, defaultInput: nil)
         return pumps
+    }
+
+    /// Puts tracks of one kind in an alternate group so players offer them as choices
+    /// and play only the default (the first audio track; no subtitles until picked),
+    /// rather than mixing every enabled audio track together.
+    private func groupAlternates(_ inputs: [AVAssetWriterInput], defaultInput: AVAssetWriterInput?) {
+        guard inputs.count > 1 || (defaultInput == nil && !inputs.isEmpty) else { return }
+        for input in inputs where input !== defaultInput { input.marksOutputTrackAsEnabled = false }
+        let group = AVAssetWriterInputGroup(inputs: inputs, defaultInput: defaultInput)
+        if writer.canAdd(group) { writer.add(group) }
     }
 
     private func selectedSubtitleTracks() async throws -> [AVAssetTrack] {
@@ -120,28 +142,30 @@ struct PipelineFactory {
 
     // MARK: Audio
 
-    private func audioPump(for track: AVAssetTrack, index: Int, reportsProgress: Bool) async throws -> SamplePump {
+    private func audioPump(
+        for track: AVAssetTrack, encoding: AudioEncoding, label: String, reportsProgress: Bool
+    ) async throws -> SamplePump {
         let (formats, language) = try await track.load(.formatDescriptions, .extendedLanguageTag)
         let output: AVAssetReaderOutput
         let input: AVAssetWriterInput
 
-        if settings.audioCodec == .passthrough {
+        if encoding.codec == .passthrough {
             output = AVAssetReaderTrackOutput(track: track, outputSettings: nil)
             input = AVAssetWriterInput(mediaType: .audio, outputSettings: nil, sourceFormatHint: formats.first)
         } else {
             let sourceChannels = formats.first
                 .flatMap { CMAudioFormatDescriptionGetStreamBasicDescription($0)?.pointee.mChannelsPerFrame }
                 .map(Int.init) ?? 2
-            let channels = settings.audioMixdown.resolved(sourceChannels: sourceChannels).channelCount
+            let channels = encoding.mixdown.resolved(sourceChannels: sourceChannels).channelCount
             output = AVAssetReaderAudioMixOutput(
                 audioTracks: [track], audioSettings: OutputSettingsBuilder.audioReaderPCM(channels: channels)
             )
             input = AVAssetWriterInput(
-                mediaType: .audio, outputSettings: OutputSettingsBuilder.audioWriter(settings: settings, channels: channels)
+                mediaType: .audio, outputSettings: OutputSettingsBuilder.audioWriter(encoding: encoding, channels: channels)
             )
         }
         input.extendedLanguageTag = language
-        return try attach(output: output, input: input, label: "audio\(index)", reportsProgress: reportsProgress)
+        return try attach(output: output, input: input, label: label, reportsProgress: reportsProgress)
     }
 
     // MARK: Subtitles

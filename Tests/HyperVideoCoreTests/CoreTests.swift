@@ -116,6 +116,16 @@ struct ChapterTests {
 
 @Suite("Settings")
 struct SettingsTests {
+    @Test func extraAudioFollowsContainerRules() {
+        var settings = EncodeSettings()
+        settings.extraAudio = AudioEncoding(codec: .alac, mixdown: .stereo, bitrateKbps: 0)
+        #expect(!settings.isValid)
+        settings.container = .mov
+        #expect(settings.isValid)
+        settings.audioCodec = .none
+        #expect(!settings.isValid, "an extra version needs a main audio track")
+    }
+
     @Test func defaultsAreValid() {
         #expect(EncodeSettings().isValid)
     }

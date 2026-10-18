@@ -122,6 +122,10 @@ struct AudioTab: View {
                 }
             }
 
+            if settings.audioCodec != .none {
+                ExtraAudioSection(settings: $settings, bitrates: bitrates)
+            }
+
             GlassSection(title: "Source Tracks", symbol: "list.number") {
                 if info.audioTracks.isEmpty {
                     Text("This source has no audio.").foregroundStyle(.secondary)
@@ -143,5 +147,64 @@ struct AudioTab: View {
 
     private func included(_ index: Int) -> Bool {
         settings.audioCodec != .none && (settings.audioTracks == .all || index == 0)
+    }
+}
+
+/// A second version of every kept track, e.g. AAC stereo next to surround passthrough.
+private struct ExtraAudioSection: View {
+    @Binding var settings: EncodeSettings
+    let bitrates: [Int]
+
+    private var isOn: Binding<Bool> {
+        Binding(
+            get: { settings.extraAudio != nil },
+            set: { on in
+                settings.extraAudio = on ? AudioEncoding(codec: settings.audioCodec == .aac ? .passthrough : .aac,
+                                                         mixdown: .stereo, bitrateKbps: 160) : nil
+            }
+        )
+    }
+
+    private var extra: Binding<AudioEncoding> {
+        Binding(
+            get: { settings.extraAudio ?? AudioEncoding(codec: .aac, mixdown: .stereo, bitrateKbps: 160) },
+            set: { settings.extraAudio = $0 }
+        )
+    }
+
+    var body: some View {
+        GlassSection(title: "Extra Version", symbol: "square.stack") {
+            SettingRow(title: "Add a second version", help: "Each kept track is also written this way; players pick one") {
+                Toggle("Add a second version", isOn: isOn).labelsHidden().toggleStyle(.switch)
+            }
+            if settings.extraAudio != nil {
+                SettingRow(title: "Codec") {
+                    Picker("Codec", selection: extra.codec) {
+                        ForEach(AudioCodec.allCases.filter { $0 != .none }) { Text($0.displayName).tag($0) }
+                    }
+                    .labelsHidden()
+                    .fixedSize()
+                }
+                if extra.wrappedValue.codec == .aac || extra.wrappedValue.codec == .alac {
+                    SettingRow(title: "Mixdown") {
+                        Picker("Mixdown", selection: extra.mixdown) {
+                            ForEach(AudioMixdown.allCases) { Text($0.displayName).tag($0) }
+                        }
+                        .pickerStyle(.segmented)
+                        .labelsHidden()
+                        .fixedSize()
+                    }
+                }
+                if extra.wrappedValue.codec == .aac {
+                    SettingRow(title: "Bitrate") {
+                        Picker("Bitrate", selection: extra.bitrateKbps) {
+                            ForEach(bitrates, id: \.self) { Text("\($0) kbit/s").tag($0) }
+                        }
+                        .labelsHidden()
+                        .fixedSize()
+                    }
+                }
+            }
+        }
     }
 }

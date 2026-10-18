@@ -68,21 +68,31 @@ public enum OutputEstimate {
         }
     }
 
-    /// Combined audio bitrate of the kept tracks, nil when it can't be predicted.
+    /// Combined audio bitrate of every kept track in every encoding, nil when it
+    /// can't be predicted.
     static func audioBitsPerSecond(info: MediaInfo, settings: EncodeSettings) -> Double? {
         let tracks = settings.audioTracks == .all ? info.audioTracks : Array(info.audioTracks.prefix(1))
-        switch settings.audioCodec {
+        var total = 0.0
+        for encoding in settings.audioEncodings {
+            guard let rate = bitsPerSecond(of: encoding, tracks: tracks) else { return nil }
+            total += rate
+        }
+        return total
+    }
+
+    private static func bitsPerSecond(of encoding: AudioEncoding, tracks: [AudioTrackInfo]) -> Double? {
+        switch encoding.codec {
         case .none:
             return 0
         case .aac:
-            return Double(settings.audioBitrateKbps * 1_000 * tracks.count)
+            return Double(encoding.bitrateKbps * 1_000 * tracks.count)
         case .passthrough:
             let rates = tracks.map(\.bitrate)
             return rates.contains(nil) ? nil : rates.compactMap { $0 }.reduce(0, +)
         case .alac:
             // Apple Lossless typically lands near 60% of 16-bit PCM.
             return tracks.reduce(0) { total, track in
-                let channels = settings.audioMixdown.resolved(sourceChannels: track.channels).channelCount
+                let channels = encoding.mixdown.resolved(sourceChannels: track.channels).channelCount
                 return total + track.sampleRate * Double(channels) * 16 * 0.6
             }
         }

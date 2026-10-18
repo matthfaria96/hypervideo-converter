@@ -92,7 +92,8 @@ struct HandBrakePresetTests {
         #expect(!s.keepMetadata && !s.prioritizeSpeed)
         #expect(s.container == .mp4)
         #expect(archive.notes.contains { $0.contains("MKV") })
-        #expect(archive.notes.contains { $0.contains("first of its 2 audio encoders") })
+        #expect(s.extraAudio == AudioEncoding(codec: .aac, mixdown: .stereo, bitrateKbps: 160))
+        #expect(archive.notes.count == 1, "\(archive.notes)")
         #expect(s.isValid)
     }
 

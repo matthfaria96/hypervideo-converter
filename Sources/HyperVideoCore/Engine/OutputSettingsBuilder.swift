@@ -111,19 +111,19 @@ public enum OutputSettingsBuilder {
         ]
     }
 
-    public static func audioWriter(settings: EncodeSettings, channels: Int) -> [String: Any] {
+    public static func audioWriter(encoding: AudioEncoding, channels: Int) -> [String: Any] {
         var output: [String: Any] = [
             AVSampleRateKey: 48_000,
             AVNumberOfChannelsKey: channels,
             AVChannelLayoutKey: channelLayoutData(channels: channels)
         ]
-        switch settings.audioCodec {
+        switch encoding.codec {
         case .alac:
             output[AVFormatIDKey] = kAudioFormatAppleLossless
             output[AVEncoderBitDepthHintKey] = 24
         default:
             output[AVFormatIDKey] = kAudioFormatMPEG4AAC
-            output[AVEncoderBitRateKey] = clampedAACBitrate(settings.audioBitrateKbps, channels: channels) * 1_000
+            output[AVEncoderBitRateKey] = clampedAACBitrate(encoding.bitrateKbps, channels: channels) * 1_000
         }
         return output
     }

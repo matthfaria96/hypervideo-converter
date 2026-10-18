@@ -154,36 +154,47 @@ public enum HandBrakePresets {
 
     // MARK: Audio
 
+    /// HandBrake applies each entry of AudioList to every selected track; HyperVideo
+    /// keeps the first entry as the main version and the second as the extra one.
     private static func applyAudio(_ p: Fields, to s: inout EncodeSettings, notes: inout [String]) {
         let behavior = p.string("AudioTrackSelectionBehavior") ?? "first"
-        let list = p.raw["AudioList"] as? [[String: Any]] ?? []
-        guard behavior != "none", let track = list.first else {
+        let list = (p.raw["AudioList"] as? [[String: Any]] ?? []).map(Fields.init)
+        guard behavior != "none", let main = list.first else {
             s.audioCodec = .none
             return
         }
-        if list.count > 1 {
-            notes.append("Only the first of its \(list.count) audio encoders is used.")
-        }
         s.audioTracks = behavior == "all" ? .all : .first
-        let audio = Fields(track)
+        let encoding = audioEncoding(main, notes: &notes)
+        s.audioCodec = encoding.codec
+        s.audioMixdown = encoding.mixdown
+        s.audioBitrateKbps = encoding.bitrateKbps
+        if list.count > 1 { s.extraAudio = audioEncoding(list[1], notes: &notes) }
+        if list.count > 2 {
+            notes.append("Only the first two of its \(list.count) audio encoders are used.")
+        }
+    }
+
+    private static func audioEncoding(_ audio: Fields, notes: inout [String]) -> AudioEncoding {
         let encoder = audio.string("AudioEncoder") ?? "aac"
+        let codec: AudioCodec
         switch encoder {
         case _ where encoder.hasPrefix("copy"):
-            s.audioCodec = .passthrough
+            codec = .passthrough
         case _ where encoder.contains("aac"):
-            s.audioCodec = .aac
+            codec = .aac
         case "alac", "alac16", "alac24":
-            s.audioCodec = .alac
+            codec = .alac
         default:
-            s.audioCodec = .aac
+            codec = .aac
             notes.append("\(encoder) audio isn't available, so it uses AAC.")
         }
-        if audio.int("AudioBitrate") > 0 { s.audioBitrateKbps = audio.int("AudioBitrate") }
-        switch audio.string("AudioMixdown") {
-        case "mono", "left_only", "right_only": s.audioMixdown = .mono
-        case "5point1", "6point1", "7point1", "5_2_lfe": s.audioMixdown = .surround51
-        default: s.audioMixdown = .stereo
+        let mixdown: AudioMixdown = switch audio.string("AudioMixdown") {
+        case "mono", "left_only", "right_only": .mono
+        case "5point1", "6point1", "7point1", "5_2_lfe": .surround51
+        default: .stereo
         }
+        let bitrate = audio.int("AudioBitrate")
+        return AudioEncoding(codec: codec, mixdown: mixdown, bitrateKbps: bitrate > 0 ? bitrate : 160)
     }
 
     /// Typed, forgiving access to a preset dictionary.

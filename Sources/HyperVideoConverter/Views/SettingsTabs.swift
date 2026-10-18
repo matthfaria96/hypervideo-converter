@@ -101,6 +101,11 @@ struct SummaryTab: View {
     }
 
     private var audioOutput: String {
+        guard let extra = settings.extraAudio, settings.audioCodec != .none else { return mainAudioOutput }
+        return mainAudioOutput + " + " + (extra.codec == .aac ? "AAC \(extra.mixdown.displayName)" : extra.codec.displayName)
+    }
+
+    private var mainAudioOutput: String {
         switch settings.audioCodec {
         case .none: "None"
         case .passthrough: "Passthrough"
