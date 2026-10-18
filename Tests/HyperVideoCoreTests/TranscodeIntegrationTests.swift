@@ -1,4 +1,5 @@
 @preconcurrency import AVFoundation
+import VideoToolbox
 import Testing
 @testable import HyperVideoCore
 
@@ -204,6 +205,45 @@ enum SyntheticClip {
             }
             if !progressed { try await Task.sleep(for: .milliseconds(2)) }
         }
+        await writer.finishWriting()
+        guard writer.status == .completed else { throw writer.error ?? TranscodeError.noTracks }
+        return url
+    }
+
+    /// One second of interlaced ProRes 720×480 whose two fields are different
+    /// (even lines light, odd lines dark), which looks like heavy combing.
+    static func makeInterlacedComb(in dir: URL) async throws -> URL {
+        let url = dir.appendingPathComponent("source-interlaced.mov")
+        let size = (width: 720, height: 480)
+        let writer = try AVAssetWriter(outputURL: url, fileType: .mov)
+        let video = AVAssetWriterInput(mediaType: .video, outputSettings: [
+            AVVideoCodecKey: AVVideoCodecType.proRes422, AVVideoWidthKey: size.width, AVVideoHeightKey: size.height,
+            AVVideoCompressionPropertiesKey: [
+                kVTCompressionPropertyKey_FieldCount as String: 2,
+                kVTCompressionPropertyKey_FieldDetail as String: kCMFormatDescriptionFieldDetail_TemporalTopFirst as String
+            ]
+        ])
+        let adaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: video, sourcePixelBufferAttributes: [
+            kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
+            kCVPixelBufferWidthKey as String: size.width, kCVPixelBufferHeightKey as String: size.height
+        ])
+        writer.add(video)
+        writer.startWriting()
+        writer.startSession(atSourceTime: .zero)
+        for frame in 0..<30 {
+            while !video.isReadyForMoreMediaData { try await Task.sleep(for: .milliseconds(2)) }
+            var buffer: CVPixelBuffer?
+            if let pool = adaptor.pixelBufferPool { CVPixelBufferPoolCreatePixelBuffer(nil, pool, &buffer) }
+            guard let buffer else { throw TranscodeError.noTracks }
+            CVPixelBufferLockBaseAddress(buffer, [])
+            if let base = CVPixelBufferGetBaseAddress(buffer) {
+                let rowBytes = CVPixelBufferGetBytesPerRow(buffer)
+                for row in 0..<size.height { memset(base + row * rowBytes, row % 2 == 0 ? 220 : 30, rowBytes) }
+            }
+            CVPixelBufferUnlockBaseAddress(buffer, [])
+            adaptor.append(buffer, withPresentationTime: CMTime(value: CMTimeValue(frame), timescale: 30))
+        }
+        video.markAsFinished()
         await writer.finishWriting()
         guard writer.status == .completed else { throw writer.error ?? TranscodeError.noTracks }
         return url

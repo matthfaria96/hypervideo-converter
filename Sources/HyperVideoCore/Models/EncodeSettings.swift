@@ -156,6 +156,7 @@ public struct EncodeSettings: Codable, Hashable, Sendable {
     public var prioritizeSpeed = false
     public var allowBFrames = true
     public var keyframeIntervalSeconds: Double = 2
+    public var filters = VideoFilters()
 
     public var audioCodec: AudioCodec = .aac
     public var audioMixdown: AudioMixdown = .stereo
@@ -188,6 +189,10 @@ public struct EncodeSettings: Codable, Hashable, Sendable {
         if videoCodec == .passthrough && (!crop.isZero || maxResolution != .source || rotation != .none || flipHorizontal || frameRate != .source) {
             issues.append("Passthrough video can't be cropped, scaled, rotated or retimed.")
         }
+        // Automatic deinterlacing simply doesn't run on passthrough, so only explicit filters conflict.
+        if videoCodec == .passthrough && filters.isActive(sourceIsInterlaced: false) {
+            issues.append("Passthrough video can't be filtered.")
+        }
         return issues
     }
 
@@ -199,7 +204,7 @@ public struct EncodeSettings: Codable, Hashable, Sendable {
 extension EncodeSettings {
     private enum CodingKeys: String, CodingKey {
         case container, videoCodec, rateControl, frameRate, maxResolution, crop, rotation, flipHorizontal
-        case prioritizeSpeed, allowBFrames, keyframeIntervalSeconds
+        case prioritizeSpeed, allowBFrames, keyframeIntervalSeconds, filters
         case audioCodec, audioMixdown, audioBitrateKbps, audioTracks, subtitles
         case trim, optimizeForWeb, keepMetadata
     }
@@ -218,6 +223,7 @@ extension EncodeSettings {
         prioritizeSpeed = try c.decodeIfPresent(Bool.self, forKey: .prioritizeSpeed) ?? d.prioritizeSpeed
         allowBFrames = try c.decodeIfPresent(Bool.self, forKey: .allowBFrames) ?? d.allowBFrames
         keyframeIntervalSeconds = try c.decodeIfPresent(Double.self, forKey: .keyframeIntervalSeconds) ?? d.keyframeIntervalSeconds
+        filters = try c.decodeIfPresent(VideoFilters.self, forKey: .filters) ?? d.filters
         audioCodec = try c.decodeIfPresent(AudioCodec.self, forKey: .audioCodec) ?? d.audioCodec
         audioMixdown = try c.decodeIfPresent(AudioMixdown.self, forKey: .audioMixdown) ?? d.audioMixdown
         audioBitrateKbps = try c.decodeIfPresent(Int.self, forKey: .audioBitrateKbps) ?? d.audioBitrateKbps

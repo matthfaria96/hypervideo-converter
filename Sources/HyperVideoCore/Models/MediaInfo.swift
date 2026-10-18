@@ -43,6 +43,7 @@ public struct MediaInfo: Codable, Hashable, Sendable {
     public var videoCodec: String?
     public var videoBitrate: Double?
     public var dynamicRange: DynamicRange
+    public var isInterlaced: Bool
     public var audioTracks: [AudioTrackInfo]
     public var subtitleTracks: [SubtitleTrackInfo]
     public var chapters: [Chapter]
@@ -50,7 +51,7 @@ public struct MediaInfo: Codable, Hashable, Sendable {
 
     public init(
         url: URL, duration: Double, displaySize: CGSize?, frameRate: Double?, videoCodec: String?,
-        videoBitrate: Double?, dynamicRange: DynamicRange, audioTracks: [AudioTrackInfo],
+        videoBitrate: Double?, dynamicRange: DynamicRange, isInterlaced: Bool = false, audioTracks: [AudioTrackInfo],
         subtitleTracks: [SubtitleTrackInfo] = [], chapters: [Chapter] = [], fileBytes: Int64
     ) {
         self.url = url
@@ -60,6 +61,7 @@ public struct MediaInfo: Codable, Hashable, Sendable {
         self.videoCodec = videoCodec
         self.videoBitrate = videoBitrate
         self.dynamicRange = dynamicRange
+        self.isInterlaced = isInterlaced
         self.audioTracks = audioTracks
         self.subtitleTracks = subtitleTracks
         self.chapters = chapters

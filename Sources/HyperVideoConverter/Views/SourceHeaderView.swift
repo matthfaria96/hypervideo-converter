@@ -55,6 +55,7 @@ struct SourceHeaderView: View {
                     InfoChip(symbol: "clock", text: Format.duration(info.duration))
                     if let rate = info.videoBitrate { InfoChip(symbol: "gauge.with.dots.needle.67percent", text: Format.bitrate(rate)) }
                     InfoChip(symbol: "internaldrive", text: Format.bytes(info.fileBytes))
+                    if info.isInterlaced { InfoChip(symbol: "line.3.horizontal", text: "Interlaced") }
                     if info.dynamicRange != .sdr {
                         InfoChip(symbol: "sun.max.fill", text: info.dynamicRange.rawValue, tint: .yellow)
                     }

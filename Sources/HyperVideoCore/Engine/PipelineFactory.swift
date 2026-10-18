@@ -66,8 +66,11 @@ struct PipelineFactory {
                     kCVPixelBufferPixelFormatTypeKey as String: OutputSettingsBuilder.readerPixelFormat(for: settings.videoCodec)
                 ]
             )
+            let interlaced = formats.first.map(MediaInspector.isInterlaced) ?? false
             compositionOutput.videoComposition = try await composition(
-                track: track, plan: plan, sourceFPS: sourceFPS, color: color
+                track: track, naturalSize: natural, plan: plan, sourceFPS: sourceFPS, color: color,
+                deinterlace: settings.filters.deinterlaces(sourceIsInterlaced: interlaced),
+                filtered: settings.filters.isActive(sourceIsInterlaced: interlaced)
             )
             output = compositionOutput
             input = AVAssetWriterInput(
@@ -80,22 +83,35 @@ struct PipelineFactory {
         return try attach(output: output, input: input, label: "video", reportsProgress: true)
     }
 
+    /// Plain geometry uses AVFoundation's own compositor; picture filters switch to
+    /// `FilterCompositor`, which applies them and the same geometry with Core Image.
     private func composition(
-        track: AVAssetTrack, plan: GeometryPlan, sourceFPS: Double?, color: OutputSettingsBuilder.ColorSpace
+        track: AVAssetTrack, naturalSize: CGSize, plan: GeometryPlan, sourceFPS: Double?,
+        color: OutputSettingsBuilder.ColorSpace, deinterlace: Bool, filtered: Bool
     ) async throws -> AVVideoComposition {
         let duration = try await asset.load(.duration)
         let rate = settings.frameRate == .source ? (sourceFPS ?? 30) : settings.frameRate.rawValue
+        let timeRange = CMTimeRange(start: .zero, duration: duration)
 
-        var layer = AVVideoCompositionLayerInstruction.Configuration(assetTrack: track)
-        layer.setTransform(plan.transform, at: .zero)
-        let instruction = AVVideoCompositionInstruction(configuration: .init(
-            layerInstructions: [AVVideoCompositionLayerInstruction(configuration: layer)],
-            timeRange: CMTimeRange(start: .zero, duration: duration)
-        ))
+        let instruction: any AVVideoCompositionInstructionProtocol
+        if filtered {
+            instruction = FilterInstruction(
+                timeRange: timeRange, trackID: track.trackID, sourceSize: naturalSize, plan: plan,
+                filters: settings.filters, deinterlace: deinterlace
+            )
+        } else {
+            var layer = AVVideoCompositionLayerInstruction.Configuration(assetTrack: track)
+            layer.setTransform(plan.transform, at: .zero)
+            instruction = AVVideoCompositionInstruction(configuration: .init(
+                layerInstructions: [AVVideoCompositionLayerInstruction(configuration: layer)],
+                timeRange: timeRange
+            ))
+        }
         return AVVideoComposition(configuration: .init(
             colorPrimaries: color.primaries,
             colorTransferFunction: color.transfer,
             colorYCbCrMatrix: color.matrix,
+            customVideoCompositorClass: filtered ? FilterCompositor.self : nil,
             frameDuration: CMTime(value: 1_000, timescale: CMTimeScale((rate * 1_000).rounded())),
             instructions: [instruction],
             renderSize: plan.renderSize

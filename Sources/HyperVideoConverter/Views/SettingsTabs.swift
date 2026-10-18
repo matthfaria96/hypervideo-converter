@@ -30,6 +30,9 @@ struct SummaryTab: View {
                     compareRow("Resolution", info.displaySize.map(Format.size) ?? "—", outputSize.map(Format.size) ?? "—")
                     compareRow("Video", info.videoCodec ?? "—", info.hasVideo ? settings.videoCodec.displayName : "—")
                     compareRow("Frame rate", info.frameRate.map(Format.fps) ?? "—", settings.frameRate.displayName)
+                    if info.hasVideo && settings.videoCodec != .passthrough {
+                        compareRow("Filters", info.isInterlaced ? "Interlaced" : "—", filterSummary)
+                    }
                     compareRow("Audio", audioSource, audioOutput)
                     if !info.subtitleTracks.isEmpty {
                         compareRow("Subtitles", "\(info.subtitleTracks.count)", "\(keptSubtitles)")
@@ -79,6 +82,17 @@ struct SummaryTab: View {
     private var audioSource: String {
         guard let first = info.audioTracks.first else { return "None" }
         return "\(first.codec) \(first.channelDescription)" + (info.audioTracks.count > 1 ? " +\(info.audioTracks.count - 1)" : "")
+    }
+
+    private var filterSummary: String {
+        let filters = settings.filters
+        let names = [
+            filters.deinterlaces(sourceIsInterlaced: info.isInterlaced) ? "Deinterlace" : nil,
+            filters.denoise != .off ? "Denoise \(filters.denoise.displayName.lowercased())" : nil,
+            filters.sharpen != .off ? "Sharpen \(filters.sharpen.displayName.lowercased())" : nil,
+            filters.grayscale ? "Grayscale" : nil
+        ].compactMap { $0 }
+        return names.isEmpty ? "—" : names.joined(separator: ", ")
     }
 
     private var keptSubtitles: Int {
@@ -141,6 +155,10 @@ struct VideoTab: View {
                 }
             }
 
+            if settings.videoCodec != .passthrough {
+                FiltersSection(info: info, filters: $settings.filters)
+            }
+
             if settings.videoCodec.supportsRateControl {
                 RateControlSection(settings: $settings)
                 GlassSection(title: "Advanced", symbol: "slider.horizontal.3") {
@@ -157,6 +175,40 @@ struct VideoTab: View {
                     }
                 }
             }
+        }
+    }
+}
+
+private struct FiltersSection: View {
+    let info: MediaInfo
+    @Binding var filters: VideoFilters
+
+    var body: some View {
+        GlassSection(title: "Filters", symbol: "camera.filters") {
+            SettingRow(title: "Deinterlace", help: info.isInterlaced ? "This source is interlaced" : "Automatic acts only on interlaced sources") {
+                Picker("Deinterlace", selection: $filters.deinterlace) {
+                    ForEach(DeinterlaceMode.allCases) { Text($0.displayName).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
+            }
+            strengthRow("Denoise", help: "Smooths grain and compression noise", selection: $filters.denoise)
+            strengthRow("Sharpen", help: "Crisper edges; best kept light", selection: $filters.sharpen)
+            SettingRow(title: "Grayscale") {
+                Toggle("Grayscale", isOn: $filters.grayscale).labelsHidden().toggleStyle(.switch)
+            }
+        }
+    }
+
+    private func strengthRow(_ title: String, help: String, selection: Binding<FilterStrength>) -> some View {
+        SettingRow(title: title, help: help) {
+            Picker(title, selection: selection) {
+                ForEach(FilterStrength.allCases) { Text($0.displayName).tag($0) }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .fixedSize()
         }
     }
 }

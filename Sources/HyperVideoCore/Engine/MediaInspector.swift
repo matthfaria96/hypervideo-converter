@@ -39,6 +39,7 @@ public enum MediaInspector {
             if let format = formats.first {
                 info.videoCodec = FourCC.string(CMFormatDescriptionGetMediaSubType(format))
                 info.dynamicRange = dynamicRange(of: format)
+                info.isInterlaced = isInterlaced(format)
             }
         }
 
@@ -96,6 +97,12 @@ public enum MediaInspector {
             let matrix = ext[kCMFormatDescriptionExtension_YCbCrMatrix as String] as? String
         else { return nil }
         return .init(primaries: primaries, transfer: transfer, matrix: matrix)
+    }
+
+    /// True when frames carry two fields, as tagged by the container.
+    static func isInterlaced(_ format: CMFormatDescription) -> Bool {
+        let fields = CMFormatDescriptionGetExtension(format, extensionKey: kCMFormatDescriptionExtension_FieldCount)
+        return (fields as? NSNumber)?.intValue == 2
     }
 
     static func dynamicRange(of format: CMFormatDescription) -> DynamicRange {
