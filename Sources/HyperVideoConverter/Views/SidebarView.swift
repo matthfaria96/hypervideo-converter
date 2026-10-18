@@ -13,7 +13,7 @@ struct SidebarView: View {
             }
             Section("Sources") {
                 if model.sources.isEmpty {
-                    Text("Drop videos here or press ⌘O")
+                    Text("Drop videos or folders here, or press ⌘O")
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 }

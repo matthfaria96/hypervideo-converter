@@ -22,7 +22,7 @@ struct ContentView: View {
                 .inspectorColumnWidth(min: 260, ideal: 290, max: 360)
         }
         .toolbar { toolbarContent }
-        .fileImporter(isPresented: $model.isImporting, allowedContentTypes: [.audiovisualContent],
+        .fileImporter(isPresented: $model.isImporting, allowedContentTypes: [.audiovisualContent, .folder],
                       allowsMultipleSelection: true) { result in
             if case .success(let urls) = result { model.addSources(urls) }
         }

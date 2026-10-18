@@ -13,7 +13,7 @@ struct EmptyStateView: View {
             VStack(spacing: 8) {
                 Text("HyperVideo Converter")
                     .font(.largeTitle.bold())
-                Text("Drop videos anywhere in this window, or open them to get started.\nHardware-accelerated H.264, HEVC, HDR and ProRes.")
+                Text("Drop videos or folders anywhere in this window, or open them to get started.\nHardware-accelerated H.264, HEVC, HDR and ProRes.")
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.secondary)
             }

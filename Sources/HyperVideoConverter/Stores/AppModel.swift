@@ -2,7 +2,6 @@ import AppKit
 @preconcurrency import AVFoundation
 import HyperVideoCore
 import Observation
-import UniformTypeIdentifiers
 
 struct SourceItem: Identifiable, Equatable {
     let id = UUID()
@@ -60,11 +59,13 @@ final class AppModel {
 
     // MARK: Sources
 
+    /// Adds files, and every video or audio file inside dropped or opened folders.
     func addSources(_ urls: [URL]) {
         let existing = Set(sources.map(\.url))
-        let accepted = urls.filter(Self.isMedia).filter { !existing.contains($0) }
+        let media = MediaDiscovery.mediaFiles(in: urls)
+        let accepted = media.filter { !existing.contains($0) }
         guard !accepted.isEmpty else {
-            if !urls.isEmpty && existing.isDisjoint(with: urls) { alertMessage = "None of those files are video or audio." }
+            if !urls.isEmpty && media.isEmpty { alertMessage = "No video or audio files found there." }
             return
         }
         let preset = defaultPreset
@@ -101,11 +102,6 @@ final class AppModel {
         let time = CMTime(seconds: min(duration * 0.1, 5), preferredTimescale: 600)
         guard let (image, _) = try? await generator.image(at: time) else { return nil }
         return NSImage(cgImage: image, size: .zero)
-    }
-
-    private static func isMedia(_ url: URL) -> Bool {
-        guard let type = UTType(filenameExtension: url.pathExtension) else { return false }
-        return type.conforms(to: .audiovisualContent)
     }
 
     // MARK: Settings
