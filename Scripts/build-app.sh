@@ -50,10 +50,14 @@ $PB -c "Set :CFBundleShortVersionString $VERSION" "$PLIST"
 $PB -c "Set :CFBundleVersion $BUILD" "$PLIST"
 $PB -c "Set :LSMinimumSystemVersion $MIN_OS" "$PLIST"
 
-# SwiftPM resource bundles (none today, but keep them if targets gain resources).
-for bundle in "$BIN_DIR"/*.bundle(N); do
-  cp -R "$bundle" "$APP/Contents/Resources/"
+# The app's translations: SwiftPM puts them in a resource bundle; copy its .lproj
+# folders into the app itself, where Bundle.main (and SwiftUI's Text) look them up.
+for lproj in "$BIN_DIR"/HyperVideoConverter_HyperVideoConverter.bundle/**/*.lproj(N/); do
+  cp -R "$lproj" "$APP/Contents/Resources/"
 done
+ls "$APP/Contents/Resources"/pt-BR.lproj/Localizable.strings >/dev/null 2>&1 \
+  || ls "$APP/Contents/Resources"/pt-br.lproj/Localizable.strings >/dev/null 2>&1 \
+  || fail "the Portuguese translations were not copied into the app"
 
 if [[ ! -f "$WORK/AppIcon.icns" || Resources/AppIcon.png -nt "$WORK/AppIcon.icns" ]]; then
   ICONSET="$WORK/AppIcon.iconset"

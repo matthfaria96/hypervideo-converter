@@ -3,6 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "HyperVideoConverter",
+    defaultLocalization: "en",
     platforms: [.macOS(.v26)],
     products: [
         .executable(name: "HyperVideoConverter", targets: ["HyperVideoConverter"])
@@ -11,7 +12,8 @@ let package = Package(
         .target(name: "HyperVideoCore"),
         .executableTarget(
             name: "HyperVideoConverter",
-            dependencies: ["HyperVideoCore"]
+            dependencies: ["HyperVideoCore"],
+            resources: [.process("Resources")]
         ),
         .testTarget(
             name: "HyperVideoCoreTests",
