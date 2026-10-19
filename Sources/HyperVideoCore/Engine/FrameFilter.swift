@@ -5,7 +5,11 @@ import CoreImage.CIFilterBuiltins
 /// then the geometry plan's transform and crop.
 enum FrameFilter {
     /// `image` is a decoded frame of `sourceSize`; the result fills `plan.renderSize`.
-    static func render(_ image: CIImage, sourceSize: CGSize, plan: GeometryPlan, filters: VideoFilters, deinterlace: Bool) -> CIImage {
+    /// `overlay` (burned-in subtitles) is drawn over the finished picture, in output pixels.
+    static func render(
+        _ image: CIImage, sourceSize: CGSize, plan: GeometryPlan, filters: VideoFilters, deinterlace: Bool,
+        overlay: CIImage? = nil
+    ) -> CIImage {
         var frame = image
         // Field lines run horizontally in the stored frame, so deinterlace before any rotation or scaling.
         if deinterlace { frame = blendFields(frame) }
@@ -14,10 +18,11 @@ enum FrameFilter {
         if filters.grayscale { frame = grayscale(frame) }
 
         let output = CGRect(origin: .zero, size: plan.renderSize)
-        return frame
+        let picture = frame
             .transformed(by: coreImageTransform(plan.transform, sourceHeight: sourceSize.height, renderHeight: plan.renderSize.height))
             .composited(over: CIImage(color: .black).cropped(to: output))
             .cropped(to: output)
+        return overlay.map { $0.composited(over: picture).cropped(to: output) } ?? picture
     }
 
     /// `plan.transform` uses AVFoundation's top-left origin; Core Image's origin is

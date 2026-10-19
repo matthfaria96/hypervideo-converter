@@ -144,7 +144,10 @@ final class AppModel {
     }
 
     func removeSubtitleFile(_ file: SubtitleFile, from id: UUID) {
-        update(id) { $0.subtitleFiles.removeAll { $0.url == file.url } }
+        update(id) { item in
+            item.subtitleFiles.removeAll { $0.url == file.url }
+            if item.settings.burnIn == .file(file.url) { item.settings.burnIn = nil }
+        }
     }
 
     private static func thumbnail(for url: URL, duration: Double) async -> NSImage? {

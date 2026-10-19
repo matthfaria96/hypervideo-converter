@@ -11,7 +11,7 @@ Requires macOS 26 or later.
 - **Picture:** crop, rotate, flip, downscale to a maximum resolution (never upscales; portrait video stays portrait) and frame rate conversion.
 - **Filters:** deinterlacing (automatic for sources tagged as interlaced), denoise, sharpen and grayscale. They run on the GPU through Core Image.
 - **Audio:** AAC with mono, stereo or 5.1 mixdown, Apple Lossless, passthrough or no audio. Keeps the first track or all of them, with their language tags.
-- **Subtitles:** text subtitles and closed captions are copied with their language: none, the first track, or all of them. SRT and WebVTT files are added too: automatically when they sit next to the video and share its name (`Movie.srt`, `Movie.pt-BR.srt`), or with Add Subtitle File…. UTF-8, UTF-16 and Windows-1252 files are all read correctly.
+- **Subtitles:** text subtitles and closed captions are copied with their language: none, the first track, or all of them. SRT and WebVTT files are added too: automatically when they sit next to the video and share its name (`Movie.srt`, `Movie.pt-BR.srt`), or with Add Subtitle File…. UTF-8, UTF-16 and Windows-1252 files are all read correctly. One subtitle per video (a source Timed Text track or an added file) can be **burned in**: drawn into the picture in white with a dark outline and shadow, bottom-centered, sized to the output height and wrapped to fit, timed to the trimmed output. The burned track isn't also kept as a soft track, and burn-in needs the video re-encoded (not passthrough).
 - **Chapters and metadata:** chapter markers and tags are kept, adjusted to the trim.
 - **Trim & preview:** a built-in player to set start and end points.
 - **Presets:** 14 built-in presets (General, 4K & HDR, Apple devices, web, ProRes production and remux). You can also save, rename, import and export your own, and import presets exported from HandBrake. Settings HyperVideo can't reproduce are mapped to the closest option and listed after the import.
@@ -29,7 +29,7 @@ HyperVideo Converter is a new implementation, not a port of HandBrake's code. It
 | Input formats | What macOS can read (MOV, MP4, M4V, many camera formats) | Nearly anything, including MKV, WebM, AVI and DVD/Blu-ray |
 | Output containers | MP4, M4V, MOV, MKV | MP4, MKV, WebM |
 | Codecs | H.264, HEVC (8/10-bit), ProRes, passthrough | Also AV1, VP9, MPEG-2, Theora and software x264/x265 |
-| Subtitles | Copy text subtitles and captions, import SRT/WebVTT | Also burn-in and foreign audio search |
+| Subtitles | Copy text subtitles and captions, import SRT/WebVTT, burn in one text subtitle | Also bitmap (PGS/VobSub) burn-in and foreign audio search |
 | Filters | Crop, scale, rotate, flip, blend deinterlace, denoise, sharpen, grayscale | Also Yadif/Bwdif deinterlace, detelecine, deblock, chroma smoothing and more |
 | Interface | SwiftUI with Liquid Glass | Cocoa on Mac, GTK on Linux, WPF on Windows |
 

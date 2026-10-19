@@ -24,7 +24,7 @@ struct PipelineFactory {
     func makePumps() async throws -> [SamplePump] {
         var pumps: [SamplePump] = []
         if let video = try await asset.loadTracks(withMediaType: .video).first {
-            pumps.append(try await videoPump(for: video))
+            pumps.append(try await videoPump(for: video, subtitles: try await burner()))
         }
         var audio: [AVAssetWriterInput] = []
         for (index, track) in try await selectedAudioTracks().enumerated() {
@@ -74,9 +74,12 @@ struct PipelineFactory {
     /// Source text tracks the container can hold (all of them unless the selection is
     /// `.none`; `makePumps` applies `.first`), then every external file the user added.
     private func subtitleCandidates() async throws -> [SubtitleSource] {
-        let files = subtitleFiles.map(SubtitleSource.file)
+        // A burned-in subtitle is part of the picture, so it isn't also kept as a track.
+        let files = subtitleFiles.filter { settings.burnIn != .file($0.url) }.map(SubtitleSource.file)
         guard settings.subtitles != .none else { return files }
-        let tracks = try await MediaInspector.subtitleTracks(in: asset).map { SubtitleSource.track($0.0, $0.1) }
+        let tracks = try await MediaInspector.subtitleTracks(in: asset)
+            .filter { settings.burnIn != .track(id: Int($0.0.trackID)) }
+            .map { SubtitleSource.track($0.0, $0.1) }
         return SubtitleTrackInfo.kept(tracks, kind: \.kind, selection: .all, container: settings.container) + files
     }
 
@@ -88,7 +91,15 @@ struct PipelineFactory {
 
     // MARK: Video
 
-    private func videoPump(for track: AVAssetTrack) async throws -> SamplePump {
+    /// The subtitle to burn in, cut to the trim range; nil when none is chosen.
+    private func burner() async throws -> SubtitleBurner? {
+        guard let burnIn = settings.burnIn, settings.videoCodec != .passthrough else { return nil }
+        let range = reader.timeRange
+        let cues = try await SubtitleBurner.cues(for: burnIn, asset: asset)
+        return SubtitleBurner(cues: cues, start: range.start.seconds, end: range.end.seconds)
+    }
+
+    private func videoPump(for track: AVAssetTrack, subtitles: SubtitleBurner?) async throws -> SamplePump {
         let (natural, transform, fps, formats) = try await track.load(
             .naturalSize, .preferredTransform, .nominalFrameRate, .formatDescriptions
         )
@@ -119,7 +130,8 @@ struct PipelineFactory {
             compositionOutput.videoComposition = try await composition(
                 track: track, naturalSize: natural, plan: plan, sourceFPS: sourceFPS, color: color,
                 deinterlace: settings.filters.deinterlaces(sourceIsInterlaced: interlaced),
-                filtered: settings.filters.isActive(sourceIsInterlaced: interlaced)
+                filtered: settings.filters.isActive(sourceIsInterlaced: interlaced) || subtitles != nil,
+                subtitles: subtitles
             )
             output = compositionOutput
             input = AVAssetWriterInput(
@@ -132,11 +144,11 @@ struct PipelineFactory {
         return try attach(output: output, input: input, label: "video", reportsProgress: true)
     }
 
-    /// Plain geometry uses AVFoundation's own compositor; picture filters switch to
-    /// `FilterCompositor`, which applies them and the same geometry with Core Image.
+    /// Plain geometry uses AVFoundation's own compositor; picture filters and burned-in
+    /// subtitles switch to `FilterCompositor`, which applies them and the same geometry with Core Image.
     private func composition(
         track: AVAssetTrack, naturalSize: CGSize, plan: GeometryPlan, sourceFPS: Double?,
-        color: OutputSettingsBuilder.ColorSpace, deinterlace: Bool, filtered: Bool
+        color: OutputSettingsBuilder.ColorSpace, deinterlace: Bool, filtered: Bool, subtitles: SubtitleBurner?
     ) async throws -> AVVideoComposition {
         let duration = try await asset.load(.duration)
         let rate = settings.frameRate == .source ? (sourceFPS ?? 30) : settings.frameRate.rawValue
@@ -146,7 +158,7 @@ struct PipelineFactory {
         if filtered {
             instruction = FilterInstruction(
                 timeRange: timeRange, trackID: track.trackID, sourceSize: naturalSize, plan: plan,
-                filters: settings.filters, deinterlace: deinterlace
+                filters: settings.filters, deinterlace: deinterlace, subtitles: subtitles
             )
         } else {
             var layer = AVVideoCompositionLayerInstruction.Configuration(assetTrack: track)

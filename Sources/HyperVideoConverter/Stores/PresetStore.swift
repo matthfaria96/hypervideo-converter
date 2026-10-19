@@ -108,20 +108,22 @@ final class PresetStore {
 }
 
 extension EncodeSettings {
-    /// Settings with the per-video values (trim and crop, which only make sense for
-    /// one source's timeline and frame) reset, as stored in and applied from presets.
+    /// Settings with the per-video values (trim, crop and burned-in subtitle, which only
+    /// make sense for one source) reset, as stored in and applied from presets.
     var presetSettings: EncodeSettings {
         var copy = self
         copy.trim = nil
         copy.crop = .zero
+        copy.burnIn = nil
         return copy
     }
 
-    /// Keeps this video's trim and crop while taking everything else from `template`.
+    /// Keeps this video's trim, crop and burned-in subtitle while taking everything else from `template`.
     func adopting(_ template: EncodeSettings) -> EncodeSettings {
         var settings = template
         settings.trim = trim
         settings.crop = crop
+        settings.burnIn = burnIn
         return settings
     }
 }

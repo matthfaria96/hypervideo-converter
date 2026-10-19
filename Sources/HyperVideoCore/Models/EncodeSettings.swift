@@ -184,6 +184,8 @@ public struct EncodeSettings: Codable, Hashable, Sendable {
     public var extraAudio: AudioEncoding?
 
     public var subtitles: SubtitleSelection = .all
+    /// A subtitle drawn into the video for this source; it isn't also kept as a text track.
+    public var burnIn: SubtitleBurnIn?
 
     public var trim: TrimRange?
     public var optimizeForWeb = true
@@ -210,6 +212,9 @@ public struct EncodeSettings: Codable, Hashable, Sendable {
         if videoCodec == .passthrough && (!crop.isZero || maxResolution != .source || rotation != .none || flipHorizontal || frameRate != .source) {
             issues.append("Passthrough video can't be cropped, scaled, rotated or retimed.")
         }
+        if videoCodec == .passthrough && burnIn != nil {
+            issues.append("Burned-in subtitles need the video to be re-encoded, not passed through.")
+        }
         // Filters are ignored for passthrough video (nothing is decoded), like an extra
         // audio version while audio is off, so neither can leave a hidden control blocking the encode.
         return issues
@@ -232,7 +237,7 @@ extension EncodeSettings {
     private enum CodingKeys: String, CodingKey {
         case container, videoCodec, rateControl, frameRate, maxResolution, crop, rotation, flipHorizontal
         case prioritizeSpeed, allowBFrames, keyframeIntervalSeconds, filters
-        case audioCodec, audioMixdown, audioBitrateKbps, audioTracks, extraAudio, subtitles
+        case audioCodec, audioMixdown, audioBitrateKbps, audioTracks, extraAudio, subtitles, burnIn
         case trim, optimizeForWeb, keepMetadata
     }
 
@@ -257,6 +262,7 @@ extension EncodeSettings {
         audioTracks = try c.decodeIfPresent(AudioTrackSelection.self, forKey: .audioTracks) ?? d.audioTracks
         extraAudio = try c.decodeIfPresent(AudioEncoding.self, forKey: .extraAudio)
         subtitles = try c.decodeIfPresent(SubtitleSelection.self, forKey: .subtitles) ?? d.subtitles
+        burnIn = try c.decodeIfPresent(SubtitleBurnIn.self, forKey: .burnIn)
         trim = try c.decodeIfPresent(TrimRange.self, forKey: .trim)
         optimizeForWeb = try c.decodeIfPresent(Bool.self, forKey: .optimizeForWeb) ?? d.optimizeForWeb
         keepMetadata = try c.decodeIfPresent(Bool.self, forKey: .keepMetadata) ?? d.keepMetadata

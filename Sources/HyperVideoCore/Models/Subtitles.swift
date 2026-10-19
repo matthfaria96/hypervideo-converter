@@ -49,3 +49,11 @@ public struct SubtitleTrackInfo: Codable, Hashable, Identifiable, Sendable {
         }
     }
 }
+
+/// One subtitle drawn into the picture instead of being kept as a text track.
+public enum SubtitleBurnIn: Codable, Hashable, Sendable {
+    /// A source text track, by track ID.
+    case track(id: Int)
+    /// An external SRT/WebVTT file added to the source.
+    case file(URL)
+}
