@@ -58,11 +58,16 @@ public struct TranscodeEngine: Sendable {
         try FileManager.default.createDirectory(at: workDir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: workDir) }
         let partial = workDir.appendingPathComponent(destination.lastPathComponent)
+        // MKV goes through an intermediate movie that is then remuxed; the encode is most of the work.
+        let remuxes = settings.container == .mkv
+        let encoded = remuxes ? workDir.appendingPathComponent("intermediate.mov") : partial
+        let encodeShare = remuxes ? 0.9 : 1
+        let encodeProgress: @Sendable (Double) -> Void = { progress($0 * encodeShare) }
 
         let reader = try AVAssetReader(asset: asset)
         reader.timeRange = range
-        let writer = try AVAssetWriter(outputURL: partial, fileType: OutputSettingsBuilder.fileType(for: settings.container))
-        writer.shouldOptimizeForNetworkUse = settings.optimizeForWeb
+        let writer = try AVAssetWriter(outputURL: encoded, fileType: OutputSettingsBuilder.fileType(for: settings.container))
+        writer.shouldOptimizeForNetworkUse = settings.optimizeForWeb && !remuxes
         if settings.keepMetadata {
             writer.metadata = (try? await asset.load(.metadata)) ?? []
         }
@@ -99,7 +104,7 @@ public struct TranscodeEngine: Sendable {
         await withTaskCancellationHandler {
             await withTaskGroup(of: Void.self) { group in
                 for pump in pumps {
-                    group.addTask { await pump.run(range: range, cancel: cancel, activity: activity, progress: progress) }
+                    group.addTask { await pump.run(range: range, cancel: cancel, activity: activity, progress: encodeProgress) }
                 }
             }
         } onCancel: {
@@ -130,6 +135,9 @@ public struct TranscodeEngine: Sendable {
         guard writer.status == .completed else {
             throw TranscodeError.writerFailed(writer.error?.localizedDescription ?? "unknown error")
         }
+        if remuxes {
+            try await remux(encoded, to: partial) { progress(encodeShare + $0 * (1 - encodeShare)) }
+        }
 
         do {
             try FileManager.default.moveItem(at: partial, to: destination)
@@ -139,6 +147,17 @@ public struct TranscodeEngine: Sendable {
         progress(1)
         let size = try? destination.resourceValues(forKeys: [.fileSizeKey]).fileSize
         return Int64(size ?? 0)
+    }
+
+    /// Copies the finished intermediate movie into Matroska, stopping if the task is cancelled.
+    private func remux(_ movie: URL, to output: URL, progress: @escaping @Sendable (Double) -> Void) async throws {
+        let cancel = CancelFlag()
+        try await withTaskCancellationHandler {
+            try await MatroskaRemuxer(source: movie, destination: output).run(cancel: cancel, progress: progress)
+        } onCancel: {
+            cancel.set()
+        }
+        try? FileManager.default.removeItem(at: movie)
     }
 
     /// Shortest trim worth encoding: about one frame at 30 fps.

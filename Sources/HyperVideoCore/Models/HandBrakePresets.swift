@@ -66,7 +66,8 @@ public enum HandBrakePresets {
         s.optimizeForWeb = p.bool("Optimize") ?? s.optimizeForWeb
 
         // Combinations only QuickTime can hold.
-        if s.videoCodec.isProRes || s.audioEncodings.contains(where: { $0.codec == .alac }) { s.container = .mov }
+        let needsALAC = s.audioEncodings.contains(where: { $0.codec == .alac }) && !s.container.supportsALAC
+        if s.videoCodec.isProRes || needsALAC { s.container = .mov }
 
         let name = p.string("PresetName").flatMap { $0.isEmpty ? nil : $0 } ?? "HandBrake Preset"
         let preset = Preset(
@@ -86,6 +87,7 @@ public enum HandBrakePresets {
         case "mp4", nil: return .mp4
         case "m4v": return .m4v
         case "mov": return .mov
+        case "mkv": return .mkv
         case let other?:
             notes.append("\(other.uppercased()) output isn't available, so it saves as MP4.")
             return .mp4

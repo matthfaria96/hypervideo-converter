@@ -91,10 +91,9 @@ struct HandBrakePresetTests {
         #expect(s.audioCodec == .passthrough && s.audioTracks == .all && s.subtitles == .all)
         #expect(s.keepMetadata, "chapter markers off must not drop other tags")
         #expect(!s.prioritizeSpeed)
-        #expect(s.container == .mp4)
-        #expect(archive.notes.contains { $0.contains("MKV") })
+        #expect(s.container == .mkv, "av_mkv maps to Matroska instead of falling back")
         #expect(s.extraAudio == AudioEncoding(codec: .aac, mixdown: .stereo, bitrateKbps: 160))
-        #expect(archive.notes.count == 1, "\(archive.notes)")
+        #expect(archive.notes.isEmpty, "\(archive.notes)")
         #expect(s.isValid)
     }
 

@@ -1,7 +1,7 @@
 import Foundation
 
 public enum ContainerFormat: String, Codable, CaseIterable, Identifiable, Sendable {
-    case mp4, m4v, mov
+    case mp4, m4v, mov, mkv
 
     public var id: String { rawValue }
     public var fileExtension: String { rawValue }
@@ -10,8 +10,12 @@ public enum ContainerFormat: String, Codable, CaseIterable, Identifiable, Sendab
         case .mp4: "MP4"
         case .m4v: "M4V"
         case .mov: "QuickTime (MOV)"
+        case .mkv: "Matroska (MKV)"
         }
     }
+
+    /// Whether the container can hold Apple Lossless audio.
+    public var supportsALAC: Bool { self == .mov || self == .mkv }
 }
 
 public enum VideoCodec: String, Codable, CaseIterable, Identifiable, Sendable {
@@ -193,8 +197,8 @@ public struct EncodeSettings: Codable, Hashable, Sendable {
         if videoCodec.isProRes && container != .mov {
             issues.append("Apple ProRes requires the QuickTime (MOV) container.")
         }
-        if audioEncodings.contains(where: { $0.codec == .alac }) && container != .mov {
-            issues.append("Apple Lossless audio requires the QuickTime (MOV) container.")
+        if audioEncodings.contains(where: { $0.codec == .alac }) && !container.supportsALAC {
+            issues.append("Apple Lossless audio requires the QuickTime (MOV) or Matroska (MKV) container.")
         }
 
         if case .averageBitrate(let kbps) = rateControl, kbps < 100 {

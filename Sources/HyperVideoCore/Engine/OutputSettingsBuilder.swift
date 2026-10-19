@@ -20,11 +20,13 @@ public enum OutputSettingsBuilder {
         }
     }
 
+    /// The file AVAssetWriter writes. MKV is encoded into a QuickTime movie first
+    /// and then remuxed by `MatroskaRemuxer`, since AVFoundation can't write Matroska.
     public static func fileType(for container: ContainerFormat) -> AVFileType {
         switch container {
         case .mp4: .mp4
         case .m4v: .m4v
-        case .mov: .mov
+        case .mov, .mkv: .mov
         }
     }
 
