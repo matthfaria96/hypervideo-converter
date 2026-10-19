@@ -43,7 +43,15 @@ public struct TranscodeEngine: Sendable {
         guard settings.isValid else { throw TranscodeError.invalidSettings(settings.validationIssues) }
 
         let asset = AVURLAsset(url: source)
-        let duration = try await asset.load(.duration)
+        let duration: CMTime
+        do {
+            // A missing, truncated or non-media file fails here with a bare AVFoundation error.
+            let (readable, loaded) = try await asset.load(.isReadable, .duration)
+            guard readable, loaded.isNumeric else { throw MediaInspectorError.unreadable(source) }
+            duration = loaded
+        } catch {
+            throw TranscodeError.readerFailed("“\(source.lastPathComponent)” can't be opened (\(error.localizedDescription)).")
+        }
         let range = try Self.timeRange(settings.trim, duration: duration)
         // Work in a private folder next to the output so cleanup also catches AVFoundation's sidecar files.
         let workDir = destination.deletingLastPathComponent().appendingPathComponent(".hypervideo-\(UUID().uuidString)")
