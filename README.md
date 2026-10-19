@@ -15,7 +15,7 @@ Requires macOS 26 or later.
 - **Chapters and metadata:** chapter markers and tags are kept, adjusted to the trim.
 - **Trim & preview:** a built-in player to set start and end points.
 - **Presets:** 14 built-in presets (General, 4K & HDR, Apple devices, web, ProRes production and remux). You can also save, rename, import and export your own, and import presets exported from HandBrake. Settings HyperVideo can't reproduce are mapped to the closest option and listed after the import.
-- **Queue:** runs several encodes at once, survives relaunching the app, and shows speed (× realtime and fps) and time left. It also shows progress in the Dock and sends a notification when a job finishes.
+- **Queue:** runs several encodes at once, survives relaunching the app, and shows speed (× realtime and fps) and time left. Pending jobs run from the top of the list down: drag jobs to reorder them, or right-click for Move to Top, Move Up and Move Down; the order is saved with the queue. It also shows progress in the Dock and sends a notification when a job finishes.
 - **Before → after summary:** resolution, codecs, duration, track counts, and an estimated output size when the settings make it predictable.
 - **Adding files:** drop files or whole folders anywhere in the window, use the Open panel, or use Finder's Open With and the Dock icon. Folders are searched recursively. When an import includes folders, a sheet asks which preset their videos get (the default preset is preselected); loose files keep the default preset.
 

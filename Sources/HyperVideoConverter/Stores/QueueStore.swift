@@ -133,14 +133,44 @@ final class QueueStore {
         persist()
     }
 
+    // MARK: Ordering (pending jobs run top to bottom)
+
+    enum Movement { case up, down, top }
+
+    func canMove(_ id: UUID, _ movement: Movement) -> Bool {
+        guard let index = jobs.firstIndex(where: { $0.id == id }) else { return false }
+        return movement == .down ? index < jobs.count - 1 : index > 0
+    }
+
+    func move(_ id: UUID, _ movement: Movement) {
+        guard canMove(id, movement), let index = jobs.firstIndex(where: { $0.id == id }) else { return }
+        switch movement {
+        case .up: move(fromOffsets: [index], toOffset: index - 1)
+        case .down: move(fromOffsets: [index], toOffset: index + 2)
+        case .top: move(fromOffsets: [index], toOffset: 0)
+        }
+    }
+
+    /// Drag and drop: `id` takes `target`'s place, so dragging down lands after it
+    /// and dragging up lands before it.
+    func move(_ id: UUID, onto target: UUID) {
+        guard id != target, let index = jobs.firstIndex(where: { $0.id == id }),
+              let destination = jobs.firstIndex(where: { $0.id == target }) else { return }
+        move(fromOffsets: [index], toOffset: destination > index ? destination + 1 : destination)
+    }
+
+    /// The queued jobs to start, in list order, filling up to `limit` running encodes.
+    static func nextToLaunch(_ jobs: [EncodeJob], limit: Int) -> [EncodeJob] {
+        let running = jobs.filter(\.state.isRunning).count
+        return Array(jobs.filter { $0.state == .queued }.prefix(max(limit - running, 0)))
+    }
+
     // MARK: Scheduling
 
     private func schedule() {
         defer { refreshDock() }
         guard isProcessing else { return }
-        while runningCount < maxConcurrent, let next = jobs.first(where: { $0.state == .queued }) {
-            launch(next)
-        }
+        Self.nextToLaunch(jobs, limit: maxConcurrent).forEach(launch)
         if runningCount == 0 && pendingCount == 0 { isProcessing = false }
     }
 

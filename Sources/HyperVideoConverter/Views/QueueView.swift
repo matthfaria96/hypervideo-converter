@@ -20,6 +20,13 @@ struct QueueView: View {
                         LazyVStack(spacing: 12) {
                             ForEach(queue.jobs) { job in
                                 JobCard(job: job)
+                                    .draggable(job.id.uuidString)
+                                    .dropDestination(for: String.self) { items, _ in
+                                        guard let dragged = items.first.flatMap(UUID.init(uuidString:)) else { return false }
+                                        queue.move(dragged, onto: job.id)
+                                        return true
+                                    }
+                                    .contextMenu { orderMenu(job) }
                             }
                         }
                     }
@@ -33,6 +40,17 @@ struct QueueView: View {
         .navigationTitle("Queue")
         .navigationSubtitle(subtitle)
         .safeAreaInset(edge: .bottom) { controls }
+    }
+
+    /// Pending jobs start from the top, so moving one up gives it priority.
+    @ViewBuilder
+    private func orderMenu(_ job: EncodeJob) -> some View {
+        Button("Move to Top", systemImage: "arrow.up.to.line") { queue.move(job.id, .top) }
+            .disabled(!queue.canMove(job.id, .top))
+        Button("Move Up", systemImage: "arrow.up") { queue.move(job.id, .up) }
+            .disabled(!queue.canMove(job.id, .up))
+        Button("Move Down", systemImage: "arrow.down") { queue.move(job.id, .down) }
+            .disabled(!queue.canMove(job.id, .down))
     }
 
     private var subtitle: String {
