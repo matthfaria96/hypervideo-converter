@@ -14,11 +14,14 @@ final class PresetStore {
         custom = store.load() ?? []
     }
 
-    var all: [Preset] { BuiltInPresets.all + custom }
+    /// Quality profiles first, then the other built-in presets, then the user's.
+    static let builtIn: [Preset] = QualityProfile.presets + BuiltInPresets.all
+
+    var all: [Preset] { Self.builtIn + custom }
 
     /// Presets grouped by category, custom ones first so personal work is on top.
     var grouped: [(category: String, presets: [Preset])] {
-        let order = (custom.map(\.category) + BuiltInPresets.all.map(\.category)).uniqued()
+        let order = (custom.map(\.category) + Self.builtIn.map(\.category)).uniqued()
         return order.map { category in (category, all.filter { $0.category == category }) }
     }
 
@@ -104,6 +107,21 @@ final class PresetStore {
             settings.frameRate == .source ? nil : settings.frameRate.displayName,
             settings.audioCodec == .none ? "No audio" : settings.audioCodec.displayName
         ].compactMap { $0 }.joined(separator: " · ")
+    }
+}
+
+extension Preset {
+    /// The name shown in the interface: built-in names are translated.
+    var displayName: String {
+        isBuiltIn ? String(localized: String.LocalizationValue(name)) : name
+    }
+
+    var displayCategory: String {
+        isBuiltIn ? String(localized: String.LocalizationValue(category)) : category
+    }
+
+    var displaySummary: String {
+        isBuiltIn ? String(localized: String.LocalizationValue(summary)) : summary
     }
 }
 
