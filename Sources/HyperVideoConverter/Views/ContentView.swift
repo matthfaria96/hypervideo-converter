@@ -46,6 +46,7 @@ struct ContentView: View {
         case .source:
             if let source = model.selectedSource {
                 SourceDetailView(sourceID: source.id)
+                    .id(source.id)
             } else {
                 EmptyStateView()
             }

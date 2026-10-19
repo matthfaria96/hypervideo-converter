@@ -2,6 +2,7 @@ import AppKit
 @preconcurrency import AVFoundation
 import HyperVideoCore
 import Observation
+import UniformTypeIdentifiers
 
 struct SourceItem: Identifiable, Equatable {
     let id = UUID()
@@ -11,6 +12,8 @@ struct SourceItem: Identifiable, Equatable {
     var thumbnail: NSImage?
     var settings: EncodeSettings
     var presetID: UUID?
+    /// External SRT/WebVTT files: found next to the video, or added by the user.
+    var subtitleFiles: [SubtitleFile] = []
 
     var isLoading: Bool { info == nil && errorMessage == nil }
     var name: String { url.lastPathComponent }
@@ -69,7 +72,7 @@ final class AppModel {
             return
         }
         let preset = defaultPreset
-        let items = accepted.map { SourceItem(url: $0, settings: preset.settings, presetID: preset.id) }
+        let items = accepted.map { SourceItem(url: $0, settings: preset.settings.presetSettings, presetID: preset.id) }
         sources = sources + items
         selection = .source(items[0].id)
         items.forEach { item in Task { await inspect(item) } }
@@ -89,10 +92,54 @@ final class AppModel {
         do {
             let info = try await MediaInspector.inspect(item.url)
             let thumbnail = await Self.thumbnail(for: item.url, duration: info.duration)
-            update(item.id) { $0.info = info; $0.thumbnail = thumbnail }
+            let sidecars = SubtitleFile.sidecars(for: item.url).filter(Self.isReadable)
+            update(item.id) { source in
+                source.info = info
+                source.thumbnail = thumbnail
+                // The user may have added files while inspection ran; keep them.
+                let known = Set(sidecars.map(\.url))
+                source.subtitleFiles = sidecars + source.subtitleFiles.filter { !known.contains($0.url) }
+            }
         } catch {
             update(item.id) { $0.errorMessage = error.localizedDescription }
         }
+    }
+
+    private static func isReadable(_ file: SubtitleFile) -> Bool {
+        guard let data = try? Data(contentsOf: file.url) else { return false }
+        return (try? SubtitleParser.cues(from: data)) != nil
+    }
+
+    // MARK: Subtitle files
+
+    func chooseSubtitleFiles(for id: UUID) {
+        guard let item = sources.first(where: { $0.id == id }) else { return }
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = SubtitleFile.fileExtensions.compactMap { UTType(filenameExtension: $0) }
+        panel.allowsMultipleSelection = true
+        panel.directoryURL = item.url.deletingLastPathComponent()
+        panel.prompt = "Add"
+        guard panel.runModal() == .OK else { return }
+        addSubtitleFiles(panel.urls, to: id)
+    }
+
+    func addSubtitleFiles(_ urls: [URL], to id: UUID) {
+        guard let item = sources.first(where: { $0.id == id }) else { return }
+        let base = item.url.deletingPathExtension().lastPathComponent
+        let candidates = urls.map { SubtitleFile(url: $0, language: SubtitleFile.language(for: $0, video: base)) }
+        let readable = candidates.filter(Self.isReadable)
+        let rejected = candidates.count - readable.count
+        if rejected > 0 {
+            alertMessage = rejected == 1 ? "That file has no subtitles HyperVideo can read." : "\(rejected) files had no subtitles HyperVideo can read."
+        }
+        update(id) { source in
+            let known = Set(source.subtitleFiles.map(\.url))
+            source.subtitleFiles += readable.filter { !known.contains($0.url) }
+        }
+    }
+
+    func removeSubtitleFile(_ file: SubtitleFile, from id: UUID) {
+        update(id) { $0.subtitleFiles.removeAll { $0.url == file.url } }
     }
 
     private static func thumbnail(for url: URL, duration: Double) async -> NSImage? {
@@ -117,9 +164,7 @@ final class AppModel {
 
     func applyPreset(_ preset: Preset, to id: UUID) {
         update(id) { item in
-            var settings = preset.settings
-            settings.trim = item.settings.trim
-            item.settings = settings
+            item.settings = item.settings.adopting(preset.settings)
             item.presetID = preset.id
         }
     }
@@ -128,9 +173,7 @@ final class AppModel {
         guard let template = sources.first(where: { $0.id == id }) else { return }
         sources = sources.map { item in
             var copy = item
-            var settings = template.settings
-            settings.trim = item.settings.trim
-            copy.settings = settings
+            copy.settings = item.settings.adopting(template.settings)
             copy.presetID = template.presetID
             return copy
         }
@@ -138,12 +181,14 @@ final class AppModel {
 
     func presetName(for item: SourceItem) -> String {
         guard let preset = presets.preset(id: item.presetID) else { return "Custom" }
-        return preset.settings == item.settings ? preset.name : "\(preset.name) (modified)"
+        return preset.settings.presetSettings == item.settings.presetSettings ? preset.name : "\(preset.name) (modified)"
     }
 
     // MARK: Queue
 
-    func enqueue(_ ids: [UUID]) {
+    /// Returns how many jobs were added.
+    @discardableResult
+    func enqueue(_ ids: [UUID]) -> Int {
         let suffix = UserDefaults.standard.string(forKey: PreferenceKey.outputSuffix) ?? ""
         var taken = queue.takenDestinations
         var jobs: [EncodeJob] = []
@@ -160,18 +205,20 @@ final class AppModel {
             jobs.append(EncodeJob(
                 source: item.url, destination: destination, settings: item.settings, presetName: presetName(for: item),
                 mediaDuration: item.settings.outputDuration(sourceDuration: info.duration),
-                frameRate: item.settings.outputFrameRate(sourceFrameRate: info.frameRate)
+                frameRate: item.settings.outputFrameRate(sourceFrameRate: info.frameRate),
+                subtitleFiles: item.subtitleFiles
             ))
         }
         if !skipped.isEmpty { alertMessage = "Skipped (not ready or invalid settings): \(skipped.joined(separator: ", "))" }
-        guard !jobs.isEmpty else { return }
+        guard !jobs.isEmpty else { return 0 }
         queue.add(jobs)
+        return jobs.count
     }
 
     func enqueueAll() { enqueue(sources.map(\.id)) }
 
     func encodeNow(_ id: UUID) {
-        enqueue([id])
+        guard enqueue([id]) > 0 else { return }
         queue.start()
         selection = .queue
     }

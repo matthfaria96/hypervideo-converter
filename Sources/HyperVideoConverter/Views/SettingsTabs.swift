@@ -6,6 +6,7 @@ import SwiftUI
 struct SummaryTab: View {
     let info: MediaInfo
     @Binding var settings: EncodeSettings
+    var subtitleFiles: [SubtitleFile] = []
 
     var body: some View {
         VStack(spacing: 16) {
@@ -34,8 +35,8 @@ struct SummaryTab: View {
                         compareRow("Filters", info.isInterlaced ? "Interlaced" : "—", filterSummary)
                     }
                     compareRow("Audio", audioSource, audioOutput)
-                    if !info.subtitleTracks.isEmpty {
-                        compareRow("Subtitles", "\(info.subtitleTracks.count)", "\(keptSubtitles)")
+                    if !info.subtitleTracks.isEmpty || !subtitleFiles.isEmpty {
+                        compareRow("Subtitles", subtitleSource, "\(keptSubtitles)")
                     }
                     if !info.chapters.isEmpty {
                         compareRow("Chapters", "\(info.chapters.count)", "\(keptChapters.count)")
@@ -95,9 +96,16 @@ struct SummaryTab: View {
         return names.isEmpty ? "—" : names.joined(separator: ", ")
     }
 
+    private var subtitleSource: String {
+        subtitleFiles.isEmpty ? "\(info.subtitleTracks.count)" : "\(info.subtitleTracks.count) + \(subtitleFiles.count) files"
+    }
+
     private var keptSubtitles: Int {
-        SubtitleTrackInfo.kept(info.subtitleTracks, kind: \.kind, selection: settings.subtitles,
-                               container: settings.container).count
+        let tracks = SubtitleTrackInfo.kept(
+            info.subtitleTracks.map(\.kind), kind: { $0 }, selection: settings.subtitles, container: settings.container
+        )
+        let added = SubtitleTrackInfo.Kind.subtitle.isSupported(in: settings.container) ? subtitleFiles.count : 0
+        return tracks.count + added
     }
 
     private var audioOutput: String {

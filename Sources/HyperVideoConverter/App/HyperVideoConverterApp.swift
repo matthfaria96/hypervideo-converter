@@ -43,6 +43,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Task { @MainActor in model?.addSources(urls) }
     }
 
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        MainActor.assumeIsolated {
+            guard let queue = model?.queue, queue.runningCount > 0 else { return .terminateNow }
+            // Let cancelled encodes remove their hidden work folders before the process exits.
+            Task { @MainActor in
+                await queue.stopForQuit()
+                sender.reply(toApplicationShouldTerminate: true)
+            }
+            return .terminateLater
+        }
+    }
+
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
 
     func applicationDidFinishLaunching(_ notification: Notification) {

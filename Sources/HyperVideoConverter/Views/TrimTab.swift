@@ -8,7 +8,12 @@ struct TrimTab: View {
     @Binding var settings: EncodeSettings
     @Environment(AppModel.self) private var model
 
-    private var player: AVPlayer? { model.ui.previewPlayer }
+    /// The shared preview player, only while it shows this video.
+    private var player: AVPlayer? {
+        guard let player = model.ui.previewPlayer,
+              (player.currentItem?.asset as? AVURLAsset)?.url == info.url else { return nil }
+        return player
+    }
 
     private var start: Double { settings.trim?.start ?? 0 }
     private var end: Double { settings.trim?.end ?? info.duration }
@@ -38,7 +43,10 @@ struct TrimTab: View {
                         Button("Set End", systemImage: "chevron.right.to.line") { setEnd(currentTime) }
                         Button("Play Selection", systemImage: "play.fill") { playSelection() }
                         Spacer()
-                        Button("Clear", systemImage: "xmark") { settings.trim = nil }
+                        Button("Clear", systemImage: "xmark") {
+                            resetSelectionPlayback()
+                            settings.trim = nil
+                        }
                             .disabled(settings.trim == nil)
                     }
                     .buttonStyle(.glass)
@@ -46,7 +54,14 @@ struct TrimTab: View {
             }
         }
         .onAppear { _ = model.ui.player(for: info.url) }
-        .onDisappear { player?.pause() }
+        .onChange(of: info.url) { _, url in _ = model.ui.player(for: url) }
+        .onReceive(NotificationCenter.default.publisher(for: AVPlayerItem.didPlayToEndTimeNotification)) { note in
+            if let item = note.object as? AVPlayerItem, item === player?.currentItem { resetSelectionPlayback() }
+        }
+        .onDisappear {
+            player?.pause()
+            resetSelectionPlayback()
+        }
     }
 
     private var aspectRatio: CGFloat {
@@ -64,11 +79,13 @@ struct TrimTab: View {
     }
 
     private func setStart(_ time: Double) {
+        resetSelectionPlayback()
         let clamped = min(max(0, time), end - 0.1)
         settings.trim = TrimRange(start: clamped, end: settings.trim?.end)
     }
 
     private func setEnd(_ time: Double) {
+        resetSelectionPlayback()
         let clamped = max(min(info.duration, time), start + 0.1)
         settings.trim = TrimRange(start: start, end: clamped >= info.duration ? nil : clamped)
     }
@@ -78,6 +95,11 @@ struct TrimTab: View {
         player.currentItem?.forwardPlaybackEndTime = CMTime(seconds: end, preferredTimescale: 600)
         player.seek(to: CMTime(seconds: start, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero)
         player.play()
+    }
+
+    /// Lifts the Play Selection stop point so normal playback runs to the end again.
+    private func resetSelectionPlayback() {
+        player?.currentItem?.forwardPlaybackEndTime = .invalid
     }
 }
 

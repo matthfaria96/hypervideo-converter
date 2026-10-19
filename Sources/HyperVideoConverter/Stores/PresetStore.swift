@@ -27,6 +27,7 @@ final class PresetStore {
 
     @discardableResult
     func save(name: String, category: String, settings: EncodeSettings) -> Preset {
+        let settings = settings.presetSettings
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let preset = Preset(
             name: trimmed.isEmpty ? "Custom Preset" : trimmed,
@@ -41,6 +42,7 @@ final class PresetStore {
     }
 
     func update(_ id: UUID, settings: EncodeSettings) {
+        let settings = settings.presetSettings
         custom = custom.map { preset in
             guard preset.id == id else { return preset }
             var updated = preset
@@ -100,6 +102,25 @@ final class PresetStore {
             settings.frameRate == .source ? nil : settings.frameRate.displayName,
             settings.audioCodec == .none ? "No audio" : settings.audioCodec.displayName
         ].compactMap { $0 }.joined(separator: " · ")
+    }
+}
+
+extension EncodeSettings {
+    /// Settings with the per-video values (trim and crop, which only make sense for
+    /// one source's timeline and frame) reset, as stored in and applied from presets.
+    var presetSettings: EncodeSettings {
+        var copy = self
+        copy.trim = nil
+        copy.crop = .zero
+        return copy
+    }
+
+    /// Keeps this video's trim and crop while taking everything else from `template`.
+    func adopting(_ template: EncodeSettings) -> EncodeSettings {
+        var settings = template
+        settings.trim = trim
+        settings.crop = crop
+        return settings
     }
 }
 

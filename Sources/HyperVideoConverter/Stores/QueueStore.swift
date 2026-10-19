@@ -2,6 +2,13 @@ import Foundation
 import HyperVideoCore
 import Observation
 
+private extension EncodeJob {
+    var isCompleted: Bool {
+        if case .completed = state { return true }
+        return false
+    }
+}
+
 @Observable
 @MainActor
 final class QueueStore {
@@ -16,6 +23,7 @@ final class QueueStore {
 
     init() {
         jobs = (store.load() ?? []).map { $0.restoredAfterRelaunch() }
+        sweepStaleWorkDirectories()
     }
 
     // MARK: Derived state
@@ -23,7 +31,9 @@ final class QueueStore {
     var pendingCount: Int { jobs.filter { $0.state == .queued }.count }
     var runningCount: Int { jobs.filter(\.state.isRunning).count }
     var hasFinished: Bool { jobs.contains { $0.state.isFinished } }
-    var takenDestinations: Set<URL> { Set(jobs.filter { !$0.state.isFinished }.map(\.destination)) }
+    /// Every destination a job could still write: only completed jobs give theirs up,
+    /// since cancelled or failed ones can be retried.
+    var takenDestinations: Set<URL> { Set(jobs.filter { !$0.isCompleted }.map(\.destination)) }
 
     /// Average progress across running jobs, nil when idle.
     var overallProgress: Double? {
@@ -84,7 +94,18 @@ final class QueueStore {
     }
 
     func retry(_ id: UUID) {
-        replace(id) { $0.with(state: .queued) }
+        replace(id) { job in
+            var retried = job.with(state: .queued)
+            let othersTaken = Set(jobs.filter { $0.id != id && !$0.isCompleted }.map(\.destination))
+            if othersTaken.contains(job.destination) || FileManager.default.fileExists(atPath: job.destination.path) {
+                let suffix = UserDefaults.standard.string(forKey: PreferenceKey.outputSuffix) ?? ""
+                retried.destination = OutputNaming.destination(
+                    for: job.source, in: job.destination.deletingLastPathComponent(),
+                    container: job.settings.container, suffix: suffix, taken: othersTaken
+                )
+            }
+            return retried
+        }
         schedule()
     }
 
@@ -125,7 +146,10 @@ final class QueueStore {
         tasks[job.id] = Task {
             let result: Result<Int64, Error>
             do {
-                let bytes = try await engine.run(source: job.source, destination: job.destination, settings: job.settings) { progress in
+                let bytes = try await engine.run(
+                    source: job.source, destination: job.destination, settings: job.settings,
+                    subtitleFiles: job.subtitleFiles ?? []
+                ) { progress in
                     Task { @MainActor in self.updateProgress(job.id, progress) }
                 }
                 result = .success(bytes)
@@ -165,6 +189,28 @@ final class QueueStore {
     private func replace(_ id: UUID, persisting: Bool = true, _ transform: (EncodeJob) -> EncodeJob) {
         jobs = jobs.map { $0.id == id ? transform($0) : $0 }
         if persisting { persist() }
+    }
+
+    /// Stops running encodes before quitting and waits for them to clean up their work
+    /// folders. Interrupted jobs go back to queued so they resume after relaunch.
+    func stopForQuit() async {
+        isProcessing = false
+        let interrupted = tasks
+        interrupted.values.forEach { $0.cancel() }
+        for task in interrupted.values { await task.value }
+        jobs = jobs.map { interrupted[$0.id] != nil ? $0.with(state: .queued) : $0 }
+        persist()
+    }
+
+    /// Removes work folders left behind by encodes interrupted by a crash or forced quit.
+    private func sweepStaleWorkDirectories() {
+        let folders = Set(jobs.map { $0.destination.deletingLastPathComponent() })
+        let manager = FileManager.default
+        for folder in folders {
+            let contents = (try? manager.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
+            contents.filter { $0.lastPathComponent.hasPrefix(".hypervideo-") }
+                .forEach { try? manager.removeItem(at: $0) }
+        }
     }
 
     private func persist() { store.save(jobs) }

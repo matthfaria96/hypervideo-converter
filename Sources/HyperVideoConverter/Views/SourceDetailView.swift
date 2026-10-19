@@ -44,7 +44,7 @@ struct SourceDetailView: View {
                         if !source.settings.validationIssues.isEmpty {
                             StatusBanner(messages: source.settings.validationIssues)
                         }
-                        tabContent(info: info)
+                        tabContent(info: info, source: source)
                     } else {
                         Label("Analyzing media…", systemImage: "rays")
                             .symbolEffect(.rotate)
@@ -94,13 +94,13 @@ struct SourceDetailView: View {
     }
 
     @ViewBuilder
-    private func tabContent(info: MediaInfo) -> some View {
+    private func tabContent(info: MediaInfo, source: SourceItem) -> some View {
         switch tab {
-        case .summary: SummaryTab(info: info, settings: settings)
+        case .summary: SummaryTab(info: info, settings: settings, subtitleFiles: source.subtitleFiles)
         case .video: VideoTab(info: info, settings: settings)
         case .dimensions: DimensionsTab(info: info, settings: settings)
         case .audio: AudioTab(info: info, settings: settings)
-        case .subtitles: SubtitlesTab(info: info, settings: settings)
+        case .subtitles: SubtitlesTab(info: info, settings: settings, sourceID: source.id, files: source.subtitleFiles)
         case .trim: TrimTab(info: info, settings: settings)
         }
     }
