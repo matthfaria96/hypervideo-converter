@@ -31,6 +31,7 @@ struct ContentView: View {
             return true
         } isTargeted: { model.ui.isDropTargeted = $0 }
         .overlay { if model.ui.isDropTargeted { DropHighlight() } }
+        .sheet(item: $model.pendingFolderImport) { FolderImportSheet(pending: $0) }
         .alert("HyperVideo Converter", isPresented: .constant(model.alertMessage != nil)) {
             Button("OK") { model.alertMessage = nil }
         } message: {

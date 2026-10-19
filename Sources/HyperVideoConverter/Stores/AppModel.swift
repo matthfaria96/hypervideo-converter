@@ -19,6 +19,16 @@ struct SourceItem: Identifiable, Equatable {
     var name: String { url.lastPathComponent }
 }
 
+/// Folders waiting for the user to pick the preset their videos get.
+struct FolderImport: Identifiable, Equatable {
+    let id = UUID()
+    /// Everything that was dropped or opened; loose files keep the default preset.
+    let urls: [URL]
+    let folders: [URL]
+    /// The preset chosen for the folders' videos.
+    var presetID: UUID?
+}
+
 enum SidebarItem: Hashable {
     case source(UUID)
     case queue
@@ -37,6 +47,8 @@ final class AppModel {
     var showsPresetInspector = true
     var isImporting = false
     var alertMessage: String?
+    /// Set when an import includes folders, until a preset is chosen for them.
+    var pendingFolderImport: FolderImport?
 
     var destinationFolder: URL {
         didSet { defaults.set(destinationFolder.path, forKey: PreferenceKey.destinationPath) }
@@ -67,17 +79,42 @@ final class AppModel {
 
     // MARK: Sources
 
-    /// Adds files, and every video or audio file inside dropped or opened folders.
+    /// Adds files right away; when folders are included, first asks (through
+    /// `pendingFolderImport`) which preset their videos should get.
     func addSources(_ urls: [URL]) {
+        let folders = urls.filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true }
+        guard folders.isEmpty else {
+            pendingFolderImport = FolderImport(urls: urls, folders: folders, presetID: defaultPreset.id)
+            return
+        }
+        addSources(urls, folderPreset: nil)
+    }
+
+    /// Adds the pending import, giving every video found in its folders `preset`.
+    func confirmFolderImport(preset: Preset) {
+        guard let pending = pendingFolderImport else { return }
+        pendingFolderImport = nil
+        addSources(pending.urls, folderPreset: preset)
+    }
+
+    func cancelFolderImport() { pendingFolderImport = nil }
+
+    /// Adds files, and every video or audio file inside folders. Files found in folders
+    /// get `folderPreset` (the default preset when nil); loose files get the default.
+    func addSources(_ urls: [URL], folderPreset: Preset?) {
         let existing = Set(sources.map(\.url))
+        let fallback = defaultPreset
+        let loose = Set(urls.map(\.standardizedFileURL))
         let media = MediaDiscovery.mediaFiles(in: urls)
         let accepted = media.filter { !existing.contains($0) }
         guard !accepted.isEmpty else {
             if !urls.isEmpty && media.isEmpty { alertMessage = "No video or audio files found there." }
             return
         }
-        let preset = defaultPreset
-        let items = accepted.map { SourceItem(url: $0, settings: preset.settings.presetSettings, presetID: preset.id) }
+        let items = accepted.map { url in
+            let preset = loose.contains(url.standardizedFileURL) ? fallback : (folderPreset ?? fallback)
+            return SourceItem(url: url, settings: preset.settings.presetSettings, presetID: preset.id)
+        }
         sources = sources + items
         selection = .source(items[0].id)
         items.forEach { item in Task { await inspect(item) } }
