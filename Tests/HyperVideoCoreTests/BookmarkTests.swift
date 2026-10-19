@@ -85,15 +85,13 @@ struct BookmarkTests {
         #expect(message.contains("Movie.srt"))
     }
 
-    @Test func missingDestinationFolderFailsTheJob() throws {
+    @Test func missingDestinationFolderIsCreatedWhenTheEncodeStarts() throws {
         let original = try roundTrip(job())
         try FileManager.default.removeItem(at: output)
         let resolved = original.resolvingBookmarks(securityScoped: false)
-        guard case .failed(let message) = resolved.state else {
-            Issue.record("expected failure, got \(resolved.state)")
-            return
-        }
-        #expect(message.contains("destination folder"))
+        #expect(resolved.state == .queued)
+        #expect(resolved.destination.lastPathComponent == "Movie.mp4")
+        #expect(resolved.destination.deletingLastPathComponent().lastPathComponent == "out")
     }
 
     @Test func finishedJobsAreLeftAlone() throws {

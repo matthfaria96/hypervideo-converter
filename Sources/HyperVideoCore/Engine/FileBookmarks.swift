@@ -60,6 +60,21 @@ extension EncodeJob {
         return copy
     }
 
+    /// A completed job is never run again, so its bookmarks (about 3 KB of the ~4 KB a job
+    /// takes in the saved queue) are dropped. Other jobs keep them: they can still be retried.
+    public func droppingBookmarksWhenCompleted() -> EncodeJob {
+        guard case .completed = state else { return self }
+        var copy = self
+        copy.sourceBookmark = nil
+        copy.destinationFolderBookmark = nil
+        copy.subtitleFiles = subtitleFiles?.map { file in
+            var lean = file
+            lean.bookmark = nil
+            return lean
+        }
+        return copy
+    }
+
     /// Follows bookmarks to where the files are now (refreshing stale ones). A job that
     /// is still waiting to run fails with a clear message if one of its files is gone.
     /// Jobs saved without bookmarks fall back to their stored paths and gain bookmarks.
@@ -76,7 +91,7 @@ extension EncodeJob {
         }
 
         let folder = destination.deletingLastPathComponent()
-        if let resolved = Self.locate(folder, bookmark: destinationFolderBookmark, securityScoped: securityScoped) {
+        if let resolved = Self.locateOutputFolder(folder, bookmark: destinationFolderBookmark, securityScoped: securityScoped) {
             copy.destination = resolved.url.appendingPathComponent(destination.lastPathComponent)
             copy.destinationFolderBookmark = resolved.bookmark
         } else {
@@ -99,6 +114,28 @@ extension EncodeJob {
             return copy.with(state: .failed(message: "Can't find the \(list). It may have been moved, renamed or deleted."))
         }
         return copy
+    }
+
+    /// The output folder may not exist yet (it is created when the encode starts, and a
+    /// bookmark can't point at it): the stored path stays valid while it can still be created.
+    private static func locateOutputFolder(
+        _ url: URL, bookmark: Data?, securityScoped: Bool
+    ) -> (url: URL, bookmark: Data?)? {
+        if let found = locate(url, bookmark: bookmark, securityScoped: securityScoped) { return found }
+        return canCreateFolder(url) ? (url, nil) : nil
+    }
+
+    /// True when `url` is missing but its nearest existing ancestor is a folder.
+    private static func canCreateFolder(_ url: URL) -> Bool {
+        var current = url
+        while current.path != "/" {
+            var isDirectory: ObjCBool = false
+            if FileManager.default.fileExists(atPath: current.path, isDirectory: &isDirectory) {
+                return isDirectory.boolValue && current != url
+            }
+            current = current.deletingLastPathComponent()
+        }
+        return false
     }
 
     private static func locate(

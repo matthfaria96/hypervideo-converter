@@ -20,9 +20,28 @@ public struct SubtitleFile: Codable, Hashable, Identifiable, Sendable {
 
     /// Subtitle files beside `video` named after it, e.g. `Movie.srt` or `Movie.pt-BR.srt`.
     public static func sidecars(for video: URL) -> [SubtitleFile] {
+        let folder = video.deletingLastPathComponent()
+        return sidecars(for: video, among: (try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? [])
+    }
+
+    /// The same for many videos, listing each folder once instead of once per video.
+    public static func sidecars(for videos: [URL]) -> [URL: [SubtitleFile]] {
+        var listings: [String: [String]] = [:]
+        var result: [URL: [SubtitleFile]] = [:]
+        for video in videos {
+            let folder = video.deletingLastPathComponent().path
+            if listings[folder] == nil {
+                listings[folder] = (try? FileManager.default.contentsOfDirectory(atPath: folder)) ?? []
+            }
+            let found = sidecars(for: video, among: listings[folder] ?? [])
+            if !found.isEmpty { result[video] = found }
+        }
+        return result
+    }
+
+    private static func sidecars(for video: URL, among names: [String]) -> [SubtitleFile] {
         let base = video.deletingPathExtension().lastPathComponent
         let folder = video.deletingLastPathComponent()
-        let names = (try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? []
         return names
             .filter { name in
                 let url = URL(fileURLWithPath: name)
