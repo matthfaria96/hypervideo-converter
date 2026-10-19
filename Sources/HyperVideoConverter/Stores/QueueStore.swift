@@ -16,25 +16,78 @@ final class QueueStore {
     /// When false, running jobs finish but no new ones start.
     private(set) var isProcessing = false
 
-    private var tasks: [UUID: Task<Void, Never>] = [:]
-    private var startTimes: [UUID: Date] = [:]
-    private let engine = TranscodeEngine()
-    private let store: JSONStore<[EncodeJob]>
-    private let defaults: UserDefaults
-    private let notifier: any QueueNotifying
+    /// Finished jobs kept in History; the oldest go first.
+    static let historyLimit = 200
+
+    @ObservationIgnored private var tasks: [UUID: Task<Void, Never>] = [:]
+    @ObservationIgnored private var startTimes: [UUID: Date] = [:]
+    /// Progress of the running jobs, outside `jobs` so ticks don't redraw the whole list.
+    @ObservationIgnored private var progressBoxes: [UUID: JobProgress] = [:]
+    @ObservationIgnored private let engine = TranscodeEngine()
+    @ObservationIgnored private let saver: CoalescingSaver<[EncodeJob]>
+    @ObservationIgnored private let defaults: UserDefaults
+    @ObservationIgnored private let notifier: any QueueNotifying
+    @ObservationIgnored private var launchTask: Task<Void, Never>?
+    /// False while the saved queue's files are being looked up after launch.
+    private(set) var isReady = true
+    /// Called with the sources of jobs that left the queue (removed, cleared, trimmed).
+    @ObservationIgnored var onJobsRemoved: (@MainActor ([EncodeJob]) -> Void)?
     /// Jobs that completed or failed since the queue last ran dry.
     private var batch = (done: 0, failed: 0)
 
     /// `directory`, `defaults` and `notifier` override persistence, preferences and
-    /// notifications (tests).
-    init(directory: URL? = nil, defaults: UserDefaults = .standard, notifier: (any QueueNotifying)? = nil) {
-        store = JSONStore(fileName: "queue.json", directory: directory)
+    /// notifications (tests). `saveDelay` is how long changes wait to be written together
+    /// (zero writes at once); `resolvesInBackground` false does the launch work inline.
+    init(directory: URL? = nil, defaults: UserDefaults = .standard, notifier: (any QueueNotifying)? = nil,
+         saveDelay: TimeInterval = 0.5, resolvesInBackground: Bool = true) {
+        let store = JSONStore<[EncodeJob]>(fileName: "queue.json", directory: directory)
+        saver = CoalescingSaver(store: store, delay: saveDelay)
         self.defaults = defaults
         self.notifier = notifier ?? SystemNotifier(defaults: defaults)
         let saved = store.load() ?? []
-        jobs = saved.map { $0.restoredAfterRelaunch().resolvingBookmarks() }
-        if jobs != saved { store.save(jobs) }
-        sweepStaleWorkDirectories()
+        let restored = Self.pruned(saved.map { $0.restoredAfterRelaunch().droppingBookmarksWhenCompleted() })
+        jobs = restored
+        if resolvesInBackground {
+            isReady = false
+            launchTask = Task { await finishLaunch(restored: restored, saved: saved) }
+        } else {
+            jobs = restored.map { $0.resolvingBookmarks() }
+            if jobs != saved { persist() }
+            Self.sweepStaleWorkDirectories(in: jobs)
+        }
+    }
+
+    /// Waits until the saved queue's files have been located (see `isReady`).
+    func whenReady() async { await launchTask?.value }
+
+    /// Follows bookmarks and removes leftover work folders away from the main thread, then
+    /// merges the result into the loaded jobs the user hasn't touched meanwhile.
+    private func finishLaunch(restored snapshot: [EncodeJob], saved: [EncodeJob]) async {
+        let resolved = await Task.detached(priority: .utility) {
+            let resolved = snapshot.map { $0.resolvingBookmarks() }
+            QueueStore.sweepStaleWorkDirectories(in: resolved)
+            return resolved
+        }.value
+        let before = Dictionary(uniqueKeysWithValues: snapshot.map { ($0.id, $0) })
+        let after = Dictionary(uniqueKeysWithValues: resolved.map { ($0.id, $0) })
+        jobs = jobs.map { current in
+            guard before[current.id] == current, let new = after[current.id] else { return current }
+            return new
+        }
+        if jobs != saved { persist() }
+        isReady = true
+        schedule()
+    }
+
+    /// Drops the oldest finished jobs beyond `historyLimit`.
+    static func pruned(_ jobs: [EncodeJob], limit: Int = historyLimit) -> [EncodeJob] {
+        var excess = jobs.filter(\.state.isFinished).count - limit
+        guard excess > 0 else { return jobs }
+        return jobs.filter { job in
+            guard excess > 0, job.state.isFinished else { return true }
+            excess -= 1
+            return false
+        }
     }
 
     // MARK: Derived state
@@ -48,19 +101,26 @@ final class QueueStore {
     /// since cancelled or failed ones can be retried.
     var takenDestinations: Set<URL> { Set(jobs.filter { !$0.isCompleted }.map(\.destination)) }
 
+    /// How far each running job is, in list order.
+    var runningFractions: [Double] {
+        jobs.compactMap { job in job.state.isRunning ? progressBoxes[job.id]?.fraction ?? 0 : nil }
+    }
+
     /// Average progress across running jobs, nil when idle.
     var overallProgress: Double? {
-        let values = jobs.compactMap { job -> Double? in
-            if case .running(let progress) = job.state { return progress }
-            return nil
-        }
+        let values = progressBoxes.values.map(\.fraction)
         return values.isEmpty ? nil : values.reduce(0, +) / Double(values.count)
+    }
+
+    /// The progress of `id`; views that show it observe only this object.
+    func progress(for id: UUID) -> JobProgress {
+        progressBoxes[id] ?? JobProgress()
     }
 
     /// Speed and time left for a running job.
     func rate(for job: EncodeJob, now: Date = Date()) -> EncodeRate? {
-        guard case .running(let progress) = job.state, let started = startTimes[job.id] else { return nil }
-        return EncodeRate(progress: progress, elapsed: now.timeIntervalSince(started),
+        guard job.state.isRunning, let started = startTimes[job.id] else { return nil }
+        return EncodeRate(progress: progress(for: job.id).fraction, elapsed: now.timeIntervalSince(started),
                           mediaDuration: job.mediaDuration, frameRate: job.frameRate)
     }
 
@@ -124,13 +184,16 @@ final class QueueStore {
 
     func remove(_ ids: Set<UUID>) {
         ids.forEach { tasks[$0]?.cancel() }
-        jobs = jobs.filter { !ids.contains($0.id) || $0.state.isRunning }
-        persist()
+        removeJobs { ids.contains($0.id) && !$0.state.isRunning }
     }
 
-    func clearFinished() {
-        jobs = jobs.filter { !$0.state.isFinished }
+    func clearFinished() { removeJobs { $0.state.isFinished } }
+
+    private func removeJobs(where shouldRemove: (EncodeJob) -> Bool) {
+        let removed = jobs.filter(shouldRemove)
+        jobs = jobs.filter { !shouldRemove($0) }
         persist()
+        if !removed.isEmpty { onJobsRemoved?(removed) }
     }
 
     func move(fromOffsets source: IndexSet, toOffset destination: Int) {
@@ -176,7 +239,7 @@ final class QueueStore {
 
     private func schedule() {
         defer { refreshDock() }
-        guard isProcessing else { return }
+        guard isProcessing, isReady else { return }
         Self.nextToLaunch(jobs, limit: maxConcurrent).forEach(launch)
         if runningCount == 0 && pendingCount == 0 { isProcessing = false }
     }
@@ -184,7 +247,9 @@ final class QueueStore {
     private func launch(_ job: EncodeJob) {
         replace(job.id) { $0.with(state: .running(progress: 0)) }
         startTimes[job.id] = Date()
+        progressBoxes[job.id] = JobProgress()
         let engine = engine
+        let throttle = ProgressThrottle()
         // QueueStore lives for the whole app session, so strong captures are safe here.
         tasks[job.id] = Task {
             let scoped = FileBookmarks.startAccessing(job.accessedURLs)
@@ -195,6 +260,7 @@ final class QueueStore {
                     source: job.source, destination: job.destination, settings: job.settings,
                     subtitleFiles: job.subtitleFiles ?? []
                 ) { progress in
+                    guard throttle.accepts(progress) else { return }
                     Task { @MainActor in self.updateProgress(job.id, progress) }
                 }
                 result = .success(bytes)
@@ -206,17 +272,19 @@ final class QueueStore {
     }
 
     private func updateProgress(_ id: UUID, _ progress: Double) {
-        guard let job = jobs.first(where: { $0.id == id }), job.state.isRunning else { return }
-        replace(id, persisting: false) { $0.with(state: .running(progress: progress)) }
+        guard let box = progressBoxes[id] else { return }
+        box.advance(to: progress)
         refreshDock()
     }
 
     private func finish(_ job: EncodeJob, result: Result<Int64, Error>) {
         tasks[job.id] = nil
+        progressBoxes[job.id] = nil
         let elapsed = Date().timeIntervalSince(startTimes.removeValue(forKey: job.id) ?? Date())
         switch result {
         case .success(let bytes):
-            replace(job.id) { $0.with(state: .completed(outputBytes: bytes, elapsed: elapsed)) }
+            let completed = JobState.completed(outputBytes: bytes, elapsed: elapsed)
+            replace(job.id) { $0.with(state: completed).droppingBookmarksWhenCompleted() }
             batch.done += 1
             notifier.jobFinished(job, succeeded: true)
         case .failure(is CancellationError):
@@ -227,8 +295,19 @@ final class QueueStore {
             batch.failed += 1
             notifier.jobFinished(job, succeeded: false)
         }
+        trimHistory()
         schedule()
         reportIfDrained()
+    }
+
+    private func trimHistory() {
+        let kept = Self.pruned(jobs)
+        guard kept.count != jobs.count else { return }
+        let keptIDs = Set(kept.map(\.id))
+        let removed = jobs.filter { !keptIDs.contains($0.id) }
+        jobs = kept
+        persist()
+        onJobsRemoved?(removed)
     }
 
     /// Once nothing is running or waiting, sums up the run (unless every job was cancelled).
@@ -239,9 +318,9 @@ final class QueueStore {
         if finished.done + finished.failed > 0 { notifier.queueFinished(done: finished.done, failed: finished.failed) }
     }
 
-    private func replace(_ id: UUID, persisting: Bool = true, _ transform: (EncodeJob) -> EncodeJob) {
+    private func replace(_ id: UUID, _ transform: (EncodeJob) -> EncodeJob) {
         jobs = jobs.map { $0.id == id ? transform($0) : $0 }
-        if persisting { persist() }
+        persist()
     }
 
     /// Stops running encodes before quitting and waits for them to clean up their work
@@ -253,6 +332,7 @@ final class QueueStore {
         for task in interrupted.values { await task.value }
         jobs = jobs.map { interrupted[$0.id] != nil ? $0.with(state: .queued) : $0 }
         persist()
+        flushPersistence()
     }
 
     /// For logout and shutdown, which can't wait: cancels encodes, requeues them and
@@ -264,12 +344,13 @@ final class QueueStore {
         interrupted.values.forEach { $0.cancel() }
         jobs = jobs.map { interrupted[$0.id] != nil ? $0.with(state: .queued) : $0 }
         persist()
-        sweepStaleWorkDirectories(near: jobs.filter { interrupted[$0.id] != nil })
+        flushPersistence()
+        Self.sweepStaleWorkDirectories(in: jobs.filter { interrupted[$0.id] != nil })
     }
 
     /// Removes work folders left behind by encodes interrupted by a crash or forced quit.
-    private func sweepStaleWorkDirectories(near sweptJobs: [EncodeJob]? = nil) {
-        let folders = Set((sweptJobs ?? jobs).map { $0.destination.deletingLastPathComponent() })
+    nonisolated static func sweepStaleWorkDirectories(in sweptJobs: [EncodeJob]) {
+        let folders = Set(sweptJobs.map { $0.destination.deletingLastPathComponent() })
         let manager = FileManager.default
         for folder in folders {
             let contents = (try? manager.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
@@ -278,7 +359,10 @@ final class QueueStore {
         }
     }
 
-    private func persist() { store.save(jobs) }
+    private func persist() { saver.save(jobs) }
+
+    /// Writes any change still waiting for its turn (called when the app quits).
+    func flushPersistence() { saver.flush() }
 
     private func refreshDock() {
         SystemIntegration.updateDock(progress: overallProgress, pendingCount: pendingCount)

@@ -27,8 +27,13 @@ struct TestEnvironment {
         defaults.set(output.path, forKey: PreferenceKey.destinationPath)
     }
 
-    func makeModel() -> AppModel { AppModel(directory: support, defaults: defaults) }
-    func makeQueue() -> QueueStore { QueueStore(directory: support, defaults: defaults) }
+    /// Saves at once and resolves the saved queue inline, so tests can read the file back.
+    func makeModel() -> AppModel {
+        AppModel(directory: support, defaults: defaults, saveDelay: 0, resolvesInBackground: false)
+    }
+    func makeQueue() -> QueueStore {
+        QueueStore(directory: support, defaults: defaults, saveDelay: 0, resolvesInBackground: false)
+    }
 
     func workDirectories() throws -> [String] {
         try FileManager.default.contentsOfDirectory(atPath: output.path).filter { $0.hasPrefix(".hypervideo-") }

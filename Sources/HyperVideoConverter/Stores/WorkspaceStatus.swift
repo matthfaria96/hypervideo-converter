@@ -35,7 +35,7 @@ struct QueueProgress: Equatable {
     @MainActor
     init(queue: QueueStore) {
         self.init(finished: queue.batchFinishedCount,
-                  running: queue.jobs.compactMap { if case .running(let p) = $0.state { p } else { nil } },
+                  running: queue.runningFractions,
                   waiting: queue.pendingCount)
     }
 

@@ -31,9 +31,8 @@ struct JSONStore<Value: Codable>: Sendable {
         guard let url else { return }
         do {
             try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-            try encoder.encode(value).write(to: url, options: .atomic)
+            // Compact output: old pretty-printed files still load, they just shrink on the next save.
+            try JSONEncoder().encode(value).write(to: url, options: .atomic)
         } catch {
             appLog.error("Couldn't save \(fileName, privacy: .public): \(error.localizedDescription, privacy: .public)")
         }

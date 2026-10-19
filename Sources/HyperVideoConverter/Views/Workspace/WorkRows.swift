@@ -96,11 +96,8 @@ struct JobRowView: View {
                     .foregroundStyle(Theme.muted)
                     .lineLimit(1)
                     .truncationMode(.middle)
-                if case .running(let progress) = job.state {
-                    ProgressView(value: progress)
-                        .progressViewStyle(.linear)
-                        .tint(Theme.accent)
-                        .controlSize(.small)
+                if job.state.isRunning {
+                    JobProgressBar(progress: model.queue.progress(for: job.id))
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -119,19 +116,42 @@ struct JobRowView: View {
     @ViewBuilder
     private var status: some View {
         VStack(alignment: .trailing, spacing: 4) {
-            switch job.state {
-            case .running(let progress):
-                Text(progress, format: .percent.precision(.fractionLength(0)))
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(Theme.accentLight)
-                Text(verbatim: rate)
-                    .font(.system(size: 10))
-                    .foregroundStyle(Theme.muted)
-            default:
+            if job.state.isRunning {
+                JobProgressStatus(job: job, progress: model.queue.progress(for: job.id))
+            } else {
                 Text("Waiting").font(.system(size: 11)).foregroundStyle(Theme.muted)
             }
         }
         .monospacedDigit()
+    }
+}
+
+/// The running job's bar. It reads the job's own progress object, so a tick redraws
+/// only this view and not the list.
+private struct JobProgressBar: View {
+    let progress: JobProgress
+
+    var body: some View {
+        ProgressView(value: progress.fraction)
+            .progressViewStyle(.linear)
+            .tint(Theme.accent)
+            .controlSize(.small)
+    }
+}
+
+/// Percentage, speed and time left of a running job.
+private struct JobProgressStatus: View {
+    @Environment(AppModel.self) private var model
+    let job: EncodeJob
+    let progress: JobProgress
+
+    var body: some View {
+        Text(progress.fraction, format: .percent.precision(.fractionLength(0)))
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(Theme.accentLight)
+        Text(verbatim: rate)
+            .font(.system(size: 10))
+            .foregroundStyle(Theme.muted)
     }
 
     private var rate: String {
