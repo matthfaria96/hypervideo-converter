@@ -9,9 +9,9 @@ struct SidebarView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             if !collapsed { Eyebrow(text: "Library").padding(.horizontal, 10).padding(.bottom, 6) }
-            NavRow(title: "Conversion", symbol: "rectangle.stack", isActive: isActive(.conversion, .convert)) {
-                model.section = .conversion
-                if model.mode == .compress { model.setMode(.convert) }
+            NavRow(title: "Conversion", symbol: "rectangle.stack", isActive: isActive(.conversion, .convert),
+                   progress: model.queue.runningCount > 0 ? model.progress.fraction : nil) {
+                model.setMode(.convert)
             }
             NavRow(title: "History", symbol: "clock.arrow.circlepath", isActive: model.section == .history,
                    badge: model.historyJobs.count) { model.section = .history }
@@ -27,7 +27,9 @@ struct SidebarView: View {
                 model.section = .analyze
             }
 
-            if !collapsed { NoteCard().padding(.top, 18) }
+            if !collapsed && model.sources.isEmpty && model.activeJobs.isEmpty && model.historyJobs.isEmpty {
+                NoteCard().padding(.top, 18)
+            }
             Spacer(minLength: 0)
             footer
         }
@@ -59,6 +61,7 @@ struct SidebarView: View {
             }
             .buttonStyle(.plain)
             .help(collapsed ? "Expand sidebar" : "Collapse sidebar")
+            .accessibilityLabel(Text(collapsed ? "Expand sidebar" : "Collapse sidebar"))
         }
         .frame(maxWidth: .infinity, alignment: collapsed ? .center : .leading)
         .padding(.horizontal, collapsed ? 0 : 6)
@@ -75,6 +78,8 @@ private struct NavRow: View {
     let symbol: String
     let isActive: Bool
     var badge = 0
+    /// Overall progress of running conversions, shown as a percentage.
+    var progress: Double?
     let action: () -> Void
 
     var body: some View {
@@ -87,7 +92,11 @@ private struct NavRow: View {
                 if !collapsed {
                     Text(title).font(.system(size: 13)).lineLimit(1)
                     Spacer(minLength: 0)
-                    if badge > 0 {
+                    if let progress {
+                        Text(progress, format: .percent.precision(.fractionLength(0)))
+                            .font(.system(size: 10, weight: .semibold)).monospacedDigit()
+                            .foregroundStyle(Theme.accentLight)
+                    } else if badge > 0 {
                         Text("\(badge)").font(.system(size: 10, weight: .semibold)).monospacedDigit()
                             .foregroundStyle(Theme.muted)
                     }
@@ -98,10 +107,18 @@ private struct NavRow: View {
             .padding(.vertical, 9)
             .frame(maxWidth: .infinity, alignment: collapsed ? .center : .leading)
             .background(isActive ? Theme.accentWash : .clear, in: .rect(cornerRadius: 8))
+            .overlay(alignment: .topTrailing) {
+                if collapsed && progress != nil {
+                    Circle().fill(Theme.accent).frame(width: 7, height: 7).padding(5)
+                }
+            }
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
         .help(title)
+        .accessibilityLabel(Text(title))
+        .accessibilityValue(progress.map { Text($0, format: .percent.precision(.fractionLength(0))) } ?? Text(verbatim: ""))
+        .accessibilityAddTraits(isActive ? [.isButton, .isSelected] : .isButton)
     }
 }
 

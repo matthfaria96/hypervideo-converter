@@ -39,8 +39,9 @@ struct ContentView: View {
         } isTargeted: { model.ui.isDropTargeted = $0 }
         .sheet(item: $model.pendingFolderImport) { FolderImportSheet(pending: $0) }
         .sheet(isPresented: advancedIsShown) { AdvancedSettingsSheet() }
-        .alert("HyperVideo Converter", isPresented: .constant(model.alertMessage != nil)) {
-            Button("OK") { model.alertMessage = nil }
+        .alert(Text(verbatim: model.alertTitle ?? String(localized: "Something went wrong")),
+               isPresented: .constant(model.alertMessage != nil)) {
+            Button("OK") { model.alertMessage = nil; model.alertTitle = nil }
         } message: {
             Text(model.alertMessage ?? "")
         }

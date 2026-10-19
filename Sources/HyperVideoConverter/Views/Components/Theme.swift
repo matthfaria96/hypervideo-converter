@@ -12,7 +12,7 @@ enum Theme {
     static let separator = Color(hex: 0x303034)
     static let text = Color(hex: 0xF5F5F7)
     static let muted = Color(hex: 0x9B9BA3)
-    static let faint = Color(hex: 0x777780)
+    static let faint = Color(hex: 0x8E8E96)
     static let accent = Color(hex: 0xFFB52E)
     static let accentLight = Color(hex: 0xFFD071)
     static let accentText = Color(hex: 0x201809)

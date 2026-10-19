@@ -21,8 +21,9 @@ struct SummaryTab: View {
                 SettingRow(title: "Web optimized", help: "Moves the index to the start for fast streaming") {
                     Toggle("Web optimized", isOn: $settings.optimizeForWeb).labelsHidden().toggleStyle(.switch)
                 }
-                SettingRow(title: "Keep metadata", help: "Title, dates, location, chapters and other tags") {
-                    Toggle("Keep metadata", isOn: $settings.keepMetadata).labelsHidden().toggleStyle(.switch)
+                SettingRow(title: "Remove metadata", help: "Drops titles, dates, location, chapters and other tags") {
+                    Toggle("Remove metadata", isOn: Binding(get: { !settings.keepMetadata }, set: { settings.keepMetadata = !$0 }))
+                        .labelsHidden().toggleStyle(.switch)
                 }
             }
 
@@ -122,9 +123,10 @@ struct SummaryTab: View {
         }
     }
 
-    /// Only bitrate-driven and passthrough encodes have a predictable size.
+    /// The same prediction as the inspector's estimate card.
     private var estimatedSize: String {
-        OutputEstimate.bytes(info: info, settings: settings).map { "≈ " + Format.bytes($0) } ?? String(localized: "Depends on content")
+        OutputEstimate.prediction(info: info, settings: settings)
+            .map { SizeEstimate.label(bytes: $0.bytes, kind: $0.kind) } ?? String(localized: "Depends on content")
     }
 
     static func local(_ text: String) -> String { String(localized: String.LocalizationValue(text)) }
@@ -161,7 +163,7 @@ struct VideoTab: View {
                         .font(.callout)
                         .foregroundStyle(.orange)
                 }
-                SettingRow(title: "Frame rate") {
+                SettingRow(title: "Frames per second (FPS)", help: "Same as Source keeps the motion as it was") {
                     Picker("Frame rate", selection: $settings.frameRate) {
                         ForEach(FrameRate.allCases) { Text(localizing: $0.displayName).tag($0) }
                     }
@@ -200,7 +202,7 @@ private struct FiltersSection: View {
 
     var body: some View {
         SettingsSection(title: "Filters", symbol: "camera.filters") {
-            SettingRow(title: "Deinterlace", help: info.isInterlaced ? "This source is interlaced" : "Automatic acts only on interlaced sources") {
+            SettingRow(title: "Deinterlace", help: info.isInterlaced ? "This source is interlaced: removes the comb-like lines of TV and camcorder video" : "Removes comb-like lines; Automatic acts only on interlaced sources") {
                 Picker("Deinterlace", selection: $filters.deinterlace) {
                     ForEach(DeinterlaceMode.allCases) { Text(localizing: $0.displayName).tag($0) }
                 }

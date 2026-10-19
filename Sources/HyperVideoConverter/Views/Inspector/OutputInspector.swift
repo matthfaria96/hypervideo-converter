@@ -10,20 +10,22 @@ struct OutputInspector: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                Text("Output Settings").font(.system(size: 14, weight: .bold)).padding(.bottom, 5)
-                Text(verbatim: scopeText)
-                    .font(.system(size: 11))
-                    .foregroundStyle(Theme.muted)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.bottom, 20)
+                Text("Output Settings").font(.system(size: 14, weight: .bold)).padding(.bottom, 8)
+                ScopeChip().padding(.bottom, 18)
 
-                FieldLabel(title: "Output Format", detail: "File type")
+                FieldLabel(title: "Output Format")
                 FormatPicker(settings: settings) { container in model.editTargets { $0 = $0.choosing(container: container) } }
+                    .help("The file type, shown as the file's extension (.mp4, .mov…).")
                     .padding(.bottom, 17)
 
-                FieldLabel(title: "Quality Profile", detail: "Recommended")
+                FieldLabel(title: "Quality Profile")
                 ProfileCards(selected: model.inspectorProfile) { model.applyProfile($0) }
-                    .padding(.bottom, 17)
+                    .padding(.bottom, 8)
+                if let personalized = model.inspectorPersonalizedProfile {
+                    PersonalizedNote(profile: personalized) { model.applyProfile(personalized) }
+                        .padding(.bottom, 8)
+                }
+                EstimateCard().padding(.top, 4)
 
                 InspectorDivider()
                 VideoFields(settings: settings) { change in model.editTargets(change) }
@@ -34,24 +36,12 @@ struct OutputInspector: View {
                     StatusBanner(messages: settings.validationIssues.map { String(localized: String.LocalizationValue($0)) })
                         .padding(.top, 12)
                 }
-                EstimateCard().padding(.top, 17)
-                advanced.padding(.top, 14)
+                advanced.padding(.top, 18)
             }
             .padding(.horizontal, 18)
             .padding(.vertical, 22)
         }
         .background(Theme.inspector)
-    }
-
-    private var scopeText: String {
-        let targets = model.inspectorTargetIDs.count
-        if model.sources.isEmpty { return String(localized: "Pick a ready-made profile or fine-tune the details. These settings go to the videos you add next.") }
-        if model.inspectsSelection {
-            return targets == 1 ? String(localized: "Changes apply to the selected video.")
-                : String(localized: "Changes apply to the \(targets) selected videos.")
-        }
-        if targets == 1 { return String(localized: "Changes apply to the video in the list.") }
-        return String(localized: "Changes apply to all \(targets) videos in the list. Select rows to change only some.")
     }
 
     private var advanced: some View {

@@ -85,10 +85,16 @@ enum Format {
         ByteCountFormatter.string(fromByteCount: count, countStyle: .file)
     }
 
+    /// "12,0 Mbit/s" in Portuguese, "12.0 Mbit/s" in English.
     static func bitrate(_ bitsPerSecond: Double) -> String {
         bitsPerSecond >= 1_000_000
-            ? String(format: "%.1f Mbit/s", bitsPerSecond / 1_000_000)
-            : String(format: "%.0f kbit/s", bitsPerSecond / 1_000)
+            ? "\((bitsPerSecond / 1_000_000).formatted(.number.precision(.fractionLength(1)))) Mbit/s"
+            : "\((bitsPerSecond / 1_000).formatted(.number.precision(.fractionLength(0)))) kbit/s"
+    }
+
+    /// A folder path with the home folder shortened to ~.
+    static func path(_ url: URL) -> String {
+        (url.path as NSString).abbreviatingWithTildeInPath
     }
 
     /// Encode speed relative to playback, e.g. "3.2×".

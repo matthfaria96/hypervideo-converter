@@ -27,7 +27,16 @@ struct ProfileCards: View {
                     .frame(width: 30, height: 30)
                     .background(isSelected ? Color(hex: 0x594421) : Color(hex: 0x39393F), in: .rect(cornerRadius: 8))
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(localizing: profile.name).font(.system(size: 11, weight: .semibold))
+                    HStack(spacing: 6) {
+                        Text(localizing: profile.name).font(.system(size: 11, weight: .semibold))
+                        if profile == .balanced {
+                            Text("Recommended")
+                                .font(.system(size: 9, weight: .semibold))
+                                .foregroundStyle(Theme.accentLight)
+                                .padding(.horizontal, 5).padding(.vertical, 1)
+                                .background(Theme.accentWash, in: .capsule)
+                        }
+                    }
                     Text(localizing: profile.summary).font(.system(size: 10)).foregroundStyle(Theme.muted)
                 }
                 Spacer(minLength: 4)
@@ -42,7 +51,9 @@ struct ProfileCards: View {
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(Text("\(Text(localizing: profile.name)), \(Text(localizing: profile.summary))"))
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 }
 
@@ -56,12 +67,14 @@ struct VideoFields: View {
             FieldLabel(title: "Video Codec")
             MenuField(label: "Video Codec", selection: settings.videoCodec, options: VideoCodec.allCases,
                       title: Self.title) { codec in edit { $0 = $0.choosing(codec: codec) } }
+                .help("H.264 plays everywhere. HEVC (H.265) makes smaller files with the same look on recent devices.")
                 .padding(.bottom, 17)
 
             FieldLabel(title: "Resolution", detail: "Optional")
             MenuField(label: "Resolution", selection: settings.maxResolution, options: MaxResolution.allCases,
                       title: Self.title) { value in edit { $0.maxResolution = value } }
                 .disabled(settings.videoCodec == .passthrough)
+                .help("Videos larger than this are scaled down; smaller ones are never enlarged.")
                 .padding(.bottom, 17)
 
             quality
@@ -74,6 +87,7 @@ struct VideoFields: View {
         case (true, .quality(let value)):
             HStack {
                 Text("Compression Quality").font(.system(size: 11, weight: .semibold))
+                    .help("Higher keeps more detail and makes a bigger file. The file size follows the content.")
                 Spacer()
                 Text(value, format: .percent.precision(.fractionLength(0)))
                     .font(.system(size: 11)).foregroundStyle(Theme.muted).monospacedDigit()
@@ -90,7 +104,15 @@ struct VideoFields: View {
             .font(.system(size: 10))
             .foregroundStyle(Theme.muted)
         case (true, .averageBitrate(let kbps)):
-            note("Average bitrate: \(kbps) kbit/s. Change the rate mode in Advanced Settings.")
+            VStack(alignment: .leading, spacing: 6) {
+                note("Fixed size: about \(Format.bitrate(Double(kbps) * 1_000)) of video, whatever the content.")
+                Button("Use automatic quality instead") { edit { $0.rateControl = .quality(0.62) } }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(Theme.accentLight)
+                    .frame(minHeight: 28)
+                    .help("Lets the encoder pick the size that keeps the picture looking right")
+            }
         default:
             note("This codec has a fixed quality, so there's nothing to tune.")
         }
@@ -128,21 +150,13 @@ struct VideoFields: View {
     }
 }
 
-/// Keep resolution and frame rate, keep the original audio, remove metadata.
+/// Keep the original audio, remove metadata.
 struct InspectorToggles: View {
     let settings: EncodeSettings
     let edit: SettingsEdit
 
     var body: some View {
         VStack(spacing: 13) {
-            row("Keep resolution and frame rate", "Doesn't change the size or the frames per second.",
-                isOn: settings.maxResolution == .source && settings.frameRate == .source) { on in
-                edit { settings in
-                    settings.maxResolution = on ? .source : .fhd1080
-                    if on { settings.frameRate = .source }
-                }
-            }
-            .disabled(settings.videoCodec == .passthrough)
             row("Keep original audio", "Copies the audio tracks as they are whenever possible.",
                 isOn: settings.audioCodec == .passthrough) { on in
                 edit { settings in

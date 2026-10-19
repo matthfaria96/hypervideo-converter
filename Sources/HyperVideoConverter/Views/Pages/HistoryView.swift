@@ -6,11 +6,18 @@ struct HistoryView: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
+        @Bindable var ui = model.ui
         PageScaffold(eyebrow: "Library", title: "History",
                      subtitle: "Finished, failed and cancelled conversions.") {
-            Button("Clear History") { model.queue.clearFinished() }
+            Button("Clear History", systemImage: "trash") { ui.confirmingClearHistory = true }
                 .buttonStyle(.subtle)
                 .disabled(model.historyJobs.isEmpty)
+                .confirmationDialog("Clear History?", isPresented: $ui.confirmingClearHistory) {
+                    Button("Clear History", role: .destructive) { model.queue.clearFinished() }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text(verbatim: model.clearHistoryMessage)
+                }
         } content: {
             if model.historyJobs.isEmpty {
                 EmptyPage(symbol: "clock.arrow.circlepath", text: "Converted videos will appear here.")
@@ -58,7 +65,7 @@ private struct HistoryRow: View {
                 Button("Show in Finder", systemImage: "folder") { SystemIntegration.reveal([job.destination]) }
                 Button("Open", systemImage: "play.fill") { NSWorkspace.shared.open(job.destination) }
             } else {
-                Button("Retry", systemImage: "arrow.clockwise") { model.queue.retry(job.id) }
+                Button("Try Again", systemImage: "arrow.clockwise") { model.queue.retry(job.id) }
             }
             Button("Show Source in Finder", systemImage: "film") { SystemIntegration.reveal([job.source]) }
             Divider()
@@ -69,14 +76,19 @@ private struct HistoryRow: View {
     private var actions: some View {
         HStack(spacing: 6) {
             if case .completed = job.state {
-                Button("Show in Finder", systemImage: "magnifyingglass") { SystemIntegration.reveal([job.destination]) }
                 Button("Open", systemImage: "play.fill") { NSWorkspace.shared.open(job.destination) }
+                    .help("Play the converted video")
+                Button("Show in Finder", systemImage: "folder") { SystemIntegration.reveal([job.destination]) }
+                    .help("Show the converted file in Finder")
             } else {
-                Button("Retry", systemImage: "arrow.clockwise") { model.queue.retry(job.id) }
+                Button("Try Again", systemImage: "arrow.clockwise") { model.queue.retry(job.id) }
+                    .help("Put this video back in the queue")
             }
-            Button("Remove from History", systemImage: "xmark") { model.queue.remove([job.id]) }
+            Button("Remove from History", systemImage: "trash") { model.queue.remove([job.id]) }
+                .labelStyle(.iconOnly)
+                .help("Remove from History (the file isn't deleted)")
+                .accessibilityLabel(Text("Remove from History"))
         }
-        .labelStyle(.iconOnly)
         .buttonStyle(.subtle)
     }
 

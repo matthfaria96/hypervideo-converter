@@ -20,20 +20,27 @@ struct SourceRowView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             sizes
+            if source.errorMessage != nil {
+                Button("Remove") { model.removeSource(source.id) }
+                    .buttonStyle(.subtle)
+            }
             Button {
                 model.removeSource(source.id)
             } label: {
                 Image(systemName: "xmark").font(.system(size: 11, weight: .semibold))
             }
             .buttonStyle(RemoveButtonStyle())
-            .help("Remove")
+            .help("Remove from the list (the file stays on your Mac)")
+            .accessibilityLabel(Text("Remove \(source.name)"))
         }
     }
 
     @ViewBuilder
     private var meta: some View {
         if let error = source.errorMessage {
-            Text(error).font(.system(size: 10)).foregroundStyle(Theme.red).lineLimit(1)
+            Text("Unsupported format or damaged file")
+                .font(.system(size: 10)).foregroundStyle(Theme.red).lineLimit(1)
+                .help(error)
         } else if let info = source.info {
             HStack(spacing: 6) {
                 Text(verbatim: RowFacts.meta(url: source.url, info: info))
@@ -55,8 +62,9 @@ struct SourceRowView: View {
             VStack(alignment: .trailing, spacing: 4) {
                 Text(Format.bytes(info.fileBytes)).font(.system(size: 11)).foregroundStyle(Color(hex: 0xDDDDDD))
                 Group {
-                    if let estimate = OutputEstimate.bytes(info: info, settings: source.settings) {
-                        Text("≈ \(Format.bytes(estimate)) output")
+                    if let estimate = OutputEstimate.prediction(info: info, settings: source.settings) {
+                        Text(verbatim: String(localized: "\(SizeEstimate.label(bytes: estimate.bytes, kind: estimate.kind)) output"))
+                            .help(model.presetName(for: source))
                     } else {
                         Text(verbatim: model.presetName(for: source))
                     }
@@ -103,7 +111,8 @@ struct JobRowView: View {
                 Image(systemName: "xmark").font(.system(size: 11, weight: .semibold))
             }
             .buttonStyle(RemoveButtonStyle())
-            .help("Cancel")
+            .help("Cancel this conversion")
+            .accessibilityLabel(Text("Cancel \(job.source.lastPathComponent)"))
         }
     }
 
@@ -163,8 +172,9 @@ struct Thumbnail: View {
 struct RemoveButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .foregroundStyle(configuration.isPressed ? Theme.red : Color(hex: 0x8A8A90))
-            .frame(width: 24, height: 24)
+            .foregroundStyle(configuration.isPressed ? Theme.red : Color(hex: 0xA6A6AD))
+            .frame(width: 28, height: 28)
+            .background(Color.white.opacity(configuration.isPressed ? 0.12 : 0.05), in: .circle)
             .contentShape(.rect)
     }
 }

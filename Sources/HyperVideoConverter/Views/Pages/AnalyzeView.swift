@@ -78,7 +78,19 @@ private struct MediaFacts: View {
             }
             FactSection(title: "File") {
                 fact("Name", url.lastPathComponent)
-                fact("Folder", (url.deletingLastPathComponent().path as NSString).abbreviatingWithTildeInPath)
+                GridRow {
+                    Text("Folder").foregroundStyle(Theme.muted)
+                    Button {
+                        SystemIntegration.reveal([url])
+                    } label: {
+                        Label(Format.path(url.deletingLastPathComponent()), systemImage: "folder")
+                            .lineLimit(1).truncationMode(.middle)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(Theme.accentLight)
+                    .help("Show in Finder")
+                }
+                .font(.system(size: 12))
                 fact("Size", Format.bytes(info.fileBytes))
                 fact("Duration", Format.duration(info.duration))
             }

@@ -1,5 +1,6 @@
 import AppKit
 import HyperVideoCore
+import QuickLook
 import SwiftUI
 
 /// Videos being set up, then the jobs waiting or encoding. Click selects a row (⌘-click
@@ -21,6 +22,9 @@ struct WorkListView: View {
                     SourceRowView(source: source, isSelected: model.selectedIDs.contains(source.id))
                 }
                 .onTapGesture { select(source.id) }
+                .accessibilityElement(children: .combine)
+                .accessibilityAddTraits(model.selectedIDs.contains(source.id) ? [.isButton, .isSelected] : .isButton)
+                .accessibilityAction { select(source.id) }
                 .contextMenu { SourceMenu(source: source) }
                 .dropDestination(for: String.self) { items, _ in
                     guard let dragged = items.first.flatMap(UUID.init(uuidString:)) else { return false }
@@ -30,6 +34,7 @@ struct WorkListView: View {
             }
             ForEach(model.activeJobs) { job in
                 rowContainer(id: job.id) { JobRowView(job: job) }
+                    .accessibilityElement(children: .combine)
                     .contextMenu { JobMenu(job: job) }
                     .dropDestination(for: String.self) { items, _ in
                         guard let dragged = items.first.flatMap(UUID.init(uuidString:)) else { return false }
@@ -40,6 +45,15 @@ struct WorkListView: View {
         }
         .clipShape(.rect(cornerRadius: 11))
         .card(fill: Color(hex: 0x202023), radius: 11)
+        .focusable()
+        .focusEffectDisabled()
+        .onDeleteCommand { if !model.selectedIDs.isEmpty { model.removeSelectedSources() } }
+        .onKeyPress(.space) {
+            guard let url = model.selectedSource?.url, model.inspectsSelection else { return .ignored }
+            model.ui.quickLookURL = url
+            return .handled
+        }
+        .quickLookPreview(Bindable(model.ui).quickLookURL)
     }
 
     private func rowContainer<Content: View>(id: UUID, @ViewBuilder content: () -> Content) -> some View {
@@ -47,6 +61,11 @@ struct WorkListView: View {
             .padding(12)
             .background(model.selectedIDs.contains(id) ? Theme.selectedCard : .clear)
             .overlay(alignment: .bottom) { Color(hex: 0x333338).frame(height: 1) }
+            .overlay {
+                if model.selectedIDs.contains(id) {
+                    RoundedRectangle(cornerRadius: 9).strokeBorder(Color(hex: 0xD9A33A), lineWidth: 1.5).padding(2)
+                }
+            }
             .contentShape(.rect)
             .draggable(id.uuidString)
     }
@@ -81,6 +100,7 @@ private struct SourceMenu: View {
         Divider()
         Button("Add to Queue", systemImage: "text.badge.plus") { model.enqueue([source.id]) }
             .disabled(source.info == nil)
+        Button("Quick Look", systemImage: "eye") { model.ui.quickLookURL = source.url }
         Button("Show in Finder", systemImage: "folder") { SystemIntegration.reveal([source.url]) }
         Divider()
         Button("Remove", systemImage: "trash", role: .destructive) { model.removeSource(source.id) }

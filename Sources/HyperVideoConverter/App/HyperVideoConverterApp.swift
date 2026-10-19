@@ -72,11 +72,14 @@ struct AppCommands: Commands {
 
     var body: some Commands {
         CommandGroup(replacing: .newItem) {
-            Button("Open Video…") { model.isImporting = true }
-                .keyboardShortcut("o")
+            Button("Choose Videos…") {
+                model.section = .conversion
+                model.isImporting = true
+            }
+            .keyboardShortcut("o")
         }
         CommandMenu("Encode") {
-            Button("Convert Videos") { model.convertAll() }
+            Button(model.mode == .compress ? "Compress Videos" : "Convert Videos") { model.convertAll() }
                 .keyboardShortcut(.return, modifiers: .command)
                 .disabled(model.readySourceCount == 0 && model.queue.pendingCount == 0)
 
@@ -105,8 +108,14 @@ struct AppCommands: Commands {
             Button("Advanced Settings…") { model.ui.advancedSourceID = model.selectedSource?.id }
                 .keyboardShortcut("e")
                 .disabled(model.selectedSource?.info == nil)
-            Button("Select None") { model.selectedIDs = [] }
+            Button(model.allSourcesSelected ? "Deselect All" : "Select All Videos") { model.toggleSelectAll() }
+                .keyboardShortcut("a", modifiers: [.command, .shift])
+                .disabled(model.sources.isEmpty)
+            Button("Deselect All") { model.selectedIDs = [] }
                 .keyboardShortcut("d")
+            Button("Remove Selected Videos") { model.removeSelectedSources() }
+                .keyboardShortcut(.delete, modifiers: .command)
+                .disabled(model.selectedIDs.isEmpty)
         }
         CommandGroup(after: .sidebar) {
             Button("Conversion") { model.setMode(.convert) }

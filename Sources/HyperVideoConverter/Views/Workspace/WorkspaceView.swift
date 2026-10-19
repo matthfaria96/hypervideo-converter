@@ -11,6 +11,9 @@ struct WorkspaceView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     heading.padding(.bottom, 20)
+                    if let batch = model.finishedBatch {
+                        FinishedBanner(count: batch.count, folder: batch.folder).padding(.bottom, 14)
+                    }
                     DropZoneView(compact: !isEmpty)
                     listHeader.padding(.top, 22).padding(.bottom, 10)
                     WorkListView()
@@ -32,9 +35,6 @@ struct WorkspaceView: View {
     private var heading: some View {
         HStack(alignment: .top, spacing: 16) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("WORKSPACE")
-                    .font(.system(size: 11))
-                    .foregroundStyle(Theme.muted)
                 Text(model.mode == .compress ? "Compress Videos" : "Convert Videos")
                     .font(.system(size: 24, weight: .bold))
                     .kerning(-0.7)
@@ -50,22 +50,31 @@ struct WorkspaceView: View {
     }
 
     private var listHeader: some View {
-        HStack {
+        @Bindable var ui = model.ui
+        return HStack(spacing: 4) {
             HStack(spacing: 4) {
-                Text("Conversion Queue").font(.system(size: 13, weight: .semibold))
+                Text("Video List").font(.system(size: 13, weight: .semibold))
                 Text(verbatim: "(\(model.sources.count + model.activeJobs.count))")
                     .font(.system(size: 13))
                     .foregroundStyle(Theme.muted)
             }
             Spacer()
             if !model.sources.isEmpty {
-                Button("Select None") { model.selectedIDs = [] }
+                Button(model.allSourcesSelected ? "Deselect All" : "Select All") { model.toggleSelectAll() }
                     .buttonStyle(.ghost)
-                    .disabled(model.selectedIDs.isEmpty)
+                    .keyboardShortcut("a")
+                    .help("Select every video to edit them together (⌘A)")
             }
-            Button("Clear Queue") { model.clearWorkspace() }
+            Button("Clear List") { ui.confirmingClearList = true }
                 .buttonStyle(.ghost)
-                .disabled(model.sources.isEmpty && model.queue.pendingCount == 0)
+                .disabled(!model.canClearList)
+                .help("Removes the videos from the list; the original files stay on your Mac")
+                .confirmationDialog("Clear the video list?", isPresented: $ui.confirmingClearList) {
+                    Button("Clear List", role: .destructive) { model.clearWorkspace() }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text(verbatim: model.clearListMessage)
+                }
         }
     }
 

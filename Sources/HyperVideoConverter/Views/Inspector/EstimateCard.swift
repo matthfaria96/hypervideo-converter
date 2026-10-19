@@ -10,7 +10,7 @@ struct EstimateCard: View {
             HStack {
                 Text("SIZE ESTIMATE")
                 Spacer()
-                Text(verbatim: "≈")
+                Text(verbatim: kindLabel(estimate))
             }
             .font(.system(size: 11))
             .foregroundStyle(Theme.muted)
@@ -35,14 +35,24 @@ struct EstimateCard: View {
         .card(fill: Color(hex: 0x262629), radius: 10, stroke: Color(hex: 0x3C3C41))
     }
 
+    private func kindLabel(_ estimate: SizeEstimate) -> String {
+        guard estimate.estimatedBytes != nil else { return "" }
+        switch estimate.kind {
+        case .exact: return String(localized: "copied as is")
+        case .upTo: return String(localized: "maximum")
+        case .approximate: return String(localized: "≈ estimate")
+        }
+    }
+
     private func headline(_ estimate: SizeEstimate) -> String {
         guard estimate.count > 0 else { return "—" }
-        return Format.bytes(estimate.estimatedBytes ?? estimate.originalBytes)
+        guard let bytes = estimate.estimatedBytes else { return String(localized: "Depends on content") }
+        return SizeEstimate.label(bytes: bytes, kind: estimate.kind)
     }
 
     private func badge(_ estimate: SizeEstimate) -> String {
         guard estimate.count > 0 else { return String(localized: "Add a video") }
-        guard let savings = estimate.savings else { return String(localized: "original size") }
+        guard let savings = estimate.savings else { return String(localized: "Original: \(Format.bytes(estimate.originalBytes))") }
         let percent = Int((abs(savings) * 100).rounded())
         if percent < 1 { return String(localized: "About the same size") }
         return savings > 0 ? String(localized: "−\(percent)% estimated") : String(localized: "+\(percent)% larger")
@@ -52,9 +62,11 @@ struct EstimateCard: View {
         guard estimate.count > 0 else {
             return String(localized: "The estimate depends on the original video, the codec and the settings you choose.")
         }
-        guard estimate.estimatedBytes != nil else {
-            return String(localized: "With constant quality the final size depends on motion, noise and detail. Pick an average bitrate in Advanced Settings for a predictable size.")
+        switch estimate.kind {
+        case .exact: return String(localized: "The video is copied without re-encoding, so the size barely changes.")
+        case .upTo: return String(localized: "With a fixed bitrate the file usually ends up at or below this size.")
+        case .approximate:
+            return String(localized: "A rule of thumb from resolution, frame rate and quality. Detailed or shaky videos come out larger, still ones smaller.")
         }
-        return String(localized: "Estimated from the bitrates. The real size can vary slightly.")
     }
 }

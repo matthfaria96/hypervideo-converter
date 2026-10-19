@@ -115,7 +115,9 @@ private struct PresetRow: View {
                 Button("Make Default", systemImage: isDefault ? "star.fill" : "star") { defaultID = preset.id.uuidString }
                     .labelStyle(.iconOnly)
                     .buttonStyle(.ghost)
-                    .help("Make Default")
+                    .help(isDefault ? "This is the default profile for new videos" : "Make this the default profile for new videos")
+                    .accessibilityLabel(Text("Make Default"))
+                    .accessibilityAddTraits(isDefault ? .isSelected : [])
                 Button("Apply") { model.applyPresetToTargets(preset) }
                     .buttonStyle(.subtle)
                     .disabled(model.sources.isEmpty)
@@ -141,9 +143,10 @@ enum PresetFiles {
                 let more = notes.count > 6 ? "\n" + String(localized: "…and \(notes.count - 6) more adjustments.") : ""
                 message += "\n\n" + String(localized: "Adjusted to what HyperVideo supports:") + "\n" + shown + more
             }
-            model.alertMessage = message
+            model.showAlert(String(localized: "Profiles imported"), message)
         } catch {
-            model.alertMessage = String(localized: "That file isn't a HyperVideo or HandBrake preset export.")
+            model.showAlert(String(localized: "Couldn't import profiles"),
+                            String(localized: "That file isn't a HyperVideo or HandBrake preset export."))
         }
     }
 
@@ -155,7 +158,7 @@ enum PresetFiles {
         do {
             try model.presets.exportPresets(to: url)
         } catch {
-            model.alertMessage = String(localized: "Couldn't export presets: \(error.localizedDescription)")
+            model.showAlert(String(localized: "Couldn't export profiles"), error.localizedDescription)
         }
     }
 }
