@@ -38,6 +38,7 @@ struct HyperVideoConverterApp: App {
 /// Lets Finder "Open With" and Dock drops reach the model.
 final class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor var model: AppModel?
+    @MainActor private lazy var quitCoordinator = QuitCoordinator()
 
     func application(_ application: NSApplication, open urls: [URL]) {
         Task { @MainActor in model?.addSources(urls) }
@@ -45,13 +46,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         MainActor.assumeIsolated {
-            guard let queue = model?.queue, queue.runningCount > 0 else { return .terminateNow }
-            // Let cancelled encodes remove their hidden work folders before the process exits.
-            Task { @MainActor in
-                await queue.stopForQuit()
-                sender.reply(toApplicationShouldTerminate: true)
-            }
-            return .terminateLater
+            // Lets cancelled encodes remove their hidden work folders before the process exits.
+            quitCoordinator.shouldTerminate(queue: model?.queue)
         }
     }
 
