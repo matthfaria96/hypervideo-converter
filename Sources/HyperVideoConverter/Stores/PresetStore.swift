@@ -38,8 +38,8 @@ final class PresetStore {
         let settings = settings.presetSettings
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let preset = Preset(
-            name: trimmed.isEmpty ? "Custom Preset" : trimmed,
-            category: category.isEmpty ? "My Presets" : category,
+            name: trimmed.isEmpty ? String(localized: "Custom Profile") : trimmed,
+            category: category.isEmpty ? String(localized: "My Presets") : category,
             symbol: "slider.horizontal.3",
             summary: Self.describe(settings),
             settings: settings
@@ -108,7 +108,7 @@ final class PresetStore {
             settings.videoCodec.displayName,
             settings.maxResolution == .source ? nil : settings.maxResolution.displayName,
             settings.frameRate == .source ? nil : settings.frameRate.displayName,
-            settings.audioCodec == .none ? "No audio" : settings.audioCodec.displayName
+            settings.audioCodec == .none ? String(localized: "No Audio") : settings.audioCodec.displayName
         ].compactMap { $0 }.joined(separator: " · ")
     }
 }

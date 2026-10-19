@@ -12,19 +12,21 @@ struct FolderImportSheet: View {
     }
 
     private var title: String {
-        pending.folders.count == 1 ? "Import “\(pending.folders[0].lastPathComponent)”" : "Import \(pending.folders.count) Folders"
+        pending.folders.count == 1
+            ? String(localized: "Import “\(pending.folders[0].lastPathComponent)”")
+            : String(localized: "Import \(pending.folders.count) Folders")
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Label(title, systemImage: "folder.badge.plus").font(.title3.weight(.semibold))
-            Text("Every video found in the folder and its subfolders gets this preset. You can still change each one afterwards.")
+            Text("Every video found in the folder and its subfolders gets this profile. You can still change each one afterwards.")
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
-            Picker("Preset", selection: presetID) {
+            Picker("Profile", selection: presetID) {
                 ForEach(model.presets.grouped, id: \.category) { group in
-                    Section(group.category) {
-                        ForEach(group.presets) { Text($0.name).tag(Optional($0.id)) }
+                    Section(group.presets.first?.displayCategory ?? group.category) {
+                        ForEach(group.presets) { Text(verbatim: $0.displayName).tag(Optional($0.id)) }
                     }
                 }
             }

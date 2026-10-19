@@ -16,9 +16,10 @@ struct QueueSummary: Equatable {
     let body: String
 
     init(done: Int, failed: Int) {
-        title = failed == 0 ? "Queue finished" : "Queue finished with errors"
-        let converted = done == 1 ? "1 video converted" : "\(done) videos converted"
-        body = failed == 0 ? converted : "\(converted), \(failed) failed"
+        title = failed == 0 ? String(localized: "Queue finished") : String(localized: "Queue finished with errors")
+        let converted = done == 1 ? String(localized: "1 video converted") : String(localized: "\(done) videos converted")
+        let failures = failed == 1 ? String(localized: "1 failed") : String(localized: "\(failed) failed")
+        body = failed == 0 ? converted : "\(converted), \(failures)"
     }
 }
 
@@ -48,7 +49,7 @@ final class SystemNotifier: QueueNotifying {
             SystemIntegration.reveal([job.destination])
         }
         guard enabled(PreferenceKey.notifyEachJob, default: false) else { return }
-        post(title: succeeded ? "Conversion finished" : "Conversion failed",
+        post(title: succeeded ? String(localized: "Conversion finished") : String(localized: "Conversion failed"),
              body: succeeded ? job.destination.lastPathComponent : job.source.lastPathComponent)
     }
 
