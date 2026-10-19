@@ -31,10 +31,12 @@ public struct EncodeJob: Codable, Hashable, Identifiable, Sendable {
     /// Output length in seconds and frame rate, used to report encode speed.
     public var mediaDuration: Double?
     public var frameRate: Double?
+    /// External subtitle files for this source; nil in queues saved before they existed.
+    public var subtitleFiles: [SubtitleFile]?
 
     public init(
         source: URL, destination: URL, settings: EncodeSettings, presetName: String,
-        mediaDuration: Double? = nil, frameRate: Double? = nil
+        mediaDuration: Double? = nil, frameRate: Double? = nil, subtitleFiles: [SubtitleFile] = []
     ) {
         self.id = UUID()
         self.source = source
@@ -45,6 +47,7 @@ public struct EncodeJob: Codable, Hashable, Identifiable, Sendable {
         self.createdAt = Date()
         self.mediaDuration = mediaDuration
         self.frameRate = frameRate
+        self.subtitleFiles = subtitleFiles
     }
 
     public func with(state: JobState) -> EncodeJob {

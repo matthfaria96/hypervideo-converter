@@ -6,6 +6,20 @@ struct PipelineFactory {
     let reader: AVAssetReader
     let writer: AVAssetWriter
     let settings: EncodeSettings
+    let subtitleFiles: [SubtitleFile]
+
+    /// A text track to keep: one of the source's own, or an external file.
+    private enum SubtitleSource {
+        case track(AVAssetTrack, SubtitleTrackInfo.Kind)
+        case file(SubtitleFile)
+
+        var kind: SubtitleTrackInfo.Kind {
+            switch self {
+            case .track(_, let kind): kind
+            case .file: .subtitle
+            }
+        }
+    }
 
     func makePumps() async throws -> [SamplePump] {
         var pumps: [SamplePump] = []
@@ -22,8 +36,19 @@ struct PipelineFactory {
             }
         }
         var subtitles: [AVAssetWriterInput] = []
-        for (index, track) in try await selectedSubtitleTracks().enumerated() {
-            if let pump = try await subtitlePump(for: track, index: index) {
+        let sources = try await subtitleCandidates()
+        for (index, source) in sources.enumerated() {
+            let pump: SamplePump?
+            switch source {
+            case .track(let track, _):
+                // `.first` keeps the first source track the writer accepts; candidates
+                // are tracks before files, so `subtitles` holds only tracks here.
+                let full = settings.subtitles == .first && !subtitles.isEmpty
+                pump = full ? nil : try await subtitlePump(for: track, index: index)
+            case .file(let file):
+                pump = try subtitlePump(for: file, index: index)
+            }
+            if let pump {
                 pumps.append(pump)
                 subtitles.append(pump.input)
             }
@@ -46,11 +71,13 @@ struct PipelineFactory {
         if writer.canAdd(group) { writer.add(group) }
     }
 
-    private func selectedSubtitleTracks() async throws -> [AVAssetTrack] {
-        guard settings.subtitles != .none else { return [] }
-        let tracks = try await MediaInspector.subtitleTracks(in: asset)
-        return SubtitleTrackInfo.kept(tracks, kind: \.1, selection: settings.subtitles, container: settings.container)
-            .map(\.0)
+    /// Source text tracks the container can hold (all of them unless the selection is
+    /// `.none`; `makePumps` applies `.first`), then every external file the user added.
+    private func subtitleCandidates() async throws -> [SubtitleSource] {
+        let files = subtitleFiles.map(SubtitleSource.file)
+        guard settings.subtitles != .none else { return files }
+        let tracks = try await MediaInspector.subtitleTracks(in: asset).map { SubtitleSource.track($0.0, $0.1) }
+        return SubtitleTrackInfo.kept(tracks, kind: \.kind, selection: .all, container: settings.container) + files
     }
 
     private func selectedAudioTracks() async throws -> [AVAssetTrack] {
@@ -182,6 +209,33 @@ struct PipelineFactory {
         input.mediaDataLocation = .beforeMainMediaDataNotInterleaved
         guard reader.canAdd(output), writer.canAdd(input) else { return nil }
         return try attach(output: output, input: input, label: "subtitle\(index)", reportsProgress: false)
+    }
+
+    /// Writes an external subtitle file as a tx3g track, cut to the trim range.
+    /// Files with no cues inside the range add no track; unreadable files fail the encode.
+    private func subtitlePump(for file: SubtitleFile, index: Int) throws -> SamplePump? {
+        let cues: [SubtitleCue]
+        do {
+            cues = try SubtitleParser.cues(from: Data(contentsOf: file.url))
+        } catch {
+            throw TranscodeError.cannotConfigure("the subtitle file \(file.name) couldn't be read (\(error.localizedDescription))")
+        }
+        guard let format = TimedText.format(mediaType: kCMMediaType_Subtitle) else {
+            throw TranscodeError.cannotConfigure("subtitle file \(file.name)")
+        }
+        let range = reader.timeRange
+        let timeline = SubtitleParser.timeline(cues, start: range.start.seconds, end: range.end.seconds)
+        guard timeline.contains(where: { !$0.text.isEmpty }) else { return nil }
+
+        let input = AVAssetWriterInput(mediaType: .subtitle, outputSettings: nil, sourceFormatHint: format)
+        input.extendedLanguageTag = file.language
+        input.languageCode = file.language.flatMap { Locale(identifier: $0).language.languageCode?.identifier(.alpha3) }
+        input.mediaDataLocation = .beforeMainMediaDataNotInterleaved
+        input.expectsMediaDataInRealTime = false
+        guard writer.canAdd(input) else { return nil }
+        writer.add(input)
+        let samples = timeline.compactMap { TimedText.sample($0.text, start: $0.start, duration: $0.end - $0.start, format: format) }
+        return SamplePump(samples: samples, input: input, label: "subtitle\(index)")
     }
 
     // MARK: Chapters

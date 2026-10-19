@@ -32,17 +32,19 @@ public struct TranscodeEngine: Sendable {
     }
 
     /// Encodes `source` to `destination`, returning the output size in bytes.
+    /// `subtitleFiles` are external SRT/WebVTT files added after the source's own text tracks.
     public func run(
         source: URL,
         destination: URL,
         settings: EncodeSettings,
+        subtitleFiles: [SubtitleFile] = [],
         progress: @escaping @Sendable (Double) -> Void
     ) async throws -> Int64 {
         guard settings.isValid else { throw TranscodeError.invalidSettings(settings.validationIssues) }
 
         let asset = AVURLAsset(url: source)
         let duration = try await asset.load(.duration)
-        let range = Self.timeRange(settings.trim, duration: duration)
+        let range = try Self.timeRange(settings.trim, duration: duration)
         // Work in a private folder next to the output so cleanup also catches AVFoundation's sidecar files.
         let workDir = destination.deletingLastPathComponent().appendingPathComponent(".hypervideo-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: workDir, withIntermediateDirectories: true)
@@ -57,7 +59,9 @@ public struct TranscodeEngine: Sendable {
             writer.metadata = (try? await asset.load(.metadata)) ?? []
         }
 
-        let pumps = try await PipelineFactory(asset: asset, reader: reader, writer: writer, settings: settings).makePumps()
+        let pumps = try await PipelineFactory(
+            asset: asset, reader: reader, writer: writer, settings: settings, subtitleFiles: subtitleFiles
+        ).makePumps()
         guard !pumps.isEmpty else { throw TranscodeError.noTracks }
 
         guard reader.startReading() else {
@@ -72,7 +76,6 @@ public struct TranscodeEngine: Sendable {
         let cancel = CancelFlag()
         let stalled = CancelFlag()
         let activity = ActivityClock()
-        let stopper = Stopper(reader: reader, pumps: pumps)
         let watchdog = Task { [stallTimeout] in
             let interval = min(max(stallTimeout / 2, .milliseconds(1)), .seconds(1))
             while !Task.isCancelled {
@@ -80,7 +83,7 @@ public struct TranscodeEngine: Sendable {
                 if activity.idle > stallTimeout {
                     stalled.set()
                     cancel.set()
-                    stopper.stop()
+                    pumps.forEach { $0.abort() }
                     return
                 }
             }
@@ -93,7 +96,7 @@ public struct TranscodeEngine: Sendable {
             }
         } onCancel: {
             cancel.set()
-            stopper.stop()
+            pumps.forEach { $0.abort() }
         }
         watchdog.cancel()
 
@@ -101,8 +104,14 @@ public struct TranscodeEngine: Sendable {
         if userCancelled || cancel.isSet || reader.status == .failed || writer.status == .failed {
             let readerError = reader.error?.localizedDescription
             let writerError = writer.error?.localizedDescription
-            reader.cancelReading()
-            writer.cancelWriting()
+            // Neither the reader nor the writer may be cancelled while a pump is inside
+            // copyNextSampleBuffer or append, so cancel them with every pump queue held.
+            // A pump stuck in a stall delays that until it returns; don't wait for it.
+            let session = Unchecked((reader, writer))
+            _ = await SamplePump.whenIdle(pumps, timeout: .seconds(2)) {
+                session.value.0.cancelReading()
+                session.value.1.cancelWriting()
+            }
             if userCancelled { throw CancellationError() }
             if stalled.isSet { throw TranscodeError.stalled }
             if let writerError { throw TranscodeError.writerFailed(writerError) }
@@ -124,11 +133,17 @@ public struct TranscodeEngine: Sendable {
         return Int64(size ?? 0)
     }
 
-    static func timeRange(_ trim: TrimRange?, duration: CMTime) -> CMTimeRange {
+    /// Shortest trim worth encoding: about one frame at 30 fps.
+    static let minimumTrim = 1.0 / 30
+
+    static func timeRange(_ trim: TrimRange?, duration: CMTime) throws -> CMTimeRange {
         guard let trim else { return CMTimeRange(start: .zero, duration: duration) }
         let total = duration.seconds
         let start = min(max(trim.start, 0), total)
         let end = min(trim.end ?? total, total)
+        guard end - start >= minimumTrim else {
+            throw TranscodeError.invalidSettings(["The trim range is too short to contain any video."])
+        }
         return CMTimeRange(
             start: CMTime(seconds: start, preferredTimescale: 600),
             end: CMTime(seconds: max(end, start), preferredTimescale: 600)
@@ -136,19 +151,8 @@ public struct TranscodeEngine: Sendable {
     }
 }
 
-/// Unblocks every pump: cancelling the reader makes a pump waiting for the next
-/// sample see the end of the track, and `abort` releases pumps the writer never calls.
-private final class Stopper: @unchecked Sendable {
-    private let reader: AVAssetReader
-    private let pumps: [SamplePump]
-
-    init(reader: AVAssetReader, pumps: [SamplePump]) {
-        self.reader = reader
-        self.pumps = pumps
-    }
-
-    func stop() {
-        reader.cancelReading()
-        pumps.forEach { $0.abort() }
-    }
+/// Hands non-Sendable AVFoundation objects to a closure that runs while no pump uses them.
+final class Unchecked<Value>: @unchecked Sendable {
+    let value: Value
+    init(_ value: Value) { self.value = value }
 }

@@ -18,14 +18,15 @@ final class ActivityClock: Sendable {
 
 /// Moves samples from a source (a reader output or a prepared list) into one writer
 /// input on a private queue. AVFoundation objects aren't Sendable, but each pump
-/// touches them only from `queue`.
+/// touches them only from `queue`; only the one-shot completion is shared.
 final class SamplePump: @unchecked Sendable {
     let input: AVAssetWriterInput
     let reportsProgress: Bool
     private let next: () -> CMSampleBuffer?
     private let queue: DispatchQueue
-    private var finished = false
-    private var continuation: CheckedContinuation<Void, Never>?
+    /// The waiting `run` call; taken exactly once, by whoever ends the pump first.
+    private let completion = Mutex<CheckedContinuation<Void, Never>?>(nil)
+    private let isDone = Mutex(false)
     private var lastReported = -1.0
 
     init(output: AVAssetReaderOutput, input: AVAssetWriterInput, label: String, reportsProgress: Bool) {
@@ -51,20 +52,30 @@ final class SamplePump: @unchecked Sendable {
         progress: @escaping @Sendable (Double) -> Void
     ) async {
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-            queue.async { [self] in self.continuation = continuation }
+            // Checked under the same lock `takeCompletion` empties, so an abort that
+            // lands before this point ends the run now instead of at the watchdog.
+            let alreadyDone = completion.withLock { stored in
+                if isDone.withLock({ $0 }) { return true }
+                stored = continuation
+                return false
+            }
+            if alreadyDone {
+                continuation.resume()
+                return
+            }
             input.requestMediaDataWhenReady(on: queue) { [self] in
-                guard !finished else { return }
-                while input.isReadyForMoreMediaData {
+                while !isDone.withLock({ $0 }) && input.isReadyForMoreMediaData {
                     guard !cancel.isSet, let buffer = next() else {
-                        finish(continuation)
+                        finish()
                         return
                     }
+                    guard !isDone.withLock({ $0 }) else { return }
                     report(buffer, range: range, progress: progress)
                     activity.touch()
                     guard input.append(buffer) else {
                         // Writer rejected the sample; stop sibling pumps too.
                         cancel.set()
-                        finish(continuation)
+                        finish()
                         return
                     }
                 }
@@ -72,19 +83,53 @@ final class SamplePump: @unchecked Sendable {
         }
     }
 
-    private func finish(_ continuation: CheckedContinuation<Void, Never>, markingInput: Bool = true) {
-        guard !finished else { return }
-        finished = true
-        if markingInput { input.markAsFinished() }
+    /// Normal end, on `queue`: the input learns the track is complete.
+    private func finish() {
+        guard let continuation = takeCompletion() else { return }
+        input.markAsFinished()
         continuation.resume()
     }
 
-    /// Ends `run` even if the writer never asks for more data again. Call after
-    /// cancelling the reader, which unblocks a pump waiting in `copyNextSampleBuffer`.
+    /// Ends `run` from any thread without touching AVFoundation, for cancellation and
+    /// stalls. A pump busy in the reader stops at its next step; one the writer never
+    /// calls again is released right away.
     func abort() {
-        queue.async { [self] in
-            if let continuation { finish(continuation, markingInput: false) }
+        takeCompletion()?.resume()
+    }
+
+    private func takeCompletion() -> CheckedContinuation<Void, Never>? {
+        isDone.withLock { $0 = true }
+        return completion.withLock { continuation in
+            defer { continuation = nil }
+            return continuation
         }
+    }
+
+    /// Runs `work` once every pump's queue is idle and held, so nothing is inside the
+    /// reader or writer while it runs. Returns true if that happened within `timeout`;
+    /// otherwise `work` still runs later, whenever a stuck pump finally lets go.
+    static func whenIdle(_ pumps: [SamplePump], timeout: Duration, work: @escaping @Sendable () -> Void) async -> Bool {
+        let parked = DispatchGroup()
+        let release = DispatchSemaphore(value: 0)
+        for pump in pumps {
+            parked.enter()
+            pump.queue.async {
+                parked.leave()
+                release.wait()
+            }
+        }
+        let ran = Mutex(false)
+        parked.notify(queue: .global(qos: .utility)) {
+            work()
+            ran.withLock { $0 = true }
+            for _ in pumps { release.signal() }
+        }
+        let deadline = ContinuousClock.now + timeout
+        while ContinuousClock.now < deadline {
+            if ran.withLock({ $0 }) { return true }
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+        return ran.withLock { $0 }
     }
 
     private func report(_ buffer: CMSampleBuffer, range: CMTimeRange, progress: @Sendable (Double) -> Void) {

@@ -110,6 +110,81 @@ struct TranscodeIntegrationTests {
         #expect(try await MediaInspector.inspect(bare).chapters.isEmpty)
     }
 
+    @Test func subtitleFilesAreAddedAfterSourceTracks() async throws {
+        let dir = try Self.tempDir()
+        let source = try await SyntheticClip.make(in: dir, size: CGSize(width: 640, height: 360), seconds: 3,
+                                                  subtitleLanguages: ["en"])
+        let srt = dir.appendingPathComponent("source-640.pt-BR.srt")
+        try "1\n00:00:00,200 --> 00:00:01,000\nUm\n\n2\n00:00:01,500 --> 00:00:02,500\nDois\n".write(to: srt, atomically: true, encoding: .utf8)
+        let files = SubtitleFile.sidecars(for: source)
+        #expect(files == [SubtitleFile(url: srt, language: "pt-BR")])
+
+        var settings = EncodeSettings()
+        settings.videoCodec = .h264
+        settings.trim = TrimRange(start: 1, end: 3)
+        let out = dir.appendingPathComponent("with-srt.mp4")
+        _ = try await TranscodeEngine().run(source: source, destination: out, settings: settings, subtitleFiles: files) { _ in }
+        #expect(try await MediaInspector.inspect(out).subtitleTracks.map(\.language) == ["en", "pt-BR"])
+        let cues = try await Self.textSamples(in: out, trackIndex: 1).filter { !$0.text.isEmpty }
+        #expect(cues.map(\.text) == ["Dois"])
+        #expect(abs((cues.first?.start ?? -1) - 0.5) < 0.02, "\(cues)")
+
+        settings.subtitles = .first
+        let first = dir.appendingPathComponent("first.mp4")
+        _ = try await TranscodeEngine().run(source: source, destination: first, settings: settings, subtitleFiles: files) { _ in }
+        #expect(try await MediaInspector.inspect(first).subtitleTracks.map(\.language) == ["en", "pt-BR"])
+
+        settings.subtitles = .none
+        let none = dir.appendingPathComponent("none.mp4")
+        _ = try await TranscodeEngine().run(source: source, destination: none, settings: settings, subtitleFiles: files) { _ in }
+        #expect(try await MediaInspector.inspect(none).subtitleTracks.map(\.language) == ["pt-BR"])
+    }
+
+    @Test func unreadableSubtitleFileFailsTheEncode() async throws {
+        let dir = try Self.tempDir()
+        let source = try await SyntheticClip.make(in: dir, size: CGSize(width: 320, height: 180), seconds: 1)
+        let bad = dir.appendingPathComponent("bad.srt")
+        try "not a subtitle".write(to: bad, atomically: true, encoding: .utf8)
+        let missing = dir.appendingPathComponent("missing.srt")
+        for file in [bad, missing] {
+            await #expect(throws: TranscodeError.self) {
+                _ = try await TranscodeEngine().run(source: source, destination: dir.appendingPathComponent("o.mp4"),
+                                                    settings: EncodeSettings(), subtitleFiles: [SubtitleFile(url: file, language: nil)]) { _ in }
+            }
+        }
+    }
+
+    @Test func nearZeroTrimIsRejected() async throws {
+        let dir = try Self.tempDir()
+        let source = try await SyntheticClip.make(in: dir, size: CGSize(width: 320, height: 180), seconds: 1)
+        var settings = EncodeSettings()
+        settings.trim = TrimRange(start: 0.5, end: 0.5)
+        await #expect(throws: TranscodeError.self) {
+            _ = try await TranscodeEngine().run(source: source, destination: dir.appendingPathComponent("z.mp4"), settings: settings) { _ in }
+        }
+    }
+
+    /// Decodes tx3g samples of the `trackIndex`-th subtitle track, with output-timeline start times.
+    static func textSamples(in url: URL, trackIndex: Int) async throws -> [SubtitleCue] {
+        let asset = AVURLAsset(url: url)
+        let track = try await asset.loadTracks(withMediaType: .subtitle)[trackIndex]
+        let reader = try AVAssetReader(asset: asset)
+        let output = AVAssetReaderTrackOutput(track: track, outputSettings: nil)
+        reader.add(output)
+        reader.startReading()
+        var cues: [SubtitleCue] = []
+        while let sample = output.copyNextSampleBuffer() {
+            guard let block = CMSampleBufferGetDataBuffer(sample) else { continue }
+            var bytes = [UInt8](repeating: 0, count: CMBlockBufferGetDataLength(block))
+            CMBlockBufferCopyDataBytes(block, atOffset: 0, dataLength: bytes.count, destination: &bytes)
+            let length = bytes.count >= 2 ? Int(bytes[0]) << 8 | Int(bytes[1]) : 0
+            let text = String(decoding: bytes.dropFirst(2).prefix(length), as: UTF8.self)
+            let start = CMSampleBufferGetPresentationTimeStamp(sample).seconds
+            cues.append(SubtitleCue(start: start, end: start + CMSampleBufferGetDuration(sample).seconds, text: text))
+        }
+        return cues
+    }
+
     @Test func stalledEncodeFailsInsteadOfHanging() async throws {
         let dir = try Self.tempDir()
         let source = try await SyntheticClip.make(in: dir, size: CGSize(width: 1920, height: 1080), seconds: 6)

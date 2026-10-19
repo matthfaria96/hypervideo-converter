@@ -49,9 +49,12 @@ enum TimedText {
         }
         guard copied == noErr else { return nil }
 
+        // Round both ends, not the duration, so back-to-back samples tile exactly.
+        let pts = CMTime(seconds: start, preferredTimescale: 600)
+        let end = CMTime(seconds: start + duration, preferredTimescale: 600)
         var timing = CMSampleTimingInfo(
-            duration: CMTime(seconds: duration, preferredTimescale: 600),
-            presentationTimeStamp: CMTime(seconds: start, preferredTimescale: 600),
+            duration: end - pts,
+            presentationTimeStamp: pts,
             decodeTimeStamp: .invalid
         )
         var size = bytes.count
