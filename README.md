@@ -48,13 +48,29 @@ Requirements: Xcode 26 or the Command Line Tools for macOS 26, with Swift 6.2.
 swift build
 ```
 
-To build the app bundle (no Xcode project needed):
+To build an installable app and disk image (no Xcode project needed):
 
 ```bash
-Scripts/build-app.sh
+Scripts/build-app.sh            # release build
+Scripts/build-app.sh debug      # debug build
 ```
 
-This creates `build/HyperVideo Converter.app`, with an icon generated from `Resources/AppIcon.png` and an ad-hoc signature. Pass `debug` to build the debug configuration instead: `Scripts/build-app.sh debug`.
+This creates `dist/HyperVideo Converter.app` and `dist/HyperVideoConverter-<version>.dmg` (drag the app onto the Applications link inside it). The script:
+
+- builds with `swift build`, assembles the bundle and copies any SwiftPM resource bundles;
+- takes the version from the latest git tag (`v1.2.0` → `1.2.0`, `0.1.0` when there is none), uses the commit count as the build number and reads `LSMinimumSystemVersion` from `Package.swift`;
+- registers video document types, so Finder's Open With lists the app;
+- builds `AppIcon.icns` from `Resources/AppIcon.png` with `sips` and `iconutil`;
+- signs ad hoc by default. Ad-hoc apps run on the Mac that built them; other Macs need right-click → Open the first time.
+
+To sign for distribution, with the hardened runtime, and optionally notarize and staple:
+
+```bash
+SIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)" Scripts/build-app.sh
+SIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)" NOTARY_PROFILE=my-profile Scripts/build-app.sh
+```
+
+`NOTARY_PROFILE` is a profile saved with `xcrun notarytool store-credentials`. If `notarytool` or `stapler` is missing, the script stops before building and says so; it only checks for them when notarization is requested.
 
 ## Testing
 
