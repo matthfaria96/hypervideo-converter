@@ -19,6 +19,9 @@ final class PresetStore {
 
     var all: [Preset] { Self.builtIn + custom }
 
+    /// Every preset a video or job can name, including the hidden Compress-mode profiles.
+    var lookup: [Preset] { all + QualityProfile.compressPresets }
+
     /// Presets grouped by category, custom ones first so personal work is on top.
     var grouped: [(category: String, presets: [Preset])] {
         let order = (custom.map(\.category) + Self.builtIn.map(\.category)).uniqued()
@@ -27,7 +30,7 @@ final class PresetStore {
 
     func preset(id: UUID?) -> Preset? {
         guard let id else { return nil }
-        return all.first { $0.id == id }
+        return lookup.first { $0.id == id }
     }
 
     @discardableResult
@@ -122,27 +125,6 @@ extension Preset {
 
     var displaySummary: String {
         isBuiltIn ? String(localized: String.LocalizationValue(summary)) : summary
-    }
-}
-
-extension EncodeSettings {
-    /// Settings with the per-video values (trim, crop and burned-in subtitle, which only
-    /// make sense for one source) reset, as stored in and applied from presets.
-    var presetSettings: EncodeSettings {
-        var copy = self
-        copy.trim = nil
-        copy.crop = .zero
-        copy.burnIn = nil
-        return copy
-    }
-
-    /// Keeps this video's trim, crop and burned-in subtitle while taking everything else from `template`.
-    func adopting(_ template: EncodeSettings) -> EncodeSettings {
-        var settings = template
-        settings.trim = trim
-        settings.crop = crop
-        settings.burnIn = burnIn
-        return settings
     }
 }
 

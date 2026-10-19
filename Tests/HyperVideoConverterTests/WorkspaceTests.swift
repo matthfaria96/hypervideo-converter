@@ -196,8 +196,10 @@ struct WorkspaceTests {
         // (4000 + 160) kbit/s for 100 s = 52 MB, from 100 MB.
         #expect(estimate.estimatedBytes == 52_000_000)
         #expect(abs((estimate.savings ?? 0) - 0.48) < 0.0001)
-        // Constant quality depends on the content: no number is made up.
-        #expect(SizeEstimate([Self.source("b.mov")]).estimatedBytes == nil)
+        #expect(estimate.kind == .upTo)
+        // Constant quality gets a rule-of-thumb estimate, marked as such.
+        let quality = SizeEstimate([Self.source("b.mov")])
+        #expect(quality.kind == .approximate && (quality.estimatedBytes ?? 0) > 0)
         #expect(SizeEstimate([]).count == 0)
     }
 

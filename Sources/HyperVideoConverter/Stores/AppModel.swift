@@ -56,8 +56,13 @@ final class AppModel {
     /// What the inspector set while the list was empty; the next loose videos get it.
     var draftSettings: EncodeSettings?
     var draftPresetID: UUID?
+    /// Every video's settings and the draft as they were in Convert mode, restored when
+    /// Compress mode is left.
+    var convertSnapshot: ModeSnapshot?
     var isImporting = false
     var alertMessage: String?
+    /// The alert's title: what went wrong, rather than the app's name.
+    var alertTitle: String?
     /// Set when an import includes folders, until a preset is chosen for them.
     var pendingFolderImport: FolderImport?
 
@@ -120,7 +125,9 @@ final class AppModel {
         let media = MediaDiscovery.mediaFiles(in: urls)
         let accepted = media.filter { !existing.contains($0) }
         guard !accepted.isEmpty else {
-            if !urls.isEmpty && media.isEmpty { alertMessage = String(localized: "No video or audio files found there.") }
+            if !urls.isEmpty && media.isEmpty {
+                showAlert(String(localized: "No videos found"), String(localized: "No video or audio files found there."))
+            }
             return
         }
         let items = accepted.map { url in
@@ -186,6 +193,7 @@ final class AppModel {
         let readable = candidates.filter(Self.isReadable)
         let rejected = candidates.count - readable.count
         if rejected > 0 {
+            alertTitle = String(localized: "Subtitles not added")
             alertMessage = rejected == 1
                 ? String(localized: "That file has no subtitles HyperVideo can read.")
                 : String(localized: "\(rejected) files had no subtitles HyperVideo can read.")
@@ -234,7 +242,7 @@ final class AppModel {
         guard let template = sources.first(where: { $0.id == id }) else { return }
         sources = sources.map { item in
             var copy = item
-            copy.settings = item.settings.adopting(template.settings)
+            copy.settings = item.settings.copyingAll(from: template.settings)
             copy.presetID = template.presetID
             return copy
         }
@@ -243,7 +251,19 @@ final class AppModel {
     func presetName(for item: SourceItem) -> String {
         guard let preset = presets.preset(id: item.presetID) else { return String(localized: "Custom") }
         let name = preset.displayName
-        return preset.settings.presetSettings == item.settings.presetSettings ? name : String(localized: "\(name) (modified)")
+        return Self.matches(item.settings, preset: preset) ? name : String(localized: "\(name) (personalized)")
+    }
+
+    /// Whether `settings` still are what `preset` gives: for quality profiles only the
+    /// fields a profile decides count, for other presets every shared setting.
+    static func matches(_ settings: EncodeSettings, preset: Preset) -> Bool {
+        if QualityProfile.profile(presetID: preset.id) != nil { return settings.matchesProfile(preset.settings) }
+        return preset.settings.presetSettings == settings.presetSettings
+    }
+
+    func showAlert(_ title: String, _ message: String) {
+        alertTitle = title
+        alertMessage = message
     }
 
     // MARK: Queue
@@ -273,11 +293,12 @@ final class AppModel {
                 source: item.url, destination: destination, settings: item.settings, presetName: presetName(for: item),
                 mediaDuration: item.settings.outputDuration(sourceDuration: info.duration),
                 frameRate: item.settings.outputFrameRate(sourceFrameRate: info.frameRate),
-                subtitleFiles: item.subtitleFiles
+                subtitleFiles: item.subtitleFiles, presetID: item.presetID
             ))
         }
         if !skipped.isEmpty {
-            alertMessage = String(localized: "Skipped (not ready or invalid settings): \(skipped.joined(separator: ", "))")
+            showAlert(String(localized: "Some videos weren't converted"),
+                      String(localized: "Skipped (not ready or invalid settings): \(skipped.joined(separator: ", "))"))
         }
         if !jobs.isEmpty { queue.add(jobs) }
         return queued

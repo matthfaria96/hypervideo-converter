@@ -105,8 +105,8 @@ struct PresetTrimCropTests {
         let model = env.makeModel()
         model.addSources([try Self.placeholder(env, "x")])
         let id = try #require(model.sources.first?.id)
-        model.update(id) { $0.settings.optimizeForWeb.toggle() }
+        model.update(id) { $0.settings.rateControl = .quality(0.99) }
         let item = try #require(model.sources.first)
-        #expect(model.presetName(for: item).hasSuffix("(modified)"))
+        #expect(model.presetName(for: item).hasSuffix("(personalized)"))
     }
 }

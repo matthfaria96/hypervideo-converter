@@ -6,13 +6,18 @@ import HyperVideoCore
 extension AppModel {
     // MARK: New sources
 
-    /// A source with `preset`'s settings, or with what the inspector set while the list
-    /// was empty (`usesDraft`, for loose files).
+    /// A source with `preset`'s settings, or with the draft (what the inspector set for
+    /// the next videos) for loose files. In Compress mode folder videos get compressed too.
     func newSource(url: URL, preset: Preset, usesDraft: Bool = false) -> SourceItem {
         if usesDraft, let draftSettings {
             return SourceItem(url: url, settings: draftSettings, presetID: draftPresetID)
         }
-        return SourceItem(url: url, settings: preset.settings.presetSettings, presetID: preset.id)
+        guard mode == .compress else {
+            return SourceItem(url: url, settings: preset.settings.presetSettings, presetID: preset.id)
+        }
+        let profile = QualityProfile.balanced
+        let settings = preset.settings.presetSettings.applyingProfile(profile.settings(compress: true)).choosing(container: .mp4)
+        return SourceItem(url: url, settings: settings, presetID: profile.compressPresetID)
     }
 
     // MARK: Inspector targets
@@ -26,29 +31,53 @@ extension AppModel {
         return selected.isEmpty ? sources.map(\.id) : selected
     }
 
-    /// The settings the inspector shows: the first target's, or the default preset's.
+    /// Settings the next added videos get, and the preset they name.
+    var draftBase: EncodeSettings { draftSettings ?? defaultPreset.settings.presetSettings }
+    var draftBasePresetID: UUID? { draftSettings == nil ? defaultPreset.id : draftPresetID }
+
+    /// The settings the inspector shows: the first target's, or the draft's.
     var inspectorSettings: EncodeSettings {
         let first = inspectorTargetIDs.first.flatMap { id in sources.first { $0.id == id } }
-        return first?.settings ?? draftSettings ?? defaultPreset.settings.presetSettings
+        return first?.settings ?? draftBase
     }
 
-    /// The profile the inspector highlights, when every target was set from the same one.
+    /// Settings and preset of every target (the draft when the list is empty).
+    private var inspectorTargets: [(settings: EncodeSettings, presetID: UUID?)] {
+        let ids = Set(inspectorTargetIDs)
+        let targets = sources.filter { ids.contains($0.id) }.map { ($0.settings, $0.presetID) }
+        return targets.isEmpty ? [(draftBase, draftBasePresetID)] : targets
+    }
+
+    /// The profile every target was set from, edited or not.
+    var inspectorBaseProfile: QualityProfile? {
+        let profiles = inspectorTargets.map { QualityProfile.profile(presetID: $0.presetID) }
+        guard let first = profiles.first, profiles.allSatisfy({ $0 == first }) else { return nil }
+        return first
+    }
+
+    /// The profile card to highlight: only when every target still has its settings.
     var inspectorProfile: QualityProfile? {
-        let targets = sources.filter { inspectorTargetIDs.contains($0.id) }
-        guard let first = targets.first, targets.allSatisfy({ $0.presetID == first.presetID }) else {
-            return targets.isEmpty ? QualityProfile.profile(presetID: draftSettings == nil ? defaultPreset.id : draftPresetID) : nil
+        guard let profile = inspectorBaseProfile else { return nil }
+        let unchanged = inspectorTargets.allSatisfy { target in
+            let compress = QualityProfile.isCompressPreset(target.presetID)
+            return target.settings.matchesProfile(profile.settings(compress: compress))
         }
-        return QualityProfile.profile(presetID: first.presetID)
+        return unchanged ? profile : nil
+    }
+
+    /// Set when the targets came from a profile but the user changed its settings since.
+    var inspectorPersonalizedProfile: QualityProfile? {
+        inspectorProfile == nil ? inspectorBaseProfile : nil
     }
 
     /// Applies one inspector edit to every target, keeping each one's other settings.
+    /// With no selection the edit also goes to the draft, so videos added later match.
     func editTargets(_ change: (inout EncodeSettings) -> Void) {
-        guard !sources.isEmpty else {
-            var draft = inspectorSettings
+        if !inspectsSelection {
+            var draft = draftBase
             change(&draft)
-            draftPresetID = draftSettings == nil ? defaultPreset.id : draftPresetID
+            draftPresetID = draftBasePresetID
             draftSettings = draft
-            return
         }
         let ids = Set(inspectorTargetIDs)
         setSources(sources.map { item in
@@ -59,55 +88,32 @@ extension AppModel {
         })
     }
 
-    /// Gives the targets `profile`'s settings, keeping their output format and per-video edits.
+    /// Gives the targets `profile`'s fields (codec, quality, resolution, frame rate,
+    /// audio), keeping format, metadata and every advanced per-video setting.
     func applyProfile(_ profile: QualityProfile) {
-        guard !sources.isEmpty else {
-            draftSettings = Self.profileSettings(profile, over: inspectorSettings)
-            draftPresetID = profile.presetID
-            return
+        let compress = mode == .compress
+        let template = profile.settings(compress: compress)
+        let presetID = profile.presetID(compress: compress)
+        if !inspectsSelection {
+            draftSettings = draftBase.applyingProfile(template)
+            draftPresetID = presetID
         }
         let ids = Set(inspectorTargetIDs)
         setSources(sources.map { item in
             guard ids.contains(item.id) else { return item }
             var copy = item
-            copy.settings = Self.profileSettings(profile, over: item.settings)
-            copy.presetID = profile.presetID
+            copy.settings = item.settings.applyingProfile(template)
+            copy.presetID = presetID
             return copy
         })
-    }
-
-    /// `profile`'s settings, keeping the output format, metadata choice and per-video edits of `current`.
-    static func profileSettings(_ profile: QualityProfile, over current: EncodeSettings) -> EncodeSettings {
-        var settings = current.adopting(profile.settings)
-        settings.container = current.container
-        settings.keepMetadata = current.keepMetadata
-        return settings.fixingCodecForContainer()
     }
 
     func applyPresetToTargets(_ preset: Preset) {
-        inspectorTargetIDs.forEach { applyPreset(preset, to: $0) }
-    }
-
-    // MARK: Mode
-
-    /// Compress mode resets the targets to the compact MP4 settings, like the prototype.
-    func setMode(_ newMode: WorkMode) {
-        mode = newMode
-        section = .conversion
-        guard newMode == .compress else { return }
-        guard !sources.isEmpty else {
-            draftSettings = QualityProfile.compressSettings
-            draftPresetID = QualityProfile.balanced.presetID
-            return
+        if !inspectsSelection {
+            draftSettings = draftBase.adopting(preset.settings.presetSettings)
+            draftPresetID = preset.id
         }
-        let ids = Set(inspectorTargetIDs)
-        setSources(sources.map { item in
-            guard ids.contains(item.id) else { return item }
-            var copy = item
-            copy.settings = item.settings.adopting(QualityProfile.compressSettings)
-            copy.presetID = QualityProfile.balanced.presetID
-            return copy
-        })
+        inspectorTargetIDs.forEach { applyPreset(preset, to: $0) }
     }
 
     // MARK: Converting
@@ -116,6 +122,7 @@ extension AppModel {
 
     /// Queues every ready video, takes it off the editing list and starts the queue.
     func convertAll() {
+        ui.batchStartedAt = ui.batchStartedAt ?? Date()
         let queued = Set(enqueueSources(sources.map(\.id)))
         if !queued.isEmpty {
             for item in sources where queued.contains(item.id) {
@@ -137,7 +144,8 @@ extension AppModel {
     func editJob(_ id: UUID) {
         guard let job = queue.jobs.first(where: { $0.id == id }), job.state == .queued else { return }
         queue.remove([id])
-        let preset = presets.all.first { $0.displayName == job.presetName || $0.name == job.presetName }
+        let preset = presets.preset(id: job.presetID)
+            ?? presets.all.first { $0.displayName == job.presetName || $0.name == job.presetName }
         var item = SourceItem(url: job.source, settings: job.settings, presetID: preset?.id)
         item.subtitleFiles = job.subtitleFiles ?? []
         setSources(sources + [item])
@@ -182,98 +190,20 @@ extension AppModel {
     var progress: QueueProgress { QueueProgress(queue: queue) }
 
     var statusText: String {
-        if queue.runningCount > 0 { return String(localized: "Processing…") }
-        let count = sources.count + queue.pendingCount
-        return count == 0 ? String(localized: "Ready to convert") : String(localized: "\(count) videos in the queue")
+        let progress = self.progress
+        if queue.runningCount > 0 {
+            let percent = Int((progress.fraction * 100).rounded())
+            return String(localized: "Converting \(progress.current) of \(progress.total) · \(percent)%")
+        }
+        return Self.queueCountText(sources.count + queue.pendingCount)
+    }
+
+    static func queueCountText(_ count: Int) -> String {
+        switch count {
+        case 0: String(localized: "Ready to convert")
+        case 1: String(localized: "1 video in the list")
+        default: String(localized: "\(count) videos in the list")
+        }
     }
 }
 
-extension EncodeSettings {
-    /// ProRes only fits in MOV: outside it the video falls back to HEVC.
-    func fixingCodecForContainer() -> EncodeSettings {
-        guard videoCodec.isProRes, container != .mov else { return self }
-        var copy = self
-        copy.videoCodec = .hevc
-        return copy
-    }
-
-    /// Picking a codec: ProRes moves the output to MOV, which is the only container it fits.
-    func choosing(codec: VideoCodec) -> EncodeSettings {
-        var copy = self
-        copy.videoCodec = codec
-        if codec.isProRes { copy.container = .mov }
-        return copy
-    }
-
-    /// Picking a format: a ProRes video that can't go there becomes HEVC.
-    func choosing(container: ContainerFormat) -> EncodeSettings {
-        var copy = self
-        copy.container = container
-        return copy.fixingCodecForContainer()
-    }
-}
-
-/// Progress of the current run, for the bottom bar: "file X of N" and an overall fraction.
-struct QueueProgress: Equatable {
-    var finished: Int
-    var running: [Double]
-    var waiting: Int
-
-    @MainActor
-    init(queue: QueueStore) {
-        self.init(finished: queue.batchFinishedCount,
-                  running: queue.jobs.compactMap { if case .running(let p) = $0.state { p } else { nil } },
-                  waiting: queue.pendingCount)
-    }
-
-    init(finished: Int, running: [Double], waiting: Int) {
-        self.finished = finished
-        self.running = running
-        self.waiting = waiting
-    }
-
-    var total: Int { finished + running.count + waiting }
-    var isActive: Bool { !running.isEmpty }
-    /// The file being worked on, counting from 1.
-    var current: Int { min(total, finished + 1) }
-    var fraction: Double {
-        guard total > 0 else { return 0 }
-        return (Double(finished) + running.reduce(0, +)) / Double(total)
-    }
-}
-
-/// Size of the inspector's targets before and after, from the core's estimate model.
-struct SizeEstimate: Equatable {
-    /// Inspected videos counted.
-    var count: Int
-    var originalBytes: Int64
-    /// Nil when any video's size depends on its content (constant quality).
-    var estimatedBytes: Int64?
-
-    /// Fraction saved (negative when the output is larger).
-    var savings: Double? {
-        guard let estimatedBytes, originalBytes > 0 else { return nil }
-        return 1 - Double(estimatedBytes) / Double(originalBytes)
-    }
-
-    init(count: Int, originalBytes: Int64, estimatedBytes: Int64?) {
-        self.count = count
-        self.originalBytes = originalBytes
-        self.estimatedBytes = estimatedBytes
-    }
-
-    init(_ items: [SourceItem]) {
-        let inspected = items.compactMap { item in item.info.map { (info: $0, settings: item.settings) } }
-        let estimates = inspected.map { OutputEstimate.bytes(info: $0.info, settings: $0.settings) }
-        self.init(count: inspected.count,
-                  originalBytes: inspected.reduce(0) { $0 + $1.info.fileBytes },
-                  estimatedBytes: estimates.contains(nil) || estimates.isEmpty ? nil : estimates.compactMap { $0 }.reduce(0, +))
-    }
-}
-
-extension AppModel {
-    var sizeEstimate: SizeEstimate {
-        let ids = Set(inspectorTargetIDs)
-        return SizeEstimate(sources.filter { ids.contains($0.id) })
-    }
-}

@@ -18,6 +18,14 @@ final class UIState {
     var advancedSourceID: UUID?
     /// Thumbnails of videos that moved from the editing list into the queue.
     var thumbnails: [URL: NSImage] = [:]
+    /// When the user last pressed Convert; the finished-run banner counts from here.
+    var batchStartedAt: Date?
+    /// Confirmations of destructive actions.
+    var confirmingClearList = false
+    var confirmingClearHistory = false
+    var confirmingApplyToAll = false
+    /// The file shown in Quick Look (Space on a selected row).
+    var quickLookURL: URL?
 
     private(set) var previewPlayer: AVPlayer?
 
