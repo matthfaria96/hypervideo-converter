@@ -15,6 +15,9 @@ private struct GeneralPreferences: View {
     @Environment(AppModel.self) private var model
     @AppStorage(PreferenceKey.outputSuffix) private var suffix = ""
     @AppStorage(PreferenceKey.notifyOnCompletion) private var notify = true
+    @AppStorage(PreferenceKey.notifyEachJob) private var notifyEachJob = false
+    @AppStorage(PreferenceKey.bounceDockOnCompletion) private var bounceDock = false
+    @AppStorage(PreferenceKey.playSoundOnCompletion) private var playSound = false
     @AppStorage(PreferenceKey.revealOnCompletion) private var reveal = false
 
     var body: some View {
@@ -25,7 +28,10 @@ private struct GeneralPreferences: View {
             }
             TextField("File name suffix", text: $suffix, prompt: Text("e.g. -converted"))
             LabeledContent("Default preset", value: model.defaultPreset.name)
-            Toggle("Notify when a conversion finishes", isOn: $notify)
+            Toggle("Notify when the queue finishes", isOn: $notify)
+            Toggle("Also notify for each conversion", isOn: $notifyEachJob)
+            Toggle("Bounce the Dock icon when the queue finishes", isOn: $bounceDock)
+            Toggle("Play a sound when the queue finishes", isOn: $playSound)
             Toggle("Show finished files in Finder", isOn: $reveal)
         }
         .formStyle(.grouped)

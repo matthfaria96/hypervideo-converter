@@ -42,7 +42,11 @@ struct JSONStore<Value: Codable>: Sendable {
 
 enum PreferenceKey {
     static let maxConcurrentJobs = "maxConcurrentJobs"
+    /// Notify when the whole queue finishes (the key predates per-job notifications).
     static let notifyOnCompletion = "notifyOnCompletion"
+    static let notifyEachJob = "notifyEachJob"
+    static let bounceDockOnCompletion = "bounceDockOnCompletion"
+    static let playSoundOnCompletion = "playSoundOnCompletion"
     static let revealOnCompletion = "revealOnCompletion"
     static let outputSuffix = "outputSuffix"
     static let destinationPath = "destinationPath"

@@ -11,6 +11,9 @@ struct HyperVideoConverterApp: App {
         UserDefaults.standard.register(defaults: [
             PreferenceKey.maxConcurrentJobs: 1,
             PreferenceKey.notifyOnCompletion: true,
+            PreferenceKey.notifyEachJob: false,
+            PreferenceKey.bounceDockOnCompletion: false,
+            PreferenceKey.playSoundOnCompletion: false,
             PreferenceKey.revealOnCompletion: false,
             PreferenceKey.autoStartQueue: false,
             PreferenceKey.outputSuffix: ""

@@ -21,11 +21,16 @@ final class QueueStore {
     private let engine = TranscodeEngine()
     private let store: JSONStore<[EncodeJob]>
     private let defaults: UserDefaults
+    private let notifier: any QueueNotifying
+    /// Jobs that completed or failed since the queue last ran dry.
+    private var batch = (done: 0, failed: 0)
 
-    /// `directory` and `defaults` override persistence and preferences (tests).
-    init(directory: URL? = nil, defaults: UserDefaults = .standard) {
+    /// `directory`, `defaults` and `notifier` override persistence, preferences and
+    /// notifications (tests).
+    init(directory: URL? = nil, defaults: UserDefaults = .standard, notifier: (any QueueNotifying)? = nil) {
         store = JSONStore(fileName: "queue.json", directory: directory)
         self.defaults = defaults
+        self.notifier = notifier ?? SystemNotifier(defaults: defaults)
         let saved = store.load() ?? []
         jobs = saved.map { $0.restoredAfterRelaunch().resolvingBookmarks() }
         if jobs != saved { store.save(jobs) }
@@ -210,18 +215,26 @@ final class QueueStore {
         switch result {
         case .success(let bytes):
             replace(job.id) { $0.with(state: .completed(outputBytes: bytes, elapsed: elapsed)) }
-            SystemIntegration.notify(title: "Conversion finished", body: job.destination.lastPathComponent)
-            if defaults.bool(forKey: PreferenceKey.revealOnCompletion) {
-                SystemIntegration.reveal([job.destination])
-            }
+            batch.done += 1
+            notifier.jobFinished(job, succeeded: true)
         case .failure(is CancellationError):
             replace(job.id) { $0.with(state: .cancelled) }
         case .failure(let error):
             appLog.error("Job failed: \(error.localizedDescription, privacy: .public)")
             replace(job.id) { $0.with(state: .failed(message: error.localizedDescription)) }
-            SystemIntegration.notify(title: "Conversion failed", body: job.source.lastPathComponent)
+            batch.failed += 1
+            notifier.jobFinished(job, succeeded: false)
         }
         schedule()
+        reportIfDrained()
+    }
+
+    /// Once nothing is running or waiting, sums up the run (unless every job was cancelled).
+    private func reportIfDrained() {
+        guard runningCount == 0, pendingCount == 0 else { return }
+        let finished = batch
+        batch = (0, 0)
+        if finished.done + finished.failed > 0 { notifier.queueFinished(done: finished.done, failed: finished.failed) }
     }
 
     private func replace(_ id: UUID, persisting: Bool = true, _ transform: (EncodeJob) -> EncodeJob) {

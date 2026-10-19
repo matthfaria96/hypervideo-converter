@@ -55,16 +55,15 @@ final class AppModel {
     }
 
     /// `directory` and `defaults` override persistence and preferences (tests).
-    init(directory: URL? = nil, defaults: UserDefaults = .standard) {
+    init(directory: URL? = nil, defaults: UserDefaults = .standard, notifier: (any QueueNotifying)? = nil) {
         presets = PresetStore(directory: directory)
-        queue = QueueStore(directory: directory, defaults: defaults)
+        queue = QueueStore(directory: directory, defaults: defaults, notifier: notifier)
         self.defaults = defaults
         let saved = defaults.string(forKey: PreferenceKey.destinationPath)
         destinationFolder = saved.map { URL(fileURLWithPath: $0) }
             ?? FileManager.default.urls(for: .moviesDirectory, in: .userDomainMask).first
             ?? URL(fileURLWithPath: NSHomeDirectory())
         if queue.jobs.contains(where: { !$0.state.isFinished }) { selection = .queue }
-        SystemIntegration.requestNotificationPermission()
     }
 
     var defaultPreset: Preset {
