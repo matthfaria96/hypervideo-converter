@@ -68,6 +68,7 @@ struct QuitAndSweepTests {
 
     @Test func relaunchRequeuesJobsThatWereRunning() throws {
         let env = try TestEnvironment()
+        try Data("x".utf8).write(to: env.root.appendingPathComponent("s.mov"))
         var running = EncodeJob(source: env.root.appendingPathComponent("s.mov"),
                                 destination: env.output.appendingPathComponent("s.mp4"),
                                 settings: EncodeSettings(), presetName: "Test")

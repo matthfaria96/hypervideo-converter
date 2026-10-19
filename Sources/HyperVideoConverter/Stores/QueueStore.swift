@@ -26,7 +26,9 @@ final class QueueStore {
     init(directory: URL? = nil, defaults: UserDefaults = .standard) {
         store = JSONStore(fileName: "queue.json", directory: directory)
         self.defaults = defaults
-        jobs = (store.load() ?? []).map { $0.restoredAfterRelaunch() }
+        let saved = store.load() ?? []
+        jobs = saved.map { $0.restoredAfterRelaunch().resolvingBookmarks() }
+        if jobs != saved { store.save(jobs) }
         sweepStaleWorkDirectories()
     }
 
@@ -69,7 +71,7 @@ final class QueueStore {
     // MARK: Mutations
 
     func add(_ newJobs: [EncodeJob]) {
-        jobs = jobs + newJobs
+        jobs = jobs + newJobs.map { $0.bookmarked() }
         persist()
         if defaults.bool(forKey: PreferenceKey.autoStartQueue) { start() } else { refreshDock() }
     }
@@ -148,6 +150,8 @@ final class QueueStore {
         let engine = engine
         // QueueStore lives for the whole app session, so strong captures are safe here.
         tasks[job.id] = Task {
+            let scoped = FileBookmarks.startAccessing(job.accessedURLs)
+            defer { FileBookmarks.stopAccessing(scoped) }
             let result: Result<Int64, Error>
             do {
                 let bytes = try await engine.run(

@@ -33,6 +33,10 @@ public struct EncodeJob: Codable, Hashable, Identifiable, Sendable {
     public var frameRate: Double?
     /// External subtitle files for this source; nil in queues saved before they existed.
     public var subtitleFiles: [SubtitleFile]?
+    /// Bookmarks that find the source and destination folder after relaunches or moves;
+    /// nil in queues saved before they existed.
+    public var sourceBookmark: Data?
+    public var destinationFolderBookmark: Data?
 
     public init(
         source: URL, destination: URL, settings: EncodeSettings, presetName: String,

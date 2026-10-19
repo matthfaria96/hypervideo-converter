@@ -4,10 +4,13 @@ import Foundation
 public struct SubtitleFile: Codable, Hashable, Identifiable, Sendable {
     public var url: URL
     public var language: String?
+    /// Finds the file after relaunches or moves; nil in queues saved before it existed.
+    public var bookmark: Data?
 
-    public init(url: URL, language: String?) {
+    public init(url: URL, language: String?, bookmark: Data? = nil) {
         self.url = url
         self.language = language
+        self.bookmark = bookmark
     }
 
     public var id: URL { url }

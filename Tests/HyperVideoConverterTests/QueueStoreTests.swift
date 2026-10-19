@@ -102,3 +102,38 @@ struct QueueStoreTests {
         #expect(queue.jobs.first?.destination.lastPathComponent == "clip-hv.mp4")
     }
 }
+
+@MainActor
+@Suite("Queue relaunch")
+struct QueueRelaunchTests {
+    @Test func queuedJobWithMissingSourceFailsOnLoadWithoutCrashing() throws {
+        let env = try TestEnvironment()
+        let source = env.root.appendingPathComponent("gone.mov")
+        try Data("x".utf8).write(to: source)
+        let job = EncodeJob(source: source, destination: env.output.appendingPathComponent("gone.mp4"),
+                            settings: EncodeSettings(), presetName: "Test")
+        env.makeQueue().add([job])
+        try FileManager.default.removeItem(at: source)
+
+        let relaunched = env.makeQueue()
+        guard case .failed(let message) = relaunched.jobs.first?.state else {
+            Issue.record("expected a failed job, got \(String(describing: relaunched.jobs.first?.state))")
+            return
+        }
+        #expect(message.contains("gone.mov"))
+        // The failure is saved, so the next launch shows it too.
+        #expect(env.makeQueue().jobs.first?.state == relaunched.jobs.first?.state)
+    }
+
+    @Test func addedJobsArePersistedWithBookmarks() throws {
+        let env = try TestEnvironment()
+        let source = env.root.appendingPathComponent("kept.mov")
+        try Data("x".utf8).write(to: source)
+        env.makeQueue().add([EncodeJob(source: source, destination: env.output.appendingPathComponent("kept.mp4"),
+                                       settings: EncodeSettings(), presetName: "Test")])
+        let reloaded = try #require(env.makeQueue().jobs.first)
+        #expect(reloaded.sourceBookmark != nil)
+        #expect(reloaded.destinationFolderBookmark != nil)
+        #expect(reloaded.state == .queued)
+    }
+}
