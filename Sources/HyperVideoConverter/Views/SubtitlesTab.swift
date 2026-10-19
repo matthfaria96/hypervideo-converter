@@ -59,10 +59,10 @@ struct SubtitlesTab: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            GlassSection(title: "Subtitles", symbol: "captions.bubble") {
+            SettingsSection(title: "Subtitles", symbol: "captions.bubble") {
                 SettingRow(title: "Tracks", help: "Copied as text, with their language; players show them on request") {
                     Picker("Tracks", selection: $settings.subtitles) {
-                        ForEach(SubtitleSelection.allCases) { Text($0.displayName).tag($0) }
+                        ForEach(SubtitleSelection.allCases) { Text(localizing: $0.displayName).tag($0) }
                     }
                     .pickerStyle(.segmented)
                     .labelsHidden()
@@ -80,7 +80,7 @@ struct SubtitlesTab: View {
                 }
             }
 
-            GlassSection(title: "Tracks", symbol: "list.number") {
+            SettingsSection(title: "Tracks", symbol: "list.number") {
                 if rows.isEmpty {
                     Text("No subtitle tracks yet. Add an SRT or WebVTT file, or name one like the video (e.g. Movie.pt-BR.srt) to pick it up automatically.")
                         .foregroundStyle(.secondary)
@@ -89,15 +89,15 @@ struct SubtitlesTab: View {
                     rowView(row, number: index + 1)
                 }
                 Button("Add Subtitle File…", systemImage: "plus") { model.chooseSubtitleFiles(for: sourceID) }
-                    .buttonStyle(.glass)
+                    .buttonStyle(.subtle)
             }
         }
     }
 
     private func burnInTitle(_ row: Row, number: Int) -> String {
         switch row {
-        case .track(let track): "Track \(number)" + (track.language.map { " (\($0))" } ?? "")
-        case .file(let file): "Track \(number): \(file.name)"
+        case .track(let track): String(localized: "Track \(number)") + (track.language.map { " (\($0))" } ?? "")
+        case .file(let file): String(localized: "Track \(number)") + ": \(file.name)"
         }
     }
 
@@ -108,11 +108,11 @@ struct SubtitlesTab: View {
                 .foregroundStyle(included ? AnyShapeStyle(.tint) : AnyShapeStyle(.tertiary))
             Text("Track \(number)").fontWeight(.medium)
             if row.burnIn == settings.burnIn {
-                InfoChip(symbol: "flame", text: "Burned in")
+                InfoChip(symbol: "flame", text: String(localized: "Burned in"))
             }
             switch row {
             case .track(let track):
-                Text(track.kind == .closedCaption ? "\(track.format) captions" : track.format).foregroundStyle(.secondary)
+                Text(verbatim: track.kind == .closedCaption ? String(localized: "\(track.format) captions") : track.format).foregroundStyle(.secondary)
                 if !track.kind.isSupported(in: settings.container) {
                     Text("Needs QuickTime (MOV)").font(.caption).foregroundStyle(.orange)
                 }
@@ -121,10 +121,10 @@ struct SubtitlesTab: View {
             case .file(let file):
                 Label(file.name, systemImage: "doc.text").foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
                 Spacer()
-                InfoChip(symbol: "globe", text: file.language ?? "Unknown")
+                InfoChip(symbol: "globe", text: file.language ?? String(localized: "Unknown"))
                 Button("Remove", systemImage: "xmark") { model.removeSubtitleFile(file, from: sourceID) }
                     .labelStyle(.iconOnly)
-                    .buttonStyle(.glass)
+                    .buttonStyle(.subtle)
                     .buttonBorderShape(.circle)
             }
         }

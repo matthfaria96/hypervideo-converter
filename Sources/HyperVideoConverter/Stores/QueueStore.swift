@@ -41,6 +41,8 @@ final class QueueStore {
 
     var pendingCount: Int { jobs.filter { $0.state == .queued }.count }
     var runningCount: Int { jobs.filter(\.state.isRunning).count }
+    /// Jobs that completed or failed in the current run.
+    var batchFinishedCount: Int { batch.done + batch.failed }
     var hasFinished: Bool { jobs.contains { $0.state.isFinished } }
     /// Every destination a job could still write: only completed jobs give theirs up,
     /// since cancelled or failed ones can be retried.

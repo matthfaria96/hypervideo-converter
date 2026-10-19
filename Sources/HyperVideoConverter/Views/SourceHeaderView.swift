@@ -8,10 +8,9 @@ struct SourceHeaderView: View {
     var body: some View {
         ZStack(alignment: .bottomLeading) {
             artwork
-                .frame(height: 260)
+                .frame(height: 240)
                 .frame(maxWidth: .infinity)
                 .clipped()
-                .backgroundExtensionEffect()
 
             VStack(alignment: .leading, spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
@@ -25,10 +24,10 @@ struct SourceHeaderView: View {
             }
             .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .glassEffect(.regular, in: .rect(cornerRadius: 22))
+            .background(.black.opacity(0.5), in: .rect(cornerRadius: 14))
             .padding(14)
         }
-        .clipShape(.rect(cornerRadius: 28))
+        .clipShape(.rect(cornerRadius: 14))
     }
 
     @ViewBuilder
@@ -46,7 +45,7 @@ struct SourceHeaderView: View {
     }
 
     private func chips(_ info: MediaInfo) -> some View {
-        GlassEffectContainer(spacing: 8) {
+        Group {
             ScrollView(.horizontal) {
                 HStack(spacing: 8) {
                     if let size = info.displaySize { InfoChip(symbol: "aspectratio", text: Format.size(size)) }
@@ -55,12 +54,12 @@ struct SourceHeaderView: View {
                     InfoChip(symbol: "clock", text: Format.duration(info.duration))
                     if let rate = info.videoBitrate { InfoChip(symbol: "gauge.with.dots.needle.67percent", text: Format.bitrate(rate)) }
                     InfoChip(symbol: "internaldrive", text: Format.bytes(info.fileBytes))
-                    if info.isInterlaced { InfoChip(symbol: "line.3.horizontal", text: "Interlaced") }
+                    if info.isInterlaced { InfoChip(symbol: "line.3.horizontal", text: String(localized: "Interlaced")) }
                     if info.dynamicRange != .sdr {
                         InfoChip(symbol: "sun.max.fill", text: info.dynamicRange.rawValue, tint: .yellow)
                     }
                     if !info.audioTracks.isEmpty {
-                        InfoChip(symbol: "speaker.wave.2", text: "\(info.audioTracks.count) audio")
+                        InfoChip(symbol: "speaker.wave.2", text: String(localized: "\(info.audioTracks.count) audio"))
                     }
                 }
             }

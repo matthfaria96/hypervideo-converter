@@ -29,9 +29,14 @@ struct FolderImport: Identifiable, Equatable {
     var presetID: UUID?
 }
 
-enum SidebarItem: Hashable {
-    case source(UUID)
-    case queue
+/// The pages of the sidebar.
+enum AppSection: Hashable, CaseIterable {
+    case conversion, history, favorites, analyze
+}
+
+/// The workspace's two flavours: Compress also resets the targets to a compact MP4.
+enum WorkMode: Hashable {
+    case convert, compress
 }
 
 @Observable
@@ -43,8 +48,14 @@ final class AppModel {
     let ui = UIState()
 
     private(set) var sources: [SourceItem] = []
-    var selection: SidebarItem?
-    var showsPresetInspector = true
+    var section: AppSection = .conversion
+    var mode: WorkMode = .convert
+    /// Selected rows of the conversion list (source or job IDs). The output inspector
+    /// edits the selected sources, or every source when none is selected.
+    var selectedIDs: Set<UUID> = []
+    /// What the inspector set while the list was empty; the next loose videos get it.
+    var draftSettings: EncodeSettings?
+    var draftPresetID: UUID?
     var isImporting = false
     var alertMessage: String?
     /// Set when an import includes folders, until a preset is chosen for them.
@@ -63,17 +74,19 @@ final class AppModel {
         destinationFolder = saved.map { URL(fileURLWithPath: $0) }
             ?? FileManager.default.urls(for: .moviesDirectory, in: .userDomainMask).first
             ?? URL(fileURLWithPath: NSHomeDirectory())
-        if queue.jobs.contains(where: { !$0.state.isFinished }) { selection = .queue }
     }
 
     var defaultPreset: Preset {
         let id = defaults.string(forKey: PreferenceKey.defaultPresetID).flatMap(UUID.init(uuidString:))
-        return presets.preset(id: id) ?? BuiltInPresets.default
+        return presets.preset(id: id) ?? QualityProfile.balanced.preset
     }
 
+    /// The one source a per-video view (Advanced, Analyze) works on: the single selected
+    /// source, or the only source in the list.
     var selectedSource: SourceItem? {
-        guard case .source(let id) = selection else { return nil }
-        return sources.first { $0.id == id }
+        let selected = sources.filter { selectedIDs.contains($0.id) }
+        if selected.count == 1 { return selected[0] }
+        return selected.isEmpty && sources.count == 1 ? sources[0] : nil
     }
 
     // MARK: Sources
@@ -107,29 +120,31 @@ final class AppModel {
         let media = MediaDiscovery.mediaFiles(in: urls)
         let accepted = media.filter { !existing.contains($0) }
         guard !accepted.isEmpty else {
-            if !urls.isEmpty && media.isEmpty { alertMessage = "No video or audio files found there." }
+            if !urls.isEmpty && media.isEmpty { alertMessage = String(localized: "No video or audio files found there.") }
             return
         }
         let items = accepted.map { url in
-            let preset = loose.contains(url.standardizedFileURL) ? fallback : (folderPreset ?? fallback)
-            return SourceItem(url: url, settings: preset.settings.presetSettings, presetID: preset.id)
+            let isLoose = loose.contains(url.standardizedFileURL) || folderPreset == nil
+            return newSource(url: url, preset: isLoose ? fallback : (folderPreset ?? fallback), usesDraft: isLoose)
         }
         sources = sources + items
-        selection = .source(items[0].id)
         items.forEach { item in Task { await inspect(item) } }
     }
 
     func removeSource(_ id: UUID) {
         sources = sources.filter { $0.id != id }
-        if selection == .source(id) { selection = sources.first.map { .source($0.id) } }
+        selectedIDs.remove(id)
     }
 
     func clearSources() {
         sources = []
-        selection = queue.jobs.isEmpty ? nil : .queue
+        selectedIDs = []
     }
 
-    private func inspect(_ item: SourceItem) async {
+    /// Replaces the whole list (reordering keeps every item and its settings).
+    func setSources(_ items: [SourceItem]) { sources = items }
+
+    func inspect(_ item: SourceItem) async {
         do {
             let info = try await MediaInspector.inspect(item.url)
             let thumbnail = await Self.thumbnail(for: item.url, duration: info.duration)
@@ -159,7 +174,7 @@ final class AppModel {
         panel.allowedContentTypes = SubtitleFile.fileExtensions.compactMap { UTType(filenameExtension: $0) }
         panel.allowsMultipleSelection = true
         panel.directoryURL = item.url.deletingLastPathComponent()
-        panel.prompt = "Add"
+        panel.prompt = String(localized: "Add")
         guard panel.runModal() == .OK else { return }
         addSubtitleFiles(panel.urls, to: id)
     }
@@ -171,7 +186,9 @@ final class AppModel {
         let readable = candidates.filter(Self.isReadable)
         let rejected = candidates.count - readable.count
         if rejected > 0 {
-            alertMessage = rejected == 1 ? "That file has no subtitles HyperVideo can read." : "\(rejected) files had no subtitles HyperVideo can read."
+            alertMessage = rejected == 1
+                ? String(localized: "That file has no subtitles HyperVideo can read.")
+                : String(localized: "\(rejected) files had no subtitles HyperVideo can read.")
         }
         update(id) { source in
             let known = Set(source.subtitleFiles.map(\.url))
@@ -224,18 +241,23 @@ final class AppModel {
     }
 
     func presetName(for item: SourceItem) -> String {
-        guard let preset = presets.preset(id: item.presetID) else { return "Custom" }
-        return preset.settings.presetSettings == item.settings.presetSettings ? preset.name : "\(preset.name) (modified)"
+        guard let preset = presets.preset(id: item.presetID) else { return String(localized: "Custom") }
+        let name = preset.displayName
+        return preset.settings.presetSettings == item.settings.presetSettings ? name : String(localized: "\(name) (modified)")
     }
 
     // MARK: Queue
 
     /// Returns how many jobs were added.
     @discardableResult
-    func enqueue(_ ids: [UUID]) -> Int {
+    func enqueue(_ ids: [UUID]) -> Int { enqueueSources(ids).count }
+
+    /// Queues the ready sources among `ids` and returns the IDs of those queued.
+    func enqueueSources(_ ids: [UUID]) -> [UUID] {
         let suffix = defaults.string(forKey: PreferenceKey.outputSuffix) ?? ""
         var taken = queue.takenDestinations
         var jobs: [EncodeJob] = []
+        var queued: [UUID] = []
         var skipped: [String] = []
         for item in sources where ids.contains(item.id) {
             guard let info = item.info, item.settings.isValid else {
@@ -246,6 +268,7 @@ final class AppModel {
                 for: item.url, in: destinationFolder, container: item.settings.container, suffix: suffix, taken: taken
             )
             taken.insert(destination)
+            queued.append(item.id)
             jobs.append(EncodeJob(
                 source: item.url, destination: destination, settings: item.settings, presetName: presetName(for: item),
                 mediaDuration: item.settings.outputDuration(sourceDuration: info.duration),
@@ -253,10 +276,11 @@ final class AppModel {
                 subtitleFiles: item.subtitleFiles
             ))
         }
-        if !skipped.isEmpty { alertMessage = "Skipped (not ready or invalid settings): \(skipped.joined(separator: ", "))" }
-        guard !jobs.isEmpty else { return 0 }
-        queue.add(jobs)
-        return jobs.count
+        if !skipped.isEmpty {
+            alertMessage = String(localized: "Skipped (not ready or invalid settings): \(skipped.joined(separator: ", "))")
+        }
+        if !jobs.isEmpty { queue.add(jobs) }
+        return queued
     }
 
     func enqueueAll() { enqueue(sources.map(\.id)) }
@@ -264,7 +288,7 @@ final class AppModel {
     func encodeNow(_ id: UUID) {
         guard enqueue([id]) > 0 else { return }
         queue.start()
-        selection = .queue
+        section = .conversion
     }
 
     func chooseDestination() {
@@ -273,7 +297,7 @@ final class AppModel {
         panel.canChooseFiles = false
         panel.canCreateDirectories = true
         panel.directoryURL = destinationFolder
-        panel.prompt = "Choose"
+        panel.prompt = String(localized: "Choose")
         if panel.runModal() == .OK, let url = panel.url { destinationFolder = url }
     }
 }

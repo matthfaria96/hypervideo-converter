@@ -1,115 +1,125 @@
 import SwiftUI
 
+/// Library pages and tools; collapses to icons only.
 struct SidebarView: View {
     @Environment(AppModel.self) private var model
 
-    var body: some View {
-        @Bindable var model = model
+    private var collapsed: Bool { model.ui.isSidebarCollapsed }
 
-        List(selection: $model.selection) {
-            Section("Activity") {
-                QueueSidebarRow(queue: model.queue)
-                    .tag(SidebarItem.queue)
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            if !collapsed { Eyebrow(text: "Library").padding(.horizontal, 10).padding(.bottom, 6) }
+            NavRow(title: "Conversion", symbol: "rectangle.stack", isActive: isActive(.conversion, .convert)) {
+                model.section = .conversion
+                if model.mode == .compress { model.setMode(.convert) }
             }
-            Section("Sources") {
-                if model.sources.isEmpty {
-                    Text("Drop videos or folders here, or press ⌘O")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                }
-                ForEach(model.sources) { source in
-                    SourceRow(source: source)
-                        .tag(SidebarItem.source(source.id))
-                        .contextMenu {
-                            Button("Add to Queue", systemImage: "text.badge.plus") { model.enqueue([source.id]) }
-                                .disabled(source.info == nil)
-                            Button("Show in Finder", systemImage: "folder") { SystemIntegration.reveal([source.url]) }
-                            Divider()
-                            Button("Remove", systemImage: "trash", role: .destructive) { model.removeSource(source.id) }
-                        }
-                }
-                .onDeleteCommand {
-                    if case .source(let id) = model.selection { model.removeSource(id) }
-                }
+            NavRow(title: "History", symbol: "clock.arrow.circlepath", isActive: model.section == .history,
+                   badge: model.historyJobs.count) { model.section = .history }
+            NavRow(title: "Favorites", symbol: "star", isActive: model.section == .favorites) { model.section = .favorites }
+
+            Theme.separator.frame(height: 1).padding(.horizontal, 8).padding(.vertical, 14)
+
+            if !collapsed { Eyebrow(text: "Tools").padding(.horizontal, 10).padding(.bottom, 6) }
+            NavRow(title: "Compress", symbol: "arrow.down.to.line", isActive: isActive(.conversion, .compress)) {
+                model.setMode(.compress)
             }
+            NavRow(title: "Analyze Video", symbol: "magnifyingglass", isActive: model.section == .analyze) {
+                model.section = .analyze
+            }
+
+            if !collapsed { NoteCard().padding(.top, 18) }
+            Spacer(minLength: 0)
+            footer
         }
-        .listStyle(.sidebar)
-        .safeAreaInset(edge: .bottom) {
-            if model.sources.count > 1 {
-                Button("Add All to Queue", systemImage: "text.badge.plus") { model.enqueueAll() }
-                    .buttonStyle(.glass)
-                    .controlSize(.large)
-                    .padding(12)
-            }
-        }
+        .padding(.horizontal, collapsed ? 8 : 12)
+        .padding(.vertical, 18)
+        .frame(maxHeight: .infinity, alignment: .top)
+        .background(Theme.sidebar)
     }
-}
 
-private struct QueueSidebarRow: View {
-    let queue: QueueStore
+    private func isActive(_ section: AppSection, _ mode: WorkMode) -> Bool {
+        model.section == section && model.mode == mode
+    }
 
-    var body: some View {
+    private var footer: some View {
         HStack {
-            Label("Queue", systemImage: queue.isProcessing ? "gearshape.2.fill" : "list.bullet.rectangle")
-                .symbolEffect(.rotate, isActive: queue.isProcessing)
-            Spacer()
-            if let progress = queue.overallProgress {
-                ProgressView(value: progress)
-                    .progressViewStyle(.circular)
-                    .controlSize(.small)
-            } else if queue.pendingCount > 0 {
-                Text("\(queue.pendingCount)")
-                    .font(.caption.bold())
-                    .monospacedDigit()
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 2)
-                    .glassEffect(.regular, in: .capsule)
+            if !collapsed {
+                Text(verbatim: "HyperVideo Converter · \(Self.version)")
+                    .font(.system(size: 10))
+                    .foregroundStyle(Theme.faint)
+                    .lineLimit(1)
+                Spacer()
             }
+            Button {
+                model.ui.isSidebarCollapsed.toggle()
+            } label: {
+                Image(systemName: collapsed ? "sidebar.right" : "sidebar.left")
+                    .foregroundStyle(Theme.faint)
+                    .frame(width: 24, height: 20)
+            }
+            .buttonStyle(.plain)
+            .help(collapsed ? "Expand sidebar" : "Collapse sidebar")
         }
+        .frame(maxWidth: .infinity, alignment: collapsed ? .center : .leading)
+        .padding(.horizontal, collapsed ? 0 : 6)
+    }
+
+    static var version: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev"
     }
 }
 
-private struct SourceRow: View {
-    let source: SourceItem
+private struct NavRow: View {
+    @Environment(AppModel.self) private var model
+    let title: LocalizedStringKey
+    let symbol: String
+    let isActive: Bool
+    var badge = 0
+    let action: () -> Void
 
     var body: some View {
-        HStack(spacing: 10) {
-            thumbnail
-                .frame(width: 54, height: 34)
-                .clipShape(.rect(cornerRadius: 7))
-            VStack(alignment: .leading, spacing: 2) {
-                Text(source.name).lineLimit(1).truncationMode(.middle)
-                subtitle.font(.caption).foregroundStyle(.secondary)
-            }
-        }
-        .padding(.vertical, 2)
-    }
-
-    @ViewBuilder
-    private var thumbnail: some View {
-        if let image = source.thumbnail {
-            Image(nsImage: image).resizable().aspectRatio(contentMode: .fill)
-        } else {
-            Rectangle().fill(.quaternary)
-                .overlay {
-                    if source.isLoading {
-                        Image(systemName: "rays").symbolEffect(.rotate).foregroundStyle(.secondary)
-                    } else {
-                        Image(systemName: source.errorMessage == nil ? "waveform" : "exclamationmark.triangle")
-                            .foregroundStyle(.secondary)
+        let collapsed = model.ui.isSidebarCollapsed
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: symbol)
+                    .font(.system(size: 14))
+                    .frame(width: 18)
+                if !collapsed {
+                    Text(title).font(.system(size: 13)).lineLimit(1)
+                    Spacer(minLength: 0)
+                    if badge > 0 {
+                        Text("\(badge)").font(.system(size: 10, weight: .semibold)).monospacedDigit()
+                            .foregroundStyle(Theme.muted)
                     }
                 }
+            }
+            .foregroundStyle(isActive ? Theme.accentLight : Color(hex: 0xC6C6CC))
+            .padding(.horizontal, collapsed ? 0 : 12)
+            .padding(.vertical, 9)
+            .frame(maxWidth: .infinity, alignment: collapsed ? .center : .leading)
+            .background(isActive ? Theme.accentWash : .clear, in: .rect(cornerRadius: 8))
+            .contentShape(.rect)
         }
+        .buttonStyle(.plain)
+        .help(title)
     }
+}
 
-    @ViewBuilder
-    private var subtitle: some View {
-        if let info = source.info {
-            Text([info.displaySize.map(Format.size), Format.duration(info.duration)].compactMap { $0 }.joined(separator: " · "))
-        } else if let error = source.errorMessage {
-            Text(error).lineLimit(1)
-        } else {
-            Text("Analyzing…")
+private struct NoteCard: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Quality comes first")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(Color(hex: 0xDDDDDD))
+            Text("Balanced mode keeps the video's essential settings and only reduces size where it's needed.")
+                .font(.system(size: 11))
+                .foregroundStyle(Theme.muted)
+                .lineSpacing(2)
+                .fixedSize(horizontal: false, vertical: true)
         }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .card(fill: Color(hex: 0x242427), radius: 10, stroke: Color(hex: 0x39393E))
+        .padding(.horizontal, 2)
     }
 }

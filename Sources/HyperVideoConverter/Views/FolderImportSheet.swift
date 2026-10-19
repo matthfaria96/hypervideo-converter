@@ -36,7 +36,7 @@ struct FolderImportSheet: View {
                     model.confirmFolderImport(preset: model.presets.preset(id: presetID.wrappedValue) ?? model.defaultPreset)
                 }
                 .keyboardShortcut(.defaultAction)
-                .buttonStyle(.glassProminent)
+                .buttonStyle(.primary)
             }
         }
         .padding(24)

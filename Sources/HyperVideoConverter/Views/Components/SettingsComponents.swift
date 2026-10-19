@@ -1,21 +1,21 @@
 import SwiftUI
 
-/// A titled Liquid Glass panel used for every settings group.
-struct GlassSection<Content: View>: View {
-    let title: String
+/// A titled panel used for every settings group.
+struct SettingsSection<Content: View>: View {
+    let title: LocalizedStringKey
     let symbol: String
     @ViewBuilder var content: Content
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Label(title, systemImage: symbol)
-                .font(.headline)
-                .foregroundStyle(.secondary)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Theme.muted)
             content
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .glassEffect(.regular, in: .rect(cornerRadius: 22))
+        .card(fill: Theme.panel, radius: 12)
     }
 }
 
@@ -31,14 +31,14 @@ struct InfoChip: View {
             .monospacedDigit()
             .padding(.horizontal, 12)
             .padding(.vertical, 7)
-            .glassEffect(tint.map { .regular.tint($0.opacity(0.35)) } ?? .regular, in: .capsule)
+            .background((tint ?? Theme.muted).opacity(tint == nil ? 0.18 : 0.3), in: .capsule)
     }
 }
 
 /// Label/control row aligned on a shared leading column.
 struct SettingRow<Control: View>: View {
-    let title: String
-    var help: String?
+    let title: LocalizedStringKey
+    var help: LocalizedStringKey?
     @ViewBuilder var control: Control
 
     var body: some View {
@@ -69,7 +69,7 @@ struct StatusBanner: View {
         .font(.callout)
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .glassEffect(.regular.tint(.orange.opacity(0.25)), in: .rect(cornerRadius: 16))
+        .card(fill: Color.orange.opacity(0.14), radius: 10, stroke: Color.orange.opacity(0.35))
     }
 }
 

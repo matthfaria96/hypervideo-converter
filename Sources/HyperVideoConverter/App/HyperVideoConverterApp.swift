@@ -24,8 +24,9 @@ struct HyperVideoConverterApp: App {
         Window("HyperVideo Converter", id: "main") {
             ContentView()
                 .environment(model)
-                .frame(minWidth: 1040, minHeight: 680)
-                .tint(Color(red: 1.0, green: 0.68, blue: 0.08))
+                .frame(minWidth: 1080, minHeight: 680)
+                .tint(Theme.accent)
+                .preferredColorScheme(.dark)
                 .onAppear { appDelegate.model = model }
         }
         .windowToolbarStyle(.unified)
@@ -75,11 +76,13 @@ struct AppCommands: Commands {
                 .keyboardShortcut("o")
         }
         CommandMenu("Encode") {
-            Button("Add to Queue") {
-                if let id = model.selectedSource?.id { model.enqueue([id]) }
-            }
-            .keyboardShortcut("b")
-            .disabled(model.selectedSource == nil)
+            Button("Convert Videos") { model.convertAll() }
+                .keyboardShortcut(.return, modifiers: .command)
+                .disabled(model.readySourceCount == 0 && model.queue.pendingCount == 0)
+
+            Button("Add Selected to Queue") { model.enqueue(Array(model.selectedIDs)) }
+                .keyboardShortcut("b")
+                .disabled(model.selectedIDs.isEmpty)
 
             Button("Add All to Queue") { model.enqueueAll() }
                 .keyboardShortcut("b", modifiers: [.command, .option])
@@ -99,14 +102,28 @@ struct AppCommands: Commands {
 
             Divider()
 
-            Button("Show Queue") { model.selection = .queue }
-                .keyboardShortcut("1", modifiers: [.command, .option])
+            Button("Advanced Settings…") { model.ui.advancedSourceID = model.selectedSource?.id }
+                .keyboardShortcut("e")
+                .disabled(model.selectedSource?.info == nil)
+            Button("Select None") { model.selectedIDs = [] }
+                .keyboardShortcut("d")
         }
         CommandGroup(after: .sidebar) {
-            Button(model.showsPresetInspector ? "Hide Presets" : "Show Presets") {
-                model.showsPresetInspector.toggle()
+            Button("Conversion") { model.setMode(.convert) }
+                .keyboardShortcut("1")
+            Button("History") { model.section = .history }
+                .keyboardShortcut("2")
+            Button("Favorites") { model.section = .favorites }
+                .keyboardShortcut("3")
+            Button("Compress") { model.setMode(.compress) }
+                .keyboardShortcut("4")
+            Button("Analyze Video") { model.section = .analyze }
+                .keyboardShortcut("5")
+            Divider()
+            Button(model.ui.isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar") {
+                model.ui.isSidebarCollapsed.toggle()
             }
-            .keyboardShortcut("i", modifiers: [.command, .option])
+            .keyboardShortcut("s", modifiers: [.command, .control])
         }
     }
 }

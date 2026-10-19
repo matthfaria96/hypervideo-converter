@@ -10,10 +10,10 @@ struct SummaryTab: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            GlassSection(title: "Output", symbol: "shippingbox") {
+            SettingsSection(title: "Output", symbol: "shippingbox") {
                 SettingRow(title: "Format") {
                     Picker("Format", selection: $settings.container) {
-                        ForEach(ContainerFormat.allCases) { Text($0.displayName).tag($0) }
+                        ForEach(ContainerFormat.allCases) { Text(localizing: $0.displayName).tag($0) }
                     }
                     .labelsHidden()
                     .fixedSize()
@@ -26,13 +26,13 @@ struct SummaryTab: View {
                 }
             }
 
-            GlassSection(title: "Before → After", symbol: "arrow.right.circle") {
+            SettingsSection(title: "Before → After", symbol: "arrow.right.circle") {
                 Grid(alignment: .leading, horizontalSpacing: 24, verticalSpacing: 10) {
                     compareRow("Resolution", info.displaySize.map(Format.size) ?? "—", outputSize.map(Format.size) ?? "—")
-                    compareRow("Video", info.videoCodec ?? "—", info.hasVideo ? settings.videoCodec.displayName : "—")
-                    compareRow("Frame rate", info.frameRate.map(Format.fps) ?? "—", settings.frameRate.displayName)
+                    compareRow("Video", info.videoCodec ?? "—", info.hasVideo ? String(localized: String.LocalizationValue(settings.videoCodec.displayName)) : "—")
+                    compareRow("Frame rate", info.frameRate.map(Format.fps) ?? "—", String(localized: String.LocalizationValue(settings.frameRate.displayName)))
                     if info.hasVideo && settings.videoCodec != .passthrough {
-                        compareRow("Filters", info.isInterlaced ? "Interlaced" : "—", filterSummary)
+                        compareRow("Filters", info.isInterlaced ? String(localized: "Interlaced") : "—", filterSummary)
                     }
                     compareRow("Audio", audioSource, audioOutput)
                     if !info.subtitleTracks.isEmpty || !subtitleFiles.isEmpty {
@@ -47,7 +47,7 @@ struct SummaryTab: View {
             }
 
             if !keptChapters.isEmpty {
-                GlassSection(title: "Chapters", symbol: "list.bullet.indent") {
+                SettingsSection(title: "Chapters", symbol: "list.bullet.indent") {
                     ForEach(Array(keptChapters.enumerated()), id: \.offset) { index, chapter in
                         HStack {
                             Text("\(index + 1)").monospacedDigit().foregroundStyle(.tertiary).frame(width: 24, alignment: .trailing)
@@ -81,23 +81,23 @@ struct SummaryTab: View {
     private var outputDuration: Double { settings.outputDuration(sourceDuration: info.duration) }
 
     private var audioSource: String {
-        guard let first = info.audioTracks.first else { return "None" }
-        return "\(first.codec) \(first.channelDescription)" + (info.audioTracks.count > 1 ? " +\(info.audioTracks.count - 1)" : "")
+        guard let first = info.audioTracks.first else { return String(localized: "None") }
+        return "\(first.codec) \(Self.local(first.channelDescription))" + (info.audioTracks.count > 1 ? " +\(info.audioTracks.count - 1)" : "")
     }
 
     private var filterSummary: String {
         let filters = settings.filters
         let names = [
-            filters.deinterlaces(sourceIsInterlaced: info.isInterlaced) ? "Deinterlace" : nil,
-            filters.denoise != .off ? "Denoise \(filters.denoise.displayName.lowercased())" : nil,
-            filters.sharpen != .off ? "Sharpen \(filters.sharpen.displayName.lowercased())" : nil,
-            filters.grayscale ? "Grayscale" : nil
+            filters.deinterlaces(sourceIsInterlaced: info.isInterlaced) ? String(localized: "Deinterlace") : nil,
+            filters.denoise != .off ? String(localized: "Denoise") + " (\(Self.local(filters.denoise.displayName)))" : nil,
+            filters.sharpen != .off ? String(localized: "Sharpen") + " (\(Self.local(filters.sharpen.displayName)))" : nil,
+            filters.grayscale ? String(localized: "Grayscale") : nil
         ].compactMap { $0 }
         return names.isEmpty ? "—" : names.joined(separator: ", ")
     }
 
     private var subtitleSource: String {
-        subtitleFiles.isEmpty ? "\(info.subtitleTracks.count)" : "\(info.subtitleTracks.count) + \(subtitleFiles.count) files"
+        subtitleFiles.isEmpty ? "\(info.subtitleTracks.count)" : String(localized: "\(info.subtitleTracks.count) + \(subtitleFiles.count) files")
     }
 
     private var keptSubtitles: Int {
@@ -110,24 +110,26 @@ struct SummaryTab: View {
 
     private var audioOutput: String {
         guard let extra = settings.extraAudio, settings.audioCodec != .none else { return mainAudioOutput }
-        return mainAudioOutput + " + " + (extra.codec == .aac ? "AAC \(extra.mixdown.displayName)" : extra.codec.displayName)
+        return mainAudioOutput + " + " + (extra.codec == .aac ? "AAC \(Self.local(extra.mixdown.displayName))" : Self.local(extra.codec.displayName))
     }
 
     private var mainAudioOutput: String {
         switch settings.audioCodec {
-        case .none: "None"
-        case .passthrough: "Passthrough"
-        case .alac: "ALAC \(settings.audioMixdown.displayName)"
-        case .aac: "AAC \(settings.audioMixdown.displayName) · \(settings.audioBitrateKbps) kbit/s"
+        case .none: String(localized: "None")
+        case .passthrough: String(localized: "Passthrough")
+        case .alac: "ALAC \(Self.local(settings.audioMixdown.displayName))"
+        case .aac: "AAC \(Self.local(settings.audioMixdown.displayName)) · \(settings.audioBitrateKbps) kbit/s"
         }
     }
 
     /// Only bitrate-driven and passthrough encodes have a predictable size.
     private var estimatedSize: String {
-        OutputEstimate.bytes(info: info, settings: settings).map { "≈ " + Format.bytes($0) } ?? "Depends on content"
+        OutputEstimate.bytes(info: info, settings: settings).map { "≈ " + Format.bytes($0) } ?? String(localized: "Depends on content")
     }
 
-    private func compareRow(_ title: String, _ before: String, _ after: String) -> some View {
+    static func local(_ text: String) -> String { String(localized: String.LocalizationValue(text)) }
+
+    private func compareRow(_ title: LocalizedStringKey, _ before: String, _ after: String) -> some View {
         GridRow {
             Text(title).foregroundStyle(.secondary)
             Text(before).monospacedDigit()
@@ -145,10 +147,10 @@ struct VideoTab: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            GlassSection(title: "Encoder", symbol: "cpu") {
+            SettingsSection(title: "Encoder", symbol: "cpu") {
                 SettingRow(title: "Codec") {
                     Picker("Codec", selection: $settings.videoCodec) {
-                        ForEach(VideoCodec.allCases) { Text($0.displayName).tag($0) }
+                        ForEach(VideoCodec.allCases) { Text(localizing: $0.displayName).tag($0) }
                     }
                     .labelsHidden()
                     .fixedSize()
@@ -161,7 +163,7 @@ struct VideoTab: View {
                 }
                 SettingRow(title: "Frame rate") {
                     Picker("Frame rate", selection: $settings.frameRate) {
-                        ForEach(FrameRate.allCases) { Text($0.displayName).tag($0) }
+                        ForEach(FrameRate.allCases) { Text(localizing: $0.displayName).tag($0) }
                     }
                     .labelsHidden()
                     .fixedSize()
@@ -174,7 +176,7 @@ struct VideoTab: View {
 
             if settings.videoCodec.supportsRateControl {
                 RateControlSection(settings: $settings)
-                GlassSection(title: "Advanced", symbol: "slider.horizontal.3") {
+                SettingsSection(title: "Advanced", symbol: "slider.horizontal.3") {
                     SettingRow(title: "Prioritize speed", help: "Faster encodes at slightly lower efficiency") {
                         Toggle("Prioritize speed", isOn: $settings.prioritizeSpeed).labelsHidden().toggleStyle(.switch)
                     }
@@ -197,10 +199,10 @@ private struct FiltersSection: View {
     @Binding var filters: VideoFilters
 
     var body: some View {
-        GlassSection(title: "Filters", symbol: "camera.filters") {
+        SettingsSection(title: "Filters", symbol: "camera.filters") {
             SettingRow(title: "Deinterlace", help: info.isInterlaced ? "This source is interlaced" : "Automatic acts only on interlaced sources") {
                 Picker("Deinterlace", selection: $filters.deinterlace) {
-                    ForEach(DeinterlaceMode.allCases) { Text($0.displayName).tag($0) }
+                    ForEach(DeinterlaceMode.allCases) { Text(localizing: $0.displayName).tag($0) }
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
@@ -214,10 +216,10 @@ private struct FiltersSection: View {
         }
     }
 
-    private func strengthRow(_ title: String, help: String, selection: Binding<FilterStrength>) -> some View {
+    private func strengthRow(_ title: LocalizedStringKey, help: LocalizedStringKey, selection: Binding<FilterStrength>) -> some View {
         SettingRow(title: title, help: help) {
             Picker(title, selection: selection) {
-                ForEach(FilterStrength.allCases) { Text($0.displayName).tag($0) }
+                ForEach(FilterStrength.allCases) { Text(localizing: $0.displayName).tag($0) }
             }
             .pickerStyle(.segmented)
             .labelsHidden()
@@ -251,7 +253,7 @@ private struct RateControlSection: View {
     }
 
     var body: some View {
-        GlassSection(title: "Quality", symbol: "dial.medium") {
+        SettingsSection(title: "Quality", symbol: "dial.medium") {
             Picker("Mode", selection: isQuality) {
                 Text("Constant Quality").tag(true)
                 Text("Average Bitrate").tag(false)
@@ -289,7 +291,7 @@ private struct RateControlSection: View {
         }
     }
 
-    static func describe(_ quality: Double) -> String {
+    static func describe(_ quality: Double) -> LocalizedStringKey {
         switch quality {
         case ..<0.4: "Compact"
         case ..<0.58: "Balanced"

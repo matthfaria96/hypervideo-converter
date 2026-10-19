@@ -2,9 +2,20 @@ import HyperVideoCore
 import SwiftUI
 
 enum SettingsTab: String, CaseIterable, Identifiable {
-    case summary = "Summary", video = "Video", dimensions = "Dimensions", audio = "Audio"
-    case subtitles = "Subtitles", trim = "Trim & Preview"
+    case summary, video, dimensions, audio, subtitles, trim
     var id: String { rawValue }
+
+    var title: LocalizedStringKey {
+        switch self {
+        case .summary: "Summary"
+        case .video: "Video & Filters"
+        case .dimensions: "Size & Crop"
+        case .audio: "Audio"
+        case .subtitles: "Subtitles"
+        case .trim: "Trim & Preview"
+        }
+    }
+
     var symbol: String {
         switch self {
         case .summary: "doc.text.magnifyingglass"
@@ -17,60 +28,59 @@ enum SettingsTab: String, CaseIterable, Identifiable {
     }
 }
 
-struct SourceDetailView: View {
+/// Every detailed setting of one video (trim, crop, filters, tracks, chapters),
+/// opened from the inspector's Advanced button or a row's context menu.
+struct AdvancedSettingsSheet: View {
     @Environment(AppModel.self) private var model
-    let sourceID: UUID
+    @Environment(\.dismiss) private var dismiss
 
+    private var source: SourceItem? { model.sources.first { $0.id == model.ui.advancedSourceID } }
     private var tab: SettingsTab { model.ui.detailTab }
 
-    private var source: SourceItem? { model.sources.first { $0.id == sourceID } }
-
-    private var settings: Binding<EncodeSettings> {
-        Binding(
-            get: { source?.settings ?? EncodeSettings() },
-            set: { newValue in model.update(sourceID) { $0.settings = newValue } }
-        )
-    }
-
     var body: some View {
-        if let source {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    SourceHeaderView(source: source, presetName: model.presetName(for: source))
-                    if let error = source.errorMessage {
-                        StatusBanner(messages: [error])
-                    } else if let info = source.info {
-                        tabPicker
+        VStack(spacing: 0) {
+            if let source, let info = source.info {
+                header(source)
+                Divider()
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
                         if !source.settings.validationIssues.isEmpty {
-                            StatusBanner(messages: source.settings.validationIssues)
+                            StatusBanner(messages: source.settings.validationIssues.map { String(localized: String.LocalizationValue($0)) })
                         }
                         tabContent(info: info, source: source)
-                    } else {
-                        Label("Analyzing media…", systemImage: "rays")
-                            .symbolEffect(.rotate)
-                            .foregroundStyle(.secondary)
-                            .padding(40)
                     }
+                    .padding(20)
                 }
-                .padding(24)
-                .containerRelativeFrame(.horizontal)
+            } else {
+                ContentUnavailableView("No video selected", systemImage: "film",
+                                       description: Text("Select one video in the list to edit its advanced settings."))
             }
-            .scrollEdgeEffectStyle(.soft, for: .all)
-            .safeAreaInset(edge: .bottom) {
-                DestinationBar(source: source)
-            }
-            .navigationTitle(source.name)
-            .navigationSubtitle(model.presetName(for: source))
-            .animation(.smooth, value: tab)
+            Divider()
+            footer
         }
+        .frame(minWidth: 900, idealWidth: 920, minHeight: 600, idealHeight: 700)
+        .background(Theme.background)
+        .environment(\.colorScheme, .dark)
+        .animation(.smooth, value: tab)
     }
 
-    /// Titled segments when they fit, icons only in narrow windows.
-    private var tabPicker: some View {
-        ViewThatFits(in: .horizontal) {
-            tabPicker(showsTitles: true)
-            tabPicker(showsTitles: false)
+    private func header(_ source: SourceItem) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                Thumbnail(image: source.thumbnail, symbol: "film", isLoading: false)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(source.name).font(.headline).lineLimit(1).truncationMode(.middle)
+                    Text(verbatim: model.presetName(for: source)).font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+            // Titled segments when they fit, icons only otherwise.
+            ViewThatFits(in: .horizontal) {
+                tabPicker(showsTitles: true)
+                tabPicker(showsTitles: false)
+            }
         }
+        .padding(20)
     }
 
     private func tabPicker(showsTitles: Bool) -> some View {
@@ -78,23 +88,44 @@ struct SourceDetailView: View {
             ForEach(SettingsTab.allCases) { tab in
                 Group {
                     if showsTitles {
-                        Label(tab.rawValue, systemImage: tab.symbol)
+                        Text(tab.title)
                     } else {
-                        Image(systemName: tab.symbol).accessibilityLabel(tab.rawValue)
+                        Image(systemName: tab.symbol)
                     }
                 }
-                .help(tab.rawValue)
+                .help(tab.title)
                 .tag(tab)
             }
         }
         .pickerStyle(.segmented)
         .labelsHidden()
-        .controlSize(.large)
         .fixedSize()
+    }
+
+    private var footer: some View {
+        HStack {
+            if let source, model.sources.count > 1 {
+                Button("Apply to All Videos", systemImage: "square.on.square") { model.applyToAll(from: source.id) }
+                    .help("Give every video in the list these settings (each keeps its own trim, crop and burned-in subtitle)")
+            }
+            Spacer()
+            Button("Done") { dismiss() }
+                .keyboardShortcut(.defaultAction)
+                .buttonStyle(.primary)
+        }
+        .padding(16)
+    }
+
+    private func settings(_ id: UUID) -> Binding<EncodeSettings> {
+        Binding(
+            get: { model.sources.first { $0.id == id }?.settings ?? EncodeSettings() },
+            set: { newValue in model.update(id) { $0.settings = newValue } }
+        )
     }
 
     @ViewBuilder
     private func tabContent(info: MediaInfo, source: SourceItem) -> some View {
+        let settings = settings(source.id)
         switch tab {
         case .summary: SummaryTab(info: info, settings: settings, subtitleFiles: source.subtitleFiles)
         case .video: VideoTab(info: info, settings: settings)
@@ -103,47 +134,5 @@ struct SourceDetailView: View {
         case .subtitles: SubtitlesTab(info: info, settings: settings, sourceID: source.id, files: source.subtitleFiles)
         case .trim: TrimTab(info: info, settings: settings)
         }
-    }
-}
-
-private struct DestinationBar: View {
-    @Environment(AppModel.self) private var model
-    let source: SourceItem
-
-    var body: some View {
-        GlassEffectContainer(spacing: 10) {
-            HStack(spacing: 12) {
-                Button {
-                    model.chooseDestination()
-                } label: {
-                    Label {
-                        VStack(alignment: .leading, spacing: 0) {
-                            Text("Save to").font(.caption).foregroundStyle(.secondary)
-                            Text(model.destinationFolder.lastPathComponent).lineLimit(1)
-                        }
-                    } icon: {
-                        Image(systemName: "folder.fill")
-                    }
-                }
-                .buttonStyle(.glass)
-                .help(model.destinationFolder.path)
-
-                Spacer()
-
-                if model.sources.count > 1 {
-                    Button("Apply to All Sources", systemImage: "square.on.square") { model.applyToAll(from: source.id) }
-                        .buttonStyle(.glass)
-                }
-                Button("Add to Queue", systemImage: "text.badge.plus") { model.enqueue([source.id]) }
-                    .buttonStyle(.glass)
-                    .keyboardShortcut("b")
-                Button("Convert Now", systemImage: "bolt.fill") { model.encodeNow(source.id) }
-                    .buttonStyle(.glassProminent)
-            }
-            .controlSize(.large)
-            .disabled(source.info == nil)
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 12)
     }
 }

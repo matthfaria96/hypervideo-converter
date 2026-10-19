@@ -20,14 +20,14 @@ struct TrimTab: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            GlassSection(title: "Preview", symbol: "play.rectangle") {
+            SettingsSection(title: "Preview", symbol: "play.rectangle") {
                 PlayerView(player: player)
                     .aspectRatio(aspectRatio, contentMode: .fit)
                     .frame(maxHeight: 380)
                     .clipShape(.rect(cornerRadius: 14))
             }
 
-            GlassSection(title: "Trim", symbol: "timeline.selection") {
+            SettingsSection(title: "Trim", symbol: "timeline.selection") {
                 HStack(spacing: 16) {
                     marker("Start", value: start)
                     Image(systemName: "arrow.right").foregroundStyle(.tertiary)
@@ -37,7 +37,7 @@ struct TrimTab: View {
                         .monospacedDigit()
                         .foregroundStyle(.secondary)
                 }
-                GlassEffectContainer(spacing: 8) {
+                Group {
                     HStack(spacing: 8) {
                         Button("Set Start", systemImage: "chevron.left.to.line") { setStart(currentTime) }
                         Button("Set End", systemImage: "chevron.right.to.line") { setEnd(currentTime) }
@@ -49,7 +49,7 @@ struct TrimTab: View {
                         }
                             .disabled(settings.trim == nil)
                     }
-                    .buttonStyle(.glass)
+                    .buttonStyle(.subtle)
                 }
             }
         }
@@ -80,7 +80,7 @@ struct TrimTab: View {
 
     private var currentTime: Double { player?.currentTime().seconds ?? 0 }
 
-    private func marker(_ title: String, value: Double) -> some View {
+    private func marker(_ title: LocalizedStringKey, value: Double) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title).font(.caption).foregroundStyle(.secondary)
             Text(Format.duration(value)).font(.title3.weight(.semibold)).monospacedDigit()

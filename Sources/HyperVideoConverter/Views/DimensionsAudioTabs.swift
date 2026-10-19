@@ -12,19 +12,19 @@ struct DimensionsTab: View {
             if settings.videoCodec == .passthrough {
                 StatusBanner(messages: ["Passthrough copies the video as is. Choose an encoder in Video to change its size."])
             }
-            GlassSection(title: "Size", symbol: "aspectratio") {
+            SettingsSection(title: "Size", symbol: "aspectratio") {
                 SettingRow(title: "Maximum resolution", help: "Never upscales; keeps the aspect ratio") {
                     Picker("Maximum resolution", selection: $settings.maxResolution) {
-                        ForEach(MaxResolution.allCases) { Text($0.displayName).tag($0) }
+                        ForEach(MaxResolution.allCases) { Text(localizing: $0.displayName).tag($0) }
                     }
                     .labelsHidden()
                     .fixedSize()
                 }
             }
-            GlassSection(title: "Orientation", symbol: "rotate.right") {
+            SettingsSection(title: "Orientation", symbol: "rotate.right") {
                 SettingRow(title: "Rotate") {
                     Picker("Rotate", selection: $settings.rotation) {
-                        ForEach(Rotation.allCases) { Text($0.displayName).tag($0) }
+                        ForEach(Rotation.allCases) { Text(localizing: $0.displayName).tag($0) }
                     }
                     .pickerStyle(.segmented)
                     .labelsHidden()
@@ -34,7 +34,7 @@ struct DimensionsTab: View {
                     Toggle("Flip", isOn: $settings.flipHorizontal).labelsHidden().toggleStyle(.switch)
                 }
             }
-            GlassSection(title: "Crop", symbol: "crop") {
+            SettingsSection(title: "Crop", symbol: "crop") {
                 Grid(alignment: .leading, horizontalSpacing: 18, verticalSpacing: 10) {
                     GridRow {
                         cropField("Top", \.top)
@@ -47,21 +47,21 @@ struct DimensionsTab: View {
                 }
                 HStack {
                     Button("Reset", systemImage: "arrow.counterclockwise") { settings.crop = .zero }
-                        .buttonStyle(.glass)
+                        .buttonStyle(.subtle)
                         .disabled(settings.crop.isZero)
                     if let size = info.displaySize, size.width > size.height {
                         Button("Crop to 2.39:1", systemImage: "rectangle.ratio.16.to.9") {
                             let bar = max(0, Int((size.height - size.width / 2.39) / 2))
                             settings.crop = Crop(top: bar, bottom: bar)
                         }
-                        .buttonStyle(.glass)
+                        .buttonStyle(.subtle)
                     }
                 }
             }
         }
     }
 
-    private func cropField(_ title: String, _ edge: WritableKeyPath<Crop, Int>) -> some View {
+    private func cropField(_ title: LocalizedStringKey, _ edge: WritableKeyPath<Crop, Int>) -> some View {
         HStack {
             Text(title).frame(width: 56, alignment: .leading)
             TextField(title, value: $settings.crop[dynamicMember: edge], format: .number)
@@ -83,10 +83,10 @@ struct AudioTab: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            GlassSection(title: "Encoding", symbol: "waveform") {
+            SettingsSection(title: "Encoding", symbol: "waveform") {
                 SettingRow(title: "Codec") {
                     Picker("Codec", selection: $settings.audioCodec) {
-                        ForEach(AudioCodec.allCases) { Text($0.displayName).tag($0) }
+                        ForEach(AudioCodec.allCases) { Text(localizing: $0.displayName).tag($0) }
                     }
                     .labelsHidden()
                     .fixedSize()
@@ -94,7 +94,7 @@ struct AudioTab: View {
                 if settings.audioCodec != .none {
                     SettingRow(title: "Tracks") {
                         Picker("Tracks", selection: $settings.audioTracks) {
-                            ForEach(AudioTrackSelection.allCases) { Text($0.displayName).tag($0) }
+                            ForEach(AudioTrackSelection.allCases) { Text(localizing: $0.displayName).tag($0) }
                         }
                         .pickerStyle(.segmented)
                         .labelsHidden()
@@ -104,7 +104,7 @@ struct AudioTab: View {
                 if settings.audioCodec == .aac || settings.audioCodec == .alac {
                     SettingRow(title: "Mixdown", help: "Falls back automatically if the source has fewer channels") {
                         Picker("Mixdown", selection: $settings.audioMixdown) {
-                            ForEach(AudioMixdown.allCases) { Text($0.displayName).tag($0) }
+                            ForEach(AudioMixdown.allCases) { Text(localizing: $0.displayName).tag($0) }
                         }
                         .pickerStyle(.segmented)
                         .labelsHidden()
@@ -126,7 +126,7 @@ struct AudioTab: View {
                 ExtraAudioSection(settings: $settings, bitrates: bitrates)
             }
 
-            GlassSection(title: "Source Tracks", symbol: "list.number") {
+            SettingsSection(title: "Source Tracks", symbol: "list.number") {
                 if info.audioTracks.isEmpty {
                     Text("This source has no audio.").foregroundStyle(.secondary)
                 }
@@ -135,7 +135,7 @@ struct AudioTab: View {
                         Image(systemName: included(index) ? "checkmark.circle.fill" : "circle")
                             .foregroundStyle(included(index) ? AnyShapeStyle(.tint) : AnyShapeStyle(.tertiary))
                         Text("Track \(index + 1)").fontWeight(.medium)
-                        Text("\(track.codec) · \(track.channelDescription) · \(Int(track.sampleRate / 1000)) kHz")
+                        Text(verbatim: "\(track.codec) · \(SummaryTab.local(track.channelDescription)) · \(Int(track.sampleRate / 1000)) kHz")
                             .foregroundStyle(.secondary)
                         Spacer()
                         if let language = track.language { InfoChip(symbol: "globe", text: language) }
@@ -173,14 +173,14 @@ private struct ExtraAudioSection: View {
     }
 
     var body: some View {
-        GlassSection(title: "Extra Version", symbol: "square.stack") {
+        SettingsSection(title: "Extra Version", symbol: "square.stack") {
             SettingRow(title: "Add a second version", help: "Each kept track is also written this way; players pick one") {
                 Toggle("Add a second version", isOn: isOn).labelsHidden().toggleStyle(.switch)
             }
             if settings.extraAudio != nil {
                 SettingRow(title: "Codec") {
                     Picker("Codec", selection: extra.codec) {
-                        ForEach(AudioCodec.allCases.filter { $0 != .none }) { Text($0.displayName).tag($0) }
+                        ForEach(AudioCodec.allCases.filter { $0 != .none }) { Text(localizing: $0.displayName).tag($0) }
                     }
                     .labelsHidden()
                     .fixedSize()
@@ -188,7 +188,7 @@ private struct ExtraAudioSection: View {
                 if extra.wrappedValue.codec == .aac || extra.wrappedValue.codec == .alac {
                     SettingRow(title: "Mixdown") {
                         Picker("Mixdown", selection: extra.mixdown) {
-                            ForEach(AudioMixdown.allCases) { Text($0.displayName).tag($0) }
+                            ForEach(AudioMixdown.allCases) { Text(localizing: $0.displayName).tag($0) }
                         }
                         .pickerStyle(.segmented)
                         .labelsHidden()

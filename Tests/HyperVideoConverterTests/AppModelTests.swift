@@ -17,7 +17,7 @@ struct AppModelTests {
         model.encodeNow(id)
         #expect(model.queue.jobs.isEmpty)
         #expect(model.queue.isProcessing == false)
-        #expect(model.selection == .source(id))
+        #expect(model.section == .conversion)
         #expect(model.alertMessage != nil)
     }
 
@@ -30,7 +30,7 @@ struct AppModelTests {
         #expect(try await TestEnvironment.waitUntil { model.sources.first?.info != nil })
         model.encodeNow(id)
         #expect(model.queue.jobs.count == 1)
-        #expect(model.selection == .queue)
+        #expect(model.section == .conversion)
         #expect(try await TestEnvironment.waitUntil(timeout: .seconds(60)) {
             model.queue.jobs.first.map { $0.state.isFinished } ?? false
         })

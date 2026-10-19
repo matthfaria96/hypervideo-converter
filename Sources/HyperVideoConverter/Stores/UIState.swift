@@ -1,3 +1,4 @@
+import AppKit
 import AVFoundation
 import HyperVideoCore
 import Observation
@@ -12,6 +13,11 @@ final class UIState {
     var isSavingPreset = false
     var presetName = ""
     var renamingPreset: Preset?
+    var isSidebarCollapsed = false
+    /// The video whose Advanced settings sheet is open.
+    var advancedSourceID: UUID?
+    /// Thumbnails of videos that moved from the editing list into the queue.
+    var thumbnails: [URL: NSImage] = [:]
 
     private(set) var previewPlayer: AVPlayer?
 
