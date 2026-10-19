@@ -16,6 +16,10 @@ let package = Package(
         .testTarget(
             name: "HyperVideoCoreTests",
             dependencies: ["HyperVideoCore"]
+        ),
+        .testTarget(
+            name: "HyperVideoConverterTests",
+            dependencies: ["HyperVideoConverter", "HyperVideoCore"]
         )
     ]
 )

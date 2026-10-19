@@ -8,9 +8,9 @@ enum SystemIntegration {
 
     static func updateDock(progress: Double?, pendingCount: Int) {
         if let progress {
-            NSApp.dockTile.badgeLabel = "\(Int((progress * 100).rounded()))%"
+            NSApp?.dockTile.badgeLabel = "\(Int((progress * 100).rounded()))%"
         } else {
-            NSApp.dockTile.badgeLabel = pendingCount > 0 ? "\(pendingCount)" : nil
+            NSApp?.dockTile.badgeLabel = pendingCount > 0 ? "\(pendingCount)" : nil
         }
     }
 

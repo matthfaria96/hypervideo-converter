@@ -19,9 +19,13 @@ final class QueueStore {
     private var tasks: [UUID: Task<Void, Never>] = [:]
     private var startTimes: [UUID: Date] = [:]
     private let engine = TranscodeEngine()
-    private let store = JSONStore<[EncodeJob]>(fileName: "queue.json")
+    private let store: JSONStore<[EncodeJob]>
+    private let defaults: UserDefaults
 
-    init() {
+    /// `directory` and `defaults` override persistence and preferences (tests).
+    init(directory: URL? = nil, defaults: UserDefaults = .standard) {
+        store = JSONStore(fileName: "queue.json", directory: directory)
+        self.defaults = defaults
         jobs = (store.load() ?? []).map { $0.restoredAfterRelaunch() }
         sweepStaleWorkDirectories()
     }
@@ -58,7 +62,7 @@ final class QueueStore {
     }
 
     private var maxConcurrent: Int {
-        let value = UserDefaults.standard.integer(forKey: PreferenceKey.maxConcurrentJobs)
+        let value = defaults.integer(forKey: PreferenceKey.maxConcurrentJobs)
         return min(max(value, 1), 4)
     }
 
@@ -67,7 +71,7 @@ final class QueueStore {
     func add(_ newJobs: [EncodeJob]) {
         jobs = jobs + newJobs
         persist()
-        if UserDefaults.standard.bool(forKey: PreferenceKey.autoStartQueue) { start() } else { refreshDock() }
+        if defaults.bool(forKey: PreferenceKey.autoStartQueue) { start() } else { refreshDock() }
     }
 
     func start() {
@@ -98,7 +102,7 @@ final class QueueStore {
             var retried = job.with(state: .queued)
             let othersTaken = Set(jobs.filter { $0.id != id && !$0.isCompleted }.map(\.destination))
             if othersTaken.contains(job.destination) || FileManager.default.fileExists(atPath: job.destination.path) {
-                let suffix = UserDefaults.standard.string(forKey: PreferenceKey.outputSuffix) ?? ""
+                let suffix = defaults.string(forKey: PreferenceKey.outputSuffix) ?? ""
                 retried.destination = OutputNaming.destination(
                     for: job.source, in: job.destination.deletingLastPathComponent(),
                     container: job.settings.container, suffix: suffix, taken: othersTaken
@@ -173,7 +177,7 @@ final class QueueStore {
         case .success(let bytes):
             replace(job.id) { $0.with(state: .completed(outputBytes: bytes, elapsed: elapsed)) }
             SystemIntegration.notify(title: "Conversion finished", body: job.destination.lastPathComponent)
-            if UserDefaults.standard.bool(forKey: PreferenceKey.revealOnCompletion) {
+            if defaults.bool(forKey: PreferenceKey.revealOnCompletion) {
                 SystemIntegration.reveal([job.destination])
             }
         case .failure(is CancellationError):

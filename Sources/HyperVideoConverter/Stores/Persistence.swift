@@ -6,8 +6,11 @@ let appLog = Logger(subsystem: "com.hypervideo.converter", category: "app")
 /// Small JSON documents stored in Application Support.
 struct JSONStore<Value: Codable>: Sendable {
     let fileName: String
+    /// Folder holding the file; nil means the app's Application Support folder.
+    var directory: URL?
 
     private var url: URL? {
+        if let directory { return directory.appendingPathComponent(fileName) }
         guard let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
             return nil
         }

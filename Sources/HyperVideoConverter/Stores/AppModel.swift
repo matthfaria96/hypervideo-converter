@@ -27,8 +27,9 @@ enum SidebarItem: Hashable {
 @Observable
 @MainActor
 final class AppModel {
-    let presets = PresetStore()
-    let queue = QueueStore()
+    let presets: PresetStore
+    let queue: QueueStore
+    private let defaults: UserDefaults
     let ui = UIState()
 
     private(set) var sources: [SourceItem] = []
@@ -38,11 +39,15 @@ final class AppModel {
     var alertMessage: String?
 
     var destinationFolder: URL {
-        didSet { UserDefaults.standard.set(destinationFolder.path, forKey: PreferenceKey.destinationPath) }
+        didSet { defaults.set(destinationFolder.path, forKey: PreferenceKey.destinationPath) }
     }
 
-    init() {
-        let saved = UserDefaults.standard.string(forKey: PreferenceKey.destinationPath)
+    /// `directory` and `defaults` override persistence and preferences (tests).
+    init(directory: URL? = nil, defaults: UserDefaults = .standard) {
+        presets = PresetStore(directory: directory)
+        queue = QueueStore(directory: directory, defaults: defaults)
+        self.defaults = defaults
+        let saved = defaults.string(forKey: PreferenceKey.destinationPath)
         destinationFolder = saved.map { URL(fileURLWithPath: $0) }
             ?? FileManager.default.urls(for: .moviesDirectory, in: .userDomainMask).first
             ?? URL(fileURLWithPath: NSHomeDirectory())
@@ -51,7 +56,7 @@ final class AppModel {
     }
 
     var defaultPreset: Preset {
-        let id = UserDefaults.standard.string(forKey: PreferenceKey.defaultPresetID).flatMap(UUID.init(uuidString:))
+        let id = defaults.string(forKey: PreferenceKey.defaultPresetID).flatMap(UUID.init(uuidString:))
         return presets.preset(id: id) ?? BuiltInPresets.default
     }
 
@@ -189,7 +194,7 @@ final class AppModel {
     /// Returns how many jobs were added.
     @discardableResult
     func enqueue(_ ids: [UUID]) -> Int {
-        let suffix = UserDefaults.standard.string(forKey: PreferenceKey.outputSuffix) ?? ""
+        let suffix = defaults.string(forKey: PreferenceKey.outputSuffix) ?? ""
         var taken = queue.takenDestinations
         var jobs: [EncodeJob] = []
         var skipped: [String] = []

@@ -6,9 +6,11 @@ import Observation
 @MainActor
 final class PresetStore {
     private(set) var custom: [Preset]
-    private let store = JSONStore<[Preset]>(fileName: "presets.json")
+    private let store: JSONStore<[Preset]>
 
-    init() {
+    /// `directory` overrides where presets are saved (tests); nil uses Application Support.
+    init(directory: URL? = nil) {
+        store = JSONStore(fileName: "presets.json", directory: directory)
         custom = store.load() ?? []
     }
 
