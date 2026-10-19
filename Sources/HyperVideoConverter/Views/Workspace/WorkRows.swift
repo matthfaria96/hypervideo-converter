@@ -91,7 +91,7 @@ struct JobRowView: View {
                     .font(.system(size: 12, weight: .semibold))
                     .lineLimit(1)
                     .truncationMode(.middle)
-                Text(verbatim: "\(job.presetName) → \(job.destination.lastPathComponent)")
+                Text(verbatim: "\(model.presetName(for: job)) → \(job.destination.lastPathComponent)")
                     .font(.system(size: 10))
                     .foregroundStyle(Theme.muted)
                     .lineLimit(1)

@@ -64,7 +64,6 @@ struct FavoritesView: View {
     @ViewBuilder
     private func menu(for preset: Preset) -> some View {
         Button("Apply", systemImage: "checkmark") { model.applyPresetToTargets(preset) }
-            .disabled(model.sources.isEmpty)
         Button("Make Default", systemImage: "star") { defaultID = preset.id.uuidString }
         if !preset.isBuiltIn {
             Divider()
@@ -120,7 +119,6 @@ private struct PresetRow: View {
                     .accessibilityAddTraits(isDefault ? .isSelected : [])
                 Button("Apply") { model.applyPresetToTargets(preset) }
                     .buttonStyle(.subtle)
-                    .disabled(model.sources.isEmpty)
                     .help("Apply to the selected videos, or to all when none is selected")
             }
         }

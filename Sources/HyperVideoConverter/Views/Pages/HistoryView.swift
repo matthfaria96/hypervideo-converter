@@ -97,14 +97,14 @@ private struct HistoryRow: View {
     private var detail: String {
         switch job.state {
         case .completed(let bytes, let elapsed):
-            var parts = [job.presetName, Format.bytes(bytes), String(localized: "finished in \(Format.duration(elapsed))")]
+            var parts = [model.presetName(for: job), Format.bytes(bytes), String(localized: "finished in \(Format.duration(elapsed))")]
             if let duration = job.mediaDuration, elapsed > 0 {
                 parts.append(String(localized: "\(Format.speed(duration / elapsed)) realtime"))
             }
             return parts.joined(separator: " · ")
         case .failed(let message): return message
-        case .cancelled: return String(localized: "Cancelled") + " · " + job.presetName
-        case .queued, .running: return job.presetName
+        case .cancelled: return String(localized: "Cancelled") + " · " + model.presetName(for: job)
+        case .queued, .running: return model.presetName(for: job)
         }
     }
 

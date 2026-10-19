@@ -356,7 +356,7 @@
 "1 waiting conversion" = "1 conversão na fila";
 "4K HEVC 30" = "4K HEVC 30";
 "4K HEVC 60 HDR" = "4K HEVC 60 HDR";
-"A rule of thumb from resolution, frame rate and quality. Detailed or shaky videos come out larger, still ones smaller." = "Estimativa pela resolução, quadros por segundo e qualidade. Vídeos com muito detalhe ou movimento ficam maiores; cenas paradas, menores.";
+"A rule of thumb from resolution, frame rate and quality. Detailed or shaky videos come out larger, still ones smaller." = "Cálculo aproximado. Vídeos com muito movimento ou detalhe ficam maiores.";
 "Add videos to start" = "Adicione vídeos para começar";
 "Also applies to videos you add next. Select rows to change only some." = "Também vale para os próximos vídeos adicionados. Selecione linhas para mudar só alguns.";
 "Analyzing the videos…" = "Analisando os vídeos…";
@@ -387,7 +387,7 @@
 "Editing: %@" = "Editando: %@";
 "Editing: %lld videos" = "Editando: %lld vídeos";
 "Editing: all %lld videos" = "Editando: todos os %lld vídeos";
-"Editing: next videos added" = "Editando: próximos vídeos adicionados";
+"Editing: next videos added" = "Editando: próximos vídeos";
 "Editing: the video in the list" = "Editando: o vídeo da lista";
 "Every video found in the folder and its subfolders gets this profile. You can still change each one afterwards." = "Todos os vídeos da pasta e das subpastas recebem este perfil. Você ainda pode mudar cada um depois.";
 "Fast 1080p30" = "Rápido 1080p30";

@@ -261,6 +261,11 @@ final class AppModel {
         return preset.settings.presetSettings == settings.presetSettings
     }
 
+    /// The translated name of the preset a job was made with.
+    func presetName(for job: EncodeJob) -> String {
+        presets.preset(id: job.presetID)?.displayName ?? String(localized: String.LocalizationValue(job.presetName))
+    }
+
     func showAlert(_ title: String, _ message: String) {
         alertTitle = title
         alertMessage = message
