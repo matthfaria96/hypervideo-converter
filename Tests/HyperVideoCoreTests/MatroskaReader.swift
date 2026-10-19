@@ -43,7 +43,7 @@ struct MatroskaReader {
         EBML.ID.ebml, EBML.ID.segment, EBML.ID.seekHead, EBML.ID.seek, EBML.ID.info, EBML.ID.tracks, EBML.ID.trackEntry,
         EBML.ID.video, EBML.ID.audio, EBML.ID.projection, EBML.ID.cluster, EBML.ID.blockGroup, EBML.ID.cues,
         EBML.ID.cuePoint, EBML.ID.cueTrackPositions, EBML.ID.chapters, EBML.ID.editionEntry, EBML.ID.chapterAtom,
-        EBML.ID.chapterDisplay
+        EBML.ID.chapterDisplay, EBML.ID.tags, EBML.ID.tag, EBML.ID.targets, EBML.ID.simpleTag
     ]
 
     /// Reads a variable-length size or ID; returns (value with or without marker, length).
@@ -91,6 +91,22 @@ struct MatroskaReader {
 
     /// Duration in milliseconds.
     var duration: Double? { float(segment?.child(EBML.ID.info)?.child(EBML.ID.duration)) }
+
+    /// Info/Title.
+    var title: String? { string(segment?.child(EBML.ID.info)?.child(EBML.ID.title)) }
+
+    /// Every SimpleTag in the Tags element, by name.
+    var tagValues: [String: String] {
+        var result: [String: String] = [:]
+        for tag in segment?.child(EBML.ID.tags)?.all(EBML.ID.tag) ?? [] {
+            for simple in tag.all(EBML.ID.simpleTag) {
+                if let name = string(simple.child(EBML.ID.tagName)), let value = string(simple.child(EBML.ID.tagString)) {
+                    result[name] = value
+                }
+            }
+        }
+        return result
+    }
 
     var tracks: [Track] {
         (segment?.child(EBML.ID.tracks)?.all(EBML.ID.trackEntry) ?? []).map { entry in

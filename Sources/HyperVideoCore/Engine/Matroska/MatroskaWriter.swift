@@ -23,6 +23,18 @@ final class MatroskaWriter {
         var endNs: UInt64
     }
 
+    /// Descriptive tags of the file: a title (Info/Title) and named values (a Tags element).
+    struct Metadata: Equatable {
+        struct Tag: Equatable {
+            var name: String
+            var value: String
+        }
+        var title: String?
+        var tags: [Tag] = []
+
+        var isEmpty: Bool { title == nil && tags.isEmpty }
+    }
+
     static let timestampScale: UInt64 = 1_000_000
     /// Longest span a cluster covers before a new one starts, even without a keyframe.
     static let maxClusterSpan: Int64 = 5_000
@@ -43,18 +55,19 @@ final class MatroskaWriter {
     private var endTime: Int64 = 0
 
     /// `cueTrack` is the track whose keyframes become cue points (the video track, if any).
-    init(url: URL, tracks: [MatroskaTrack], chapters: [Chapter], cueTrack: Int?, appName: String) throws {
+    init(url: URL, tracks: [MatroskaTrack], chapters: [Chapter], cueTrack: Int?, appName: String,
+         metadata: Metadata = Metadata()) throws {
         FileManager.default.createFile(atPath: url.path, contents: nil)
         handle = try FileHandle(forWritingTo: url)
         self.cueTrack = cueTrack
-        try writeHeaders(tracks: tracks, chapters: chapters, appName: appName)
+        try writeHeaders(tracks: tracks, chapters: chapters, appName: appName, metadata: metadata)
     }
 
     deinit { try? handle.close() }
 
     // MARK: Headers
 
-    private func writeHeaders(tracks: [MatroskaTrack], chapters: [Chapter], appName: String) throws {
+    private func writeHeaders(tracks: [MatroskaTrack], chapters: [Chapter], appName: String, metadata: Metadata) throws {
         try write(EBML.master(EBML.ID.ebml, [
             EBML.uint(EBML.ID.ebmlVersion, 1),
             EBML.uint(EBML.ID.ebmlReadVersion, 1),
@@ -70,7 +83,7 @@ final class MatroskaWriter {
         segmentDataStart = offset
         try write(EBML.void(filling: Self.seekHeadReserve))
 
-        let info = infoElement(appName: appName)
+        let info = infoElement(appName: appName, title: metadata.title)
         seekEntries.append((EBML.ID.info, offset - segmentDataStart))
         // Duration is the last child, so its 8 value bytes end the element.
         durationOffset = offset + UInt64(info.count) - 8
@@ -82,16 +95,35 @@ final class MatroskaWriter {
             seekEntries.append((EBML.ID.chapters, offset - segmentDataStart))
             try write(Self.chaptersElement(chapters))
         }
+        if !metadata.tags.isEmpty {
+            seekEntries.append((EBML.ID.tags, offset - segmentDataStart))
+            try write(Self.tagsElement(metadata.tags))
+        }
     }
 
-    private func infoElement(appName: String) -> Data {
+    private func infoElement(appName: String, title: String?) -> Data {
         let uuid = withUnsafeBytes(of: UUID().uuid) { Data($0) }
         return EBML.master(EBML.ID.info, [
             EBML.uint(EBML.ID.timestampScale, Self.timestampScale),
-            EBML.element(EBML.ID.segmentUUID, uuid),
+            EBML.element(EBML.ID.segmentUUID, uuid)
+        ] + (title.map { [EBML.string(EBML.ID.title, $0)] } ?? []) + [
             EBML.string(EBML.ID.muxingApp, appName),
             EBML.string(EBML.ID.writingApp, appName),
             EBML.float(EBML.ID.duration, 0)
+        ])
+    }
+
+    /// One Tag for the whole file (target level 50, "movie") holding a SimpleTag per value.
+    static func tagsElement(_ tags: [Metadata.Tag]) -> Data {
+        EBML.master(EBML.ID.tags, [
+            EBML.master(EBML.ID.tag, [
+                EBML.master(EBML.ID.targets, [EBML.uint(EBML.ID.targetTypeValue, 50)])
+            ] + tags.map { tag in
+                EBML.master(EBML.ID.simpleTag, [
+                    EBML.string(EBML.ID.tagName, tag.name),
+                    EBML.string(EBML.ID.tagString, tag.value)
+                ])
+            })
         ])
     }
 

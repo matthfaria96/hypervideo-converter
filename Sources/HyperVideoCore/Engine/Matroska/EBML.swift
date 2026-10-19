@@ -97,6 +97,7 @@ extension EBML {
         static let info: UInt32 = 0x1549A966
         static let timestampScale: UInt32 = 0x2AD7B1
         static let duration: UInt32 = 0x4489
+        static let title: UInt32 = 0x7BA9
         static let muxingApp: UInt32 = 0x4D80
         static let writingApp: UInt32 = 0x5741
         static let segmentUUID: UInt32 = 0x73A4
@@ -141,6 +142,14 @@ extension EBML {
         static let cueTrackPositions: UInt32 = 0xB7
         static let cueTrack: UInt32 = 0xF7
         static let cueClusterPosition: UInt32 = 0xF1
+
+        static let tags: UInt32 = 0x1254C367
+        static let tag: UInt32 = 0x7373
+        static let targets: UInt32 = 0x63C0
+        static let targetTypeValue: UInt32 = 0x68CA
+        static let simpleTag: UInt32 = 0x67C8
+        static let tagName: UInt32 = 0x45A3
+        static let tagString: UInt32 = 0x4487
 
         static let chapters: UInt32 = 0x1043A770
         static let editionEntry: UInt32 = 0x45B9

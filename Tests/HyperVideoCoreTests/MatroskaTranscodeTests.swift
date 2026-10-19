@@ -206,3 +206,60 @@ struct MatroskaTranscodeTests {
         if case .success = result { #expect(leftovers == ["cancel.mkv"]) } else { #expect(leftovers.isEmpty, "\(leftovers)") }
     }
 }
+
+/// Title, artist and dates survive the trip into a Matroska file when metadata is kept.
+@Suite("Matroska metadata", .serialized)
+struct MatroskaMetadataTests {
+    private func item(_ identifier: AVMetadataIdentifier, _ value: String) -> AVMetadataItem {
+        let item = AVMutableMetadataItem()
+        item.identifier = identifier
+        item.value = value as NSString
+        item.dataType = kCMMetadataBaseDataType_UTF8 as String
+        return item
+    }
+
+    private func encode(keepMetadata: Bool) async throws -> MatroskaReader {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("hvc-mkvmeta-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        var spec = StressClip.Spec()
+        spec.metadata = [
+            item(.commonIdentifierTitle, "Holiday in Lisbon"),
+            item(.commonIdentifierArtist, "Ana"),
+            item(.commonIdentifierCreationDate, "2024-05-01T10:00:00Z"),
+            item(.commonIdentifierDescription, "Trip & more")
+        ]
+        let source = try await StressClip.make(in: dir, spec)
+        var settings = EncodeSettings()
+        settings.videoCodec = .h264
+        settings.container = .mkv
+        settings.keepMetadata = keepMetadata
+        let out = dir.appendingPathComponent("out.mkv")
+        _ = try await TranscodeEngine().run(source: source, destination: out, settings: settings) { _ in }
+        return try MatroskaReader(url: out)
+    }
+
+    @Test func titleAndTagsAreWrittenWhenMetadataIsKept() async throws {
+        let mkv = try await encode(keepMetadata: true)
+        #expect(mkv.title == "Holiday in Lisbon")
+        let tags = mkv.tagValues
+        #expect(tags["TITLE"] == "Holiday in Lisbon")
+        #expect(tags["ARTIST"] == "Ana")
+        #expect(tags["DESCRIPTION"] == "Trip & more")
+        #expect(tags["DATE_RELEASED"]?.hasPrefix("2024-05-01") == true, "\(tags)")
+        // The SeekHead lists the Tags element, and it points at it.
+        let offset = try #require(mkv.seeks.first { $0.0 == EBML.ID.tags }?.1)
+        #expect(mkv.segmentChild(at: offset)?.id == EBML.ID.tags)
+    }
+
+    @Test func nothingIsWrittenWhenMetadataIsDropped() async throws {
+        let mkv = try await encode(keepMetadata: false)
+        #expect(mkv.title == nil)
+        #expect(mkv.tagValues.isEmpty)
+    }
+
+    @Test func emptyMetadataHasNothingToWrite() {
+        #expect(MatroskaWriter.Metadata().isEmpty)
+        let element = MatroskaWriter.tagsElement([.init(name: "TITLE", value: "x")])
+        #expect(element.starts(with: EBML.id(EBML.ID.tags)))
+    }
+}

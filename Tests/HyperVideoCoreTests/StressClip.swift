@@ -22,6 +22,7 @@ enum StressClip {
         var frameTimes: [Double] = (0..<30).map { Double($0) / 30 }
         var seconds = 1.0
         var audio: [Audio] = [Audio()]
+        var metadata: [AVMetadataItem] = []
     }
 
     static func make(in dir: URL, _ spec: Spec) async throws -> URL {
@@ -55,6 +56,7 @@ enum StressClip {
             writer.add(input)
             return input
         }
+        writer.metadata = spec.metadata
         writer.startWriting()
         writer.startSession(atSourceTime: .zero)
 
