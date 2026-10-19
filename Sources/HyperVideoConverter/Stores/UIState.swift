@@ -3,6 +3,12 @@ import AVFoundation
 import HyperVideoCore
 import Observation
 
+/// A video's big picture, for the Analyze header.
+struct HeroPicture {
+    let url: URL
+    let image: NSImage
+}
+
 /// Transient view state kept in an observable object instead of `@State`,
 /// so the app also builds with the Command Line Tools toolchain (no SwiftUI macro plugin).
 @Observable
@@ -18,6 +24,8 @@ final class UIState {
     var advancedSourceID: UUID?
     /// Thumbnails of videos that moved from the editing list into the queue.
     var thumbnails: [URL: NSImage] = [:]
+    /// The large picture of the Analyze header: the video last shown there.
+    var hero: HeroPicture?
     /// When the user last pressed Convert; the finished-run banner counts from here.
     var batchStartedAt: Date?
     /// Confirmations of destructive actions.

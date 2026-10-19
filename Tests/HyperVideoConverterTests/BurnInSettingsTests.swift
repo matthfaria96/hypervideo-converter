@@ -23,7 +23,7 @@ struct BurnInSettingsTests {
         let srt = env.root.appendingPathComponent("extra.srt")
         try "1\n00:00:00,000 --> 00:00:01,000\nHi\n".write(to: srt, atomically: true, encoding: .utf8)
         let model = env.makeModel()
-        model.addSources([clip])
+        await model.addSources([clip])
         let id = try #require(model.sources.first?.id)
         model.addSubtitleFiles([srt], to: id)
         let file = try #require(model.sources.first?.subtitleFiles.first { $0.url == srt })

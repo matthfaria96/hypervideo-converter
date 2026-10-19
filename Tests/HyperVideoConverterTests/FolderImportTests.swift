@@ -23,33 +23,33 @@ struct FolderImportTests {
             ?? model.presets.all.first { $0.id != model.defaultPreset.id })
     }
 
-    @Test func filesAreAddedRightAwayWithTheDefaultPreset() throws {
+    @Test func filesAreAddedRightAwayWithTheDefaultPreset() async throws {
         let env = try TestEnvironment()
         let (_, loose) = try Self.layout(env)
         let model = env.makeModel()
-        model.addSources([loose])
+        await model.addSources([loose])
         #expect(model.pendingFolderImport == nil)
         #expect(model.sources.map(\.presetID) == [model.defaultPreset.id])
     }
 
-    @Test func foldersWaitForAPresetDefaultingToTheDefault() throws {
+    @Test func foldersWaitForAPresetDefaultingToTheDefault() async throws {
         let env = try TestEnvironment()
         let (folder, _) = try Self.layout(env)
         let model = env.makeModel()
-        model.addSources([folder])
+        await model.addSources([folder])
         #expect(model.sources.isEmpty)
         let pending = try #require(model.pendingFolderImport)
         #expect(pending.folders == [folder])
         #expect(pending.presetID == model.defaultPreset.id)
     }
 
-    @Test func chosenPresetAppliesToEveryVideoInTheFolderOnly() throws {
+    @Test func chosenPresetAppliesToEveryVideoInTheFolderOnly() async throws {
         let env = try TestEnvironment()
         let (folder, loose) = try Self.layout(env)
         let model = env.makeModel()
         let chosen = try Self.otherPreset(than: model)
-        model.addSources([folder, loose])
-        model.confirmFolderImport(preset: chosen)
+        await model.addSources([folder, loose])
+        await model.confirmFolderImport(preset: chosen)
 
         #expect(model.pendingFolderImport == nil)
         let byName = Dictionary(uniqueKeysWithValues: model.sources.map { ($0.name, $0) })
@@ -61,11 +61,11 @@ struct FolderImportTests {
         #expect(byName["loose.mov"]?.presetID == model.defaultPreset.id)
     }
 
-    @Test func cancellingAddsNothing() throws {
+    @Test func cancellingAddsNothing() async throws {
         let env = try TestEnvironment()
         let (folder, _) = try Self.layout(env)
         let model = env.makeModel()
-        model.addSources([folder])
+        await model.addSources([folder])
         model.cancelFolderImport()
         #expect(model.pendingFolderImport == nil)
         #expect(model.sources.isEmpty)

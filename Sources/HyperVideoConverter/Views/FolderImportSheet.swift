@@ -35,7 +35,7 @@ struct FolderImportSheet: View {
                 Button("Cancel", role: .cancel) { model.cancelFolderImport() }
                     .keyboardShortcut(.cancelAction)
                 Button("Import") {
-                    model.confirmFolderImport(preset: model.presets.preset(id: presetID.wrappedValue) ?? model.defaultPreset)
+                    Task { await model.confirmFolderImport(preset: model.presets.preset(id: presetID.wrappedValue) ?? model.defaultPreset) }
                 }
                 .keyboardShortcut(.defaultAction)
                 .buttonStyle(.primary)

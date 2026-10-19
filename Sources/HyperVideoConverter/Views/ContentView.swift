@@ -30,11 +30,11 @@ struct ContentView: View {
         .toolbarBackground(Color(hex: 0x202023), for: .windowToolbar)
         .fileImporter(isPresented: $model.isImporting, allowedContentTypes: [.audiovisualContent, .folder],
                       allowsMultipleSelection: true) { result in
-            if case .success(let urls) = result { model.addSources(urls) }
+            if case .success(let urls) = result { Task { await model.addSources(urls) } }
         }
         .dropDestination(for: URL.self) { urls, _ in
             model.section = .conversion
-            model.addSources(urls)
+            Task { await model.addSources(urls) }
             return true
         } isTargeted: { model.ui.isDropTargeted = $0 }
         .sheet(item: $model.pendingFolderImport) { FolderImportSheet(pending: $0) }

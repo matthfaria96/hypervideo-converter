@@ -50,8 +50,9 @@ final class AppModel {
     private(set) var sources: [SourceItem] = []
     var section: AppSection = .conversion
     var mode: WorkMode = .convert
-    /// Selected rows of the conversion list (source or job IDs). The output inspector
-    /// edits the selected sources, or every source when none is selected.
+    /// Selected rows of the conversion list (IDs of videos on the editing list; queued jobs
+    /// can't be selected). The output inspector edits the selected sources, or every
+    /// source when none is selected.
     var selectedIDs: Set<UUID> = []
     /// What the inspector set while the list was empty; the next loose videos get it.
     var draftSettings: EncodeSettings?
@@ -71,14 +72,17 @@ final class AppModel {
     }
 
     /// `directory` and `defaults` override persistence and preferences (tests).
-    init(directory: URL? = nil, defaults: UserDefaults = .standard, notifier: (any QueueNotifying)? = nil) {
+    init(directory: URL? = nil, defaults: UserDefaults = .standard, notifier: (any QueueNotifying)? = nil,
+         saveDelay: TimeInterval = 0.5, resolvesInBackground: Bool = true) {
         presets = PresetStore(directory: directory)
-        queue = QueueStore(directory: directory, defaults: defaults, notifier: notifier)
+        queue = QueueStore(directory: directory, defaults: defaults, notifier: notifier, saveDelay: saveDelay,
+                           resolvesInBackground: resolvesInBackground)
         self.defaults = defaults
         let saved = defaults.string(forKey: PreferenceKey.destinationPath)
         destinationFolder = saved.map { URL(fileURLWithPath: $0) }
             ?? FileManager.default.urls(for: .moviesDirectory, in: .userDomainMask).first
             ?? URL(fileURLWithPath: NSHomeDirectory())
+        queue.onJobsRemoved = { [weak self] removed in self?.releaseThumbnails(of: removed) }
     }
 
     var defaultPreset: Preset {
@@ -96,48 +100,6 @@ final class AppModel {
 
     // MARK: Sources
 
-    /// Adds files right away; when folders are included, first asks (through
-    /// `pendingFolderImport`) which preset their videos should get.
-    func addSources(_ urls: [URL]) {
-        let folders = urls.filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true }
-        guard folders.isEmpty else {
-            pendingFolderImport = FolderImport(urls: urls, folders: folders, presetID: defaultPreset.id)
-            return
-        }
-        addSources(urls, folderPreset: nil)
-    }
-
-    /// Adds the pending import, giving every video found in its folders `preset`.
-    func confirmFolderImport(preset: Preset) {
-        guard let pending = pendingFolderImport else { return }
-        pendingFolderImport = nil
-        addSources(pending.urls, folderPreset: preset)
-    }
-
-    func cancelFolderImport() { pendingFolderImport = nil }
-
-    /// Adds files, and every video or audio file inside folders. Files found in folders
-    /// get `folderPreset` (the default preset when nil); loose files get the default.
-    func addSources(_ urls: [URL], folderPreset: Preset?) {
-        let existing = Set(sources.map(\.url))
-        let fallback = defaultPreset
-        let loose = Set(urls.map(\.standardizedFileURL))
-        let media = MediaDiscovery.mediaFiles(in: urls)
-        let accepted = media.filter { !existing.contains($0) }
-        guard !accepted.isEmpty else {
-            if !urls.isEmpty && media.isEmpty {
-                showAlert(String(localized: "No videos found"), String(localized: "No video or audio files found there."))
-            }
-            return
-        }
-        let items = accepted.map { url in
-            let isLoose = loose.contains(url.standardizedFileURL) || folderPreset == nil
-            return newSource(url: url, preset: isLoose ? fallback : (folderPreset ?? fallback), usesDraft: isLoose)
-        }
-        sources = sources + items
-        items.forEach { item in Task { await inspect(item) } }
-    }
-
     func removeSource(_ id: UUID) {
         sources = sources.filter { $0.id != id }
         selectedIDs.remove(id)
@@ -150,28 +112,6 @@ final class AppModel {
 
     /// Replaces the whole list (reordering keeps every item and its settings).
     func setSources(_ items: [SourceItem]) { sources = items }
-
-    func inspect(_ item: SourceItem) async {
-        do {
-            let info = try await MediaInspector.inspect(item.url)
-            let thumbnail = await Self.thumbnail(for: item.url, duration: info.duration)
-            let sidecars = SubtitleFile.sidecars(for: item.url).filter(Self.isReadable)
-            update(item.id) { source in
-                source.info = info
-                source.thumbnail = thumbnail
-                // The user may have added files while inspection ran; keep them.
-                let known = Set(sidecars.map(\.url))
-                source.subtitleFiles = sidecars + source.subtitleFiles.filter { !known.contains($0.url) }
-            }
-        } catch {
-            update(item.id) { $0.errorMessage = error.localizedDescription }
-        }
-    }
-
-    private static func isReadable(_ file: SubtitleFile) -> Bool {
-        guard let data = try? Data(contentsOf: file.url) else { return false }
-        return (try? SubtitleParser.cues(from: data)) != nil
-    }
 
     // MARK: Subtitle files
 
@@ -209,15 +149,6 @@ final class AppModel {
             item.subtitleFiles.removeAll { $0.url == file.url }
             if item.settings.burnIn == .file(file.url) { item.settings.burnIn = nil }
         }
-    }
-
-    private static func thumbnail(for url: URL, duration: Double) async -> NSImage? {
-        let generator = AVAssetImageGenerator(asset: AVURLAsset(url: url))
-        generator.appliesPreferredTrackTransform = true
-        generator.maximumSize = CGSize(width: 1280, height: 1280)
-        let time = CMTime(seconds: min(duration * 0.1, 5), preferredTimescale: 600)
-        guard let (image, _) = try? await generator.image(at: time) else { return nil }
-        return NSImage(cgImage: image, size: .zero)
     }
 
     // MARK: Settings
@@ -273,18 +204,37 @@ final class AppModel {
 
     // MARK: Queue
 
-    /// Returns how many jobs were added.
+    /// Queues the ready videos among `ids`, takes them off the editing list (they are jobs
+    /// now) and returns how many were queued.
     @discardableResult
-    func enqueue(_ ids: [UUID]) -> Int { enqueueSources(ids).count }
+    func enqueue(_ ids: [UUID]) -> Int {
+        let queued = Set(enqueueSources(ids))
+        takeOffList(queued)
+        return queued.count
+    }
 
-    /// Queues the ready sources among `ids` and returns the IDs of those queued.
-    func enqueueSources(_ ids: [UUID]) -> [UUID] {
+    func enqueueAll() { enqueue(sources.map(\.id)) }
+
+    /// Removes sources that became jobs from the list and the selection, keeping their
+    /// thumbnails for the queue rows.
+    private func takeOffList(_ queued: Set<UUID>) {
+        guard !queued.isEmpty else { return }
+        for item in sources where queued.contains(item.id) {
+            if let image = item.thumbnail { ui.thumbnails[item.url] = image }
+        }
+        setSources(sources.filter { !queued.contains($0.id) })
+        selectedIDs.subtract(queued)
+    }
+
+    /// Creates jobs for the ready sources among `ids` and returns the IDs of those queued.
+    private func enqueueSources(_ ids: [UUID]) -> [UUID] {
+        let wanted = Set(ids)
         let suffix = defaults.string(forKey: PreferenceKey.outputSuffix) ?? ""
         var taken = queue.takenDestinations
         var jobs: [EncodeJob] = []
         var queued: [UUID] = []
         var skipped: [String] = []
-        for item in sources where ids.contains(item.id) {
+        for item in sources where wanted.contains(item.id) {
             guard let info = item.info, item.settings.isValid else {
                 skipped.append(item.name)
                 continue
@@ -307,14 +257,6 @@ final class AppModel {
         }
         if !jobs.isEmpty { queue.add(jobs) }
         return queued
-    }
-
-    func enqueueAll() { enqueue(sources.map(\.id)) }
-
-    func encodeNow(_ id: UUID) {
-        guard enqueue([id]) > 0 else { return }
-        queue.start()
-        section = .conversion
     }
 
     func chooseDestination() {

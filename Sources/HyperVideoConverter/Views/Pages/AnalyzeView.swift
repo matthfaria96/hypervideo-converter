@@ -13,7 +13,9 @@ struct AnalyzeView: View {
             if !model.sources.isEmpty { picker }
         } content: {
             if let source {
-                SourceHeaderView(source: source, presetName: model.presetName(for: source))
+                SourceHeaderView(source: source, presetName: model.presetName(for: source),
+                                 picture: model.ui.hero?.url == source.url ? model.ui.hero?.image : source.thumbnail)
+                    .task(id: source.info?.duration) { await model.loadHero(for: source) }
                 if let info = source.info {
                     MediaFacts(info: info, url: source.url)
                 } else if let error = source.errorMessage {

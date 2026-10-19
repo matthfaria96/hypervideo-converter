@@ -28,7 +28,11 @@ struct HyperVideoConverterApp: App {
                 .tint(Theme.accent)
                 .preferredColorScheme(.dark)
                 .onAppear { appDelegate.model = model }
+                .modifier(WindowOpener(delegate: appDelegate))
         }
+        // Opening files must not make SwiftUI re-activate the window with a full layout pass
+        // (about a second with dozens of files); AppDelegate adds them to the list itself.
+        .handlesExternalEvents(matching: [])
         .windowToolbarStyle(.unified)
         .commands { AppCommands(model: model) }
 
@@ -39,14 +43,39 @@ struct HyperVideoConverterApp: App {
     }
 }
 
+/// Hands the delegate a way to open the main window again after it was closed.
+private struct WindowOpener: ViewModifier {
+    @Environment(\.openWindow) private var openWindow
+    let delegate: AppDelegate
+
+    func body(content: Content) -> some View {
+        content.onAppear { delegate.openMainWindow = { openWindow(id: "main") } }
+    }
+}
+
 /// Lets Finder "Open With" and Dock drops reach the model.
 final class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor var model: AppModel?
+    @MainActor var openMainWindow: (() -> Void)?
     @MainActor private lazy var sessionEnd = SessionEndMonitor()
     @MainActor private lazy var quitCoordinator = QuitCoordinator(isSessionEnding: { [unowned self] in sessionEnd.isSessionEnding })
 
     func application(_ application: NSApplication, open urls: [URL]) {
-        Task { @MainActor in model?.addSources(urls) }
+        // Activate inside the event, while the system still counts it as the user's request.
+        MainActor.assumeIsolated { showMainWindow() }
+        Task { @MainActor in await model?.addSources(urls) }
+    }
+
+    /// Brings the window forward (SwiftUI no longer does it for opened files, see the scene).
+    @MainActor private func showMainWindow() {
+        // Opened files are the user's request, so take the focus even from another app.
+        NSApp.activate(ignoringOtherApps: true)
+        guard let window = NSApp.windows.first(where: { $0.canBecomeMain }) else {
+            openMainWindow?()
+            return
+        }
+        if window.isMiniaturized { window.deminiaturize(nil) }
+        window.makeKeyAndOrderFront(nil)
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {

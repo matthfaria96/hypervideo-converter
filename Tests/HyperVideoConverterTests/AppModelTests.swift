@@ -6,31 +6,32 @@ import HyperVideoCore
 @MainActor
 @Suite("App model", .serialized)
 struct AppModelTests {
-    @Test func encodeNowDoesNotStartQueueWhenNothingWasAdded() throws {
+    @Test func enqueueSkipsVideosNotInspectedYetAndKeepsThem() async throws {
         let env = try TestEnvironment()
         let broken = env.root.appendingPathComponent("broken.mov")
         try Data("nope".utf8).write(to: broken)
         let model = env.makeModel()
-        model.addSources([broken])
+        await model.addSources([broken])
         let id = try #require(model.sources.first?.id)
         // Not inspected yet (info == nil), so enqueue skips it.
-        model.encodeNow(id)
+        #expect(model.enqueue([id]) == 0)
         #expect(model.queue.jobs.isEmpty)
         #expect(model.queue.isProcessing == false)
-        #expect(model.section == .conversion)
+        #expect(model.sources.map(\.id) == [id])
         #expect(model.alertMessage != nil)
     }
 
-    @Test func encodeNowStartsQueueAndSelectsIt() async throws {
+    @Test func enqueuedVideoEncodesAndLeavesTheList() async throws {
         let env = try TestEnvironment()
         let clip = try await AppTestClip.make(in: env.root, .init(name: "now"))
         let model = env.makeModel()
-        model.addSources([clip])
+        await model.addSources([clip])
         let id = try #require(model.sources.first?.id)
         #expect(try await TestEnvironment.waitUntil { model.sources.first?.info != nil })
-        model.encodeNow(id)
+        #expect(model.enqueue([id]) == 1)
+        model.queue.start()
         #expect(model.queue.jobs.count == 1)
-        #expect(model.section == .conversion)
+        #expect(model.sources.isEmpty)
         #expect(try await TestEnvironment.waitUntil(timeout: .seconds(60)) {
             model.queue.jobs.first.map { $0.state.isFinished } ?? false
         })
@@ -52,7 +53,7 @@ struct AppModelTests {
         try Data(srt.utf8).write(to: userFile)
 
         let model = env.makeModel()
-        model.addSources([clip])
+        await model.addSources([clip])
         let id = try #require(model.sources.first?.id)
         // Added before inspection finishes (it runs in a later main-actor task).
         model.addSubtitleFiles([userFile, sidecar], to: id)

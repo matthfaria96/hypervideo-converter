@@ -59,7 +59,7 @@ struct PresetTrimCropTests {
         try JSONEncoder().encode([preset]).write(to: env.support.appendingPathComponent("presets.json"))
         env.defaults.set(preset.id.uuidString, forKey: PreferenceKey.defaultPresetID)
         let fresh = env.makeModel()
-        fresh.addSources([try Self.placeholder(env, "legacy")])
+        await fresh.addSources([try Self.placeholder(env, "legacy")])
         if let item = fresh.sources.first {
             #expect(item.settings.videoCodec == .hevc)
             #expect(item.settings.trim == nil)
@@ -75,7 +75,7 @@ struct PresetTrimCropTests {
         let a = try await AppTestClip.make(in: env.root, .init(name: "a"))
         let b = try await AppTestClip.make(in: env.root, .init(name: "b"))
         let model = env.makeModel()
-        model.addSources([a, b])
+        await model.addSources([a, b])
         let ids = model.sources.map(\.id)
         #expect(ids.count == 2)
         model.update(ids[0]) { $0.settings.trim = TrimRange(start: 0.1, end: 0.5); $0.settings.crop = Crop(top: 2) }
@@ -103,7 +103,7 @@ struct PresetTrimCropTests {
     @Test func presetNameReportsRealChanges() async throws {
         let env = try TestEnvironment()
         let model = env.makeModel()
-        model.addSources([try Self.placeholder(env, "x")])
+        await model.addSources([try Self.placeholder(env, "x")])
         let id = try #require(model.sources.first?.id)
         model.update(id) { $0.settings.rateControl = .quality(0.99) }
         let item = try #require(model.sources.first)

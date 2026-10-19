@@ -1,9 +1,12 @@
+import AppKit
 import HyperVideoCore
 import SwiftUI
 
 struct SourceHeaderView: View {
     let source: SourceItem
     let presetName: String
+    /// The big picture, once loaded; the list thumbnail meanwhile.
+    var picture: NSImage?
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
@@ -32,7 +35,7 @@ struct SourceHeaderView: View {
 
     @ViewBuilder
     private var artwork: some View {
-        if let image = source.thumbnail {
+        if let image = picture {
             Image(nsImage: image).resizable().aspectRatio(contentMode: .fill)
         } else {
             LinearGradient(colors: [.indigo, .purple, .pink], startPoint: .topLeading, endPoint: .bottomTrailing)

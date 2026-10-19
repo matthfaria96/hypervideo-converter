@@ -113,7 +113,14 @@ extension AppModel {
             draftSettings = draftBase.adopting(preset.settings.presetSettings)
             draftPresetID = preset.id
         }
-        inspectorTargetIDs.forEach { applyPreset(preset, to: $0) }
+        let ids = Set(inspectorTargetIDs)
+        setSources(sources.map { item in
+            guard ids.contains(item.id) else { return item }
+            var copy = item
+            copy.settings = item.settings.adopting(preset.settings)
+            copy.presetID = preset.id
+            return copy
+        })
     }
 
     // MARK: Converting
@@ -123,14 +130,7 @@ extension AppModel {
     /// Queues every ready video, takes it off the editing list and starts the queue.
     func convertAll() {
         ui.batchStartedAt = ui.batchStartedAt ?? Date()
-        let queued = Set(enqueueSources(sources.map(\.id)))
-        if !queued.isEmpty {
-            for item in sources where queued.contains(item.id) {
-                if let image = item.thumbnail { ui.thumbnails[item.url] = image }
-            }
-            setSources(sources.filter { !queued.contains($0.id) })
-            selectedIDs.subtract(queued)
-        }
+        enqueue(sources.map(\.id))
         if queue.pendingCount > 0 { queue.start() }
     }
 

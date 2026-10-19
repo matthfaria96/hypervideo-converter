@@ -62,7 +62,7 @@ struct NotificationTests {
         let clip = try await AppTestClip.make(in: env.root, .init(name: "good"))
         let recorder = RecordingNotifier()
         let model = AppModel(directory: env.support, defaults: env.defaults, notifier: recorder)
-        model.addSources([clip])
+        await model.addSources([clip])
         #expect(try await TestEnvironment.waitUntil { model.sources.first?.info != nil })
         model.enqueueAll()
         model.queue.add([bogusJob(env, "bad")])

@@ -9,7 +9,8 @@ struct WorkListView: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
-        VStack(spacing: 0) {
+        // Lazy: with hundreds of videos only the rows on screen are built.
+        LazyVStack(spacing: 0) {
             if model.sources.isEmpty && model.activeJobs.isEmpty {
                 Text("No videos added. Your files will appear here.")
                     .font(.system(size: 12))
@@ -18,7 +19,7 @@ struct WorkListView: View {
                     .padding(20)
             }
             ForEach(model.sources) { source in
-                rowContainer(id: source.id) {
+                rowContainer(id: source.id, isSelected: model.selectedIDs.contains(source.id)) {
                     SourceRowView(source: source, isSelected: model.selectedIDs.contains(source.id))
                 }
                 .onTapGesture { select(source.id) }
@@ -33,7 +34,7 @@ struct WorkListView: View {
                 }
             }
             ForEach(model.activeJobs) { job in
-                rowContainer(id: job.id) { JobRowView(job: job) }
+                rowContainer(id: job.id, isSelected: false) { JobRowView(job: job) }
                     .accessibilityElement(children: .combine)
                     .contextMenu { JobMenu(job: job) }
                     .dropDestination(for: String.self) { items, _ in
@@ -56,13 +57,15 @@ struct WorkListView: View {
         .quickLookPreview(Bindable(model.ui).quickLookURL)
     }
 
-    private func rowContainer<Content: View>(id: UUID, @ViewBuilder content: () -> Content) -> some View {
+    /// The row's frame. Only videos on the editing list can be selected; jobs can't, and
+    /// are dragged by their own ID to reorder the queue.
+    private func rowContainer<Content: View>(id: UUID, isSelected: Bool, @ViewBuilder content: () -> Content) -> some View {
         content()
             .padding(12)
-            .background(model.selectedIDs.contains(id) ? Theme.selectedCard : .clear)
+            .background(isSelected ? Theme.selectedCard : .clear)
             .overlay(alignment: .bottom) { Color(hex: 0x333338).frame(height: 1) }
             .overlay {
-                if model.selectedIDs.contains(id) {
+                if isSelected {
                     RoundedRectangle(cornerRadius: 9).strokeBorder(Color(hex: 0xD9A33A), lineWidth: 1.5).padding(2)
                 }
             }

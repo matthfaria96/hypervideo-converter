@@ -22,7 +22,7 @@ struct HistoryView: View {
             if model.historyJobs.isEmpty {
                 EmptyPage(symbol: "clock.arrow.circlepath", text: "Converted videos will appear here.")
             } else {
-                VStack(spacing: 0) {
+                LazyVStack(spacing: 0) {
                     ForEach(model.historyJobs) { job in
                         HistoryRow(job: job)
                             .padding(12)
