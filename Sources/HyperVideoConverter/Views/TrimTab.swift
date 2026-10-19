@@ -55,6 +55,15 @@ struct TrimTab: View {
         }
         .onAppear { _ = model.ui.player(for: info.url) }
         .onChange(of: info.url) { _, url in _ = model.ui.player(for: url) }
+        .onReceive(
+            NotificationCenter.default.publisher(for: AVPlayer.rateDidChangeNotification).receive(on: RunLoop.main)
+        ) { note in
+            // A pause (by the user or at the selection's end) ends the Play Selection run, so
+            // resuming with the player's own controls plays past the selection.
+            if let changed = note.object as? AVPlayer, changed === player, changed.rate == 0 {
+                resetSelectionPlayback()
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: AVPlayerItem.didPlayToEndTimeNotification)) { note in
             if let item = note.object as? AVPlayerItem, item === player?.currentItem { resetSelectionPlayback() }
         }
