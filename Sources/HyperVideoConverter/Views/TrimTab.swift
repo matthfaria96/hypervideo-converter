@@ -120,4 +120,11 @@ private struct PlayerView: NSViewRepresentable {
     func updateNSView(_ view: AVPlayerView, context: Context) {
         if view.player !== player { view.player = player }
     }
+
+    /// Takes exactly the offered size. AVPlayerView's own fitting size changes with its
+    /// controls layout, which can feed back into SwiftUI layout and loop on constraint
+    /// updates until AppKit throws when the player or its video changes.
+    func sizeThatFits(_ proposal: ProposedViewSize, nsView: AVPlayerView, context: Context) -> CGSize? {
+        proposal.replacingUnspecifiedDimensions(by: CGSize(width: 640, height: 360))
+    }
 }
