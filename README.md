@@ -27,7 +27,7 @@ HyperVideo Converter is a new implementation, not a port of HandBrake's code. It
 |---|---|---|
 | Engine | AVFoundation + VideoToolbox | FFmpeg / libav, x264, x265 |
 | Input formats | What macOS can read (MOV, MP4, M4V, many camera formats) | Nearly anything, including MKV, WebM, AVI and DVD/Blu-ray |
-| Output containers | MP4, M4V, MOV | MP4, MKV, WebM |
+| Output containers | MP4, M4V, MOV, MKV | MP4, MKV, WebM |
 | Codecs | H.264, HEVC (8/10-bit), ProRes, passthrough | Also AV1, VP9, MPEG-2, Theora and software x264/x265 |
 | Subtitles | Copy text subtitles and captions, import SRT/WebVTT | Also burn-in and foreign audio search |
 | Filters | Crop, scale, rotate, flip, blend deinterlace, denoise, sharpen, grayscale | Also Yadif/Bwdif deinterlace, detelecine, deblock, chroma smoothing and more |
@@ -37,8 +37,18 @@ HyperVideo Converter is a new implementation, not a port of HandBrake's code. It
 
 - **No MKV, WebM or AV1 input** unless macOS itself can decode the file. Unreadable files are rejected with a clear message when they're added.
 - **No DVD or Blu-ray ripping.**
-- **Output is MP4, M4V or MOV only.**
-- **ProRes and Apple Lossless need the MOV container**, and so do closed captions. The app flags these combinations before encoding.
+- **Output is MP4, M4V, MOV or MKV.** There's no WebM output.
+- **ProRes needs the MOV container**, and so do closed captions. Apple Lossless works in MOV or MKV. The app flags these combinations before encoding.
+
+### MKV output
+
+AVFoundation can't write Matroska, so MKV is made in two steps: the encode goes into a hidden QuickTime movie in the job's work folder, then a small built-in Matroska muxer (pure Swift, no FFmpeg) copies the compressed samples into the `.mkv` without re-encoding. Progress covers both steps, and cancelling or a failure leaves nothing behind.
+
+- **Video:** H.264 or H.265 (8 or 10-bit), encoded or passed through. Passthrough of other codecs (such as ProRes or MPEG-2) is refused with a message. Rotation from a passed-through source is stored as a projection roll, which FFmpeg-based players (VLC, IINA, mpv) honour.
+- **Audio:** AAC and Apple Lossless, plus AC-3, E-AC-3 and MP3 when passed through, with languages and the first track marked default. AAC encoder priming is declared as a codec delay, so audio stays in sync.
+- **Subtitles:** text subtitles (from the source or added SRT/WebVTT files) become SRT-style `S_TEXT/UTF8` tracks with their languages; styling is dropped. Closed captions aren't carried.
+- **Chapters** are kept (cut to the trim range) when Keep Metadata is on; other metadata tags aren't written.
+- The file has a SeekHead and Cues for fast seeking. macOS itself (QuickTime Player, Finder previews) can't open MKV; use VLC, IINA or another Matroska player.
 
 ## Building
 
