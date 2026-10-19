@@ -77,3 +77,34 @@ struct QuitAndSweepTests {
         #expect(env.makeQueue().jobs.first?.state == .queued)
     }
 }
+
+@MainActor
+@Suite("Stop immediately for session end", .serialized)
+struct StopImmediatelyTests {
+    @Test func stopImmediatelyRequeuesAndRemovesWorkFolders() async throws {
+        let env = try TestEnvironment()
+        let clip = try await AppTestClip.make(in: env.root, .init(
+            name: "long", size: CGSize(width: 1920, height: 1080),
+            frameTimes: (0..<180).map { Double($0) / 30 }, seconds: 6
+        ))
+        var settings = EncodeSettings()
+        settings.videoCodec = .proRes422HQ
+        settings.container = .mov
+        let job = EncodeJob(source: clip, destination: env.output.appendingPathComponent("a.mov"),
+                            settings: settings, presetName: "Test")
+        let queue = env.makeQueue()
+        queue.add([job])
+        queue.start()
+        #expect(try await TestEnvironment.waitUntil { (try? env.workDirectories().count) == 1 })
+
+        queue.stopImmediately()
+
+        // Synchronous: by the time it returns, the job is requeued and persisted and the folder is gone.
+        #expect(queue.isProcessing == false)
+        #expect(queue.jobs.map(\.state) == [.queued])
+        #expect(try env.workDirectories().isEmpty)
+        #expect(env.makeQueue().jobs.map(\.state) == [.queued])
+        // Let the cancelled task wind down before the temp folder goes away.
+        #expect(try await TestEnvironment.waitUntil { queue.runningCount == 0 })
+    }
+}

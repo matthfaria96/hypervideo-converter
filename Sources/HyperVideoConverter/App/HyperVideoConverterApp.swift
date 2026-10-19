@@ -41,7 +41,8 @@ struct HyperVideoConverterApp: App {
 /// Lets Finder "Open With" and Dock drops reach the model.
 final class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor var model: AppModel?
-    @MainActor private lazy var quitCoordinator = QuitCoordinator()
+    @MainActor private lazy var sessionEnd = SessionEndMonitor()
+    @MainActor private lazy var quitCoordinator = QuitCoordinator(isSessionEnding: { [unowned self] in sessionEnd.isSessionEnding })
 
     func application(_ application: NSApplication, open urls: [URL]) {
         Task { @MainActor in model?.addSources(urls) }
@@ -57,6 +58,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Start watching for logout/shutdown before any quit can arrive.
+        MainActor.assumeIsolated { _ = sessionEnd }
         // Needed when launched as a bare SwiftPM executable rather than an .app bundle.
         NSApp.setActivationPolicy(.regular)
         NSApp.activate()

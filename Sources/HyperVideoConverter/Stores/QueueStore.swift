@@ -253,9 +253,21 @@ final class QueueStore {
         persist()
     }
 
+    /// For logout and shutdown, which can't wait: cancels encodes, requeues them and
+    /// removes their work folders now (best effort; a writer may still be closing).
+    /// The launch sweep catches anything left behind.
+    func stopImmediately() {
+        isProcessing = false
+        let interrupted = tasks
+        interrupted.values.forEach { $0.cancel() }
+        jobs = jobs.map { interrupted[$0.id] != nil ? $0.with(state: .queued) : $0 }
+        persist()
+        sweepStaleWorkDirectories(near: jobs.filter { interrupted[$0.id] != nil })
+    }
+
     /// Removes work folders left behind by encodes interrupted by a crash or forced quit.
-    private func sweepStaleWorkDirectories() {
-        let folders = Set(jobs.map { $0.destination.deletingLastPathComponent() })
+    private func sweepStaleWorkDirectories(near sweptJobs: [EncodeJob]? = nil) {
+        let folders = Set((sweptJobs ?? jobs).map { $0.destination.deletingLastPathComponent() })
         let manager = FileManager.default
         for folder in folders {
             let contents = (try? manager.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
