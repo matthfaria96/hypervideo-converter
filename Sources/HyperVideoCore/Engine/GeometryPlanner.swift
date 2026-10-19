@@ -71,11 +71,19 @@ public enum GeometryPlanner {
         if let box = limit.boundingBox(portrait: size.height > size.width) {
             factor = min(1, box.width / size.width, box.height / size.height)
         }
-        return CGSize(width: even(size.width * factor), height: even(size.height * factor))
+        return CGSize(width: evenFitting(size.width * factor, within: size.width),
+                      height: evenFitting(size.height * factor, within: size.height))
     }
 
-    /// Encoders require even dimensions for 4:2:0 chroma.
+    /// Nearest even value, but never more than `limit` rounded down to even: downscales keep
+    /// their aspect as closely as possible and nothing is ever stretched past its source.
+    static func evenFitting(_ value: CGFloat, within limit: CGFloat) -> CGFloat {
+        min(max(2, (value / 2).rounded() * 2), even(limit))
+    }
+
+    /// Encoders require even dimensions for 4:2:0 chroma. Rounds down, so an odd crop
+    /// loses a pixel instead of being stretched by one; the tolerance absorbs scaling noise.
     static func even(_ value: CGFloat) -> CGFloat {
-        max(2, (value / 2).rounded() * 2)
+        max(2, ((value + 1e-6) / 2).rounded(.down) * 2)
     }
 }

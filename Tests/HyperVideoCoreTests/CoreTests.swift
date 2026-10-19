@@ -60,6 +60,32 @@ struct GeometryTests {
         #expect(GeometryPlanner.even(1) == 2)
     }
 
+    @Test func evenRoundsDown() {
+        #expect(GeometryPlanner.even(721) == 720)
+        #expect(GeometryPlanner.even(1919) == 1918)
+        #expect(GeometryPlanner.even(720) == 720)
+        #expect(GeometryPlanner.even(719.9999999) == 720)
+        #expect(GeometryPlanner.even(3) == 2)
+        #expect(GeometryPlanner.even(0) == 2)
+    }
+
+    @Test func downscaleRoundsToNearestEvenWithinSource() {
+        #expect(GeometryPlanner.evenFitting(853.33, within: 1920) == 854)
+        #expect(GeometryPlanner.evenFitting(1919, within: 1919) == 1918)
+        #expect(GeometryPlanner.evenFitting(1, within: 1) == 2)
+    }
+
+    @Test func oddCropIsNeverUpscaled() {
+        let plan = GeometryPlanner.plan(
+            naturalSize: hd, preferredTransform: .identity,
+            crop: Crop(top: 3, bottom: 0, left: 1, right: 0), rotation: .none,
+            flipHorizontal: false, maxResolution: .source
+        )
+        #expect(plan.renderSize == CGSize(width: 1918, height: 1076))
+        #expect(plan.transform.a <= 1)
+        #expect(plan.transform.d <= 1)
+    }
+
     @Test func flipMirrorsHorizontally() {
         let plan = GeometryPlanner.plan(naturalSize: hd, preferredTransform: .identity, crop: .zero,
                                         rotation: .none, flipHorizontal: true, maxResolution: .source)
