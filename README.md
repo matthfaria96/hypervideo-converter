@@ -1,8 +1,18 @@
 # HyperVideo Converter
 
-A native macOS video converter in the spirit of HandBrake, written from scratch in Swift and SwiftUI. It encodes with Apple's own media frameworks (AVFoundation and VideoToolbox), so H.264, HEVC and ProRes run on the Mac's hardware encoders, and the interface uses macOS Liquid Glass.
+A native macOS video converter in the spirit of HandBrake, written from scratch in Swift and SwiftUI. It encodes with Apple's own media frameworks (AVFoundation and VideoToolbox), so H.264, HEVC and ProRes run on the Mac's hardware encoders. The interface is in English and Brazilian Portuguese (it follows the Mac's language).
 
 Requires macOS 26 or later.
+
+## Interface
+
+One dark window with three columns:
+
+- **Sidebar.** *Library*: Conversion (the workspace), History (finished, failed and cancelled conversions, with Show in Finder, Open, Retry and Remove) and Favorites (every preset: apply, make default, save the current settings, rename, delete, import from HyperVideo or HandBrake, export). *Tools*: Compress (the workspace in Compress mode) and Analyze Video (streams, tracks, chapters and file details of a video). The sidebar collapses to icons (⌃⌘S).
+- **Workspace.** A Convert | Compress switch, a drop zone (files or whole folders, or Choose Videos…) that shrinks to a strip once videos are added, and the conversion list: thumbnail, container, codec, resolution and duration, original size and, when the settings make it predictable, the estimated output size. Waiting and running jobs follow in the same list with their progress. Click selects a row (⌘-click adds), drag reorders, right-click offers Advanced Settings, Analyze, Move to Top/Up/Down, Show in Finder, Remove, Edit Settings (puts a waiting job back on the list) and Cancel. The bottom bar shows the destination folder (Change…), Convert Videos (⌘↩: queues every ready video and starts), Stop, and while running a progress bar with “File X of N” and the overall percentage. Finished jobs move to History.
+- **Output settings.** They apply to the selected videos, or to every video when none is selected (the panel says which); with an empty list they become the settings of the next videos added. Output format (MP4, MOV, MKV, M4V), four quality profiles (Balanced, High Quality, Smaller File, Keep Original — built-in presets), video codec, maximum resolution, a constant-quality slider, switches for Keep resolution and frame rate, Keep original audio (passthrough) and Remove metadata, and a size estimate that only shows numbers the settings make predictable (bitrate or passthrough), with the saving in percent. Choosing ProRes switches to MOV; choosing another format with ProRes switches to HEVC.
+- **Advanced Settings** (⌘E) opens every detailed setting of one video: summary with chapters and before → after, video and filters (codec, frame rate, deinterlace, denoise, sharpen, grayscale, quality or bitrate, speed, B-frames, keyframes), size and crop (maximum resolution, rotate, flip, crop), audio (codec, tracks, mixdown, bitrate, extra version), subtitles (tracks, burn-in, added SRT/WebVTT files) and trim with a preview player.
+- **Compress** switches the targets to MP4, the Balanced profile with HEVC.
 
 ## Features
 
@@ -14,7 +24,7 @@ Requires macOS 26 or later.
 - **Subtitles:** text subtitles and closed captions are copied with their language: none, the first track, or all of them. SRT and WebVTT files are added too: automatically when they sit next to the video and share its name (`Movie.srt`, `Movie.pt-BR.srt`), or with Add Subtitle File…. UTF-8, UTF-16 and Windows-1252 files are all read correctly. One subtitle per video (a source Timed Text track or an added file) can be **burned in**: drawn into the picture in white with a dark outline and shadow, bottom-centered, sized to the output height and wrapped to fit, timed to the trimmed output. The burned track isn't also kept as a soft track, and burn-in needs the video re-encoded (not passthrough).
 - **Chapters and metadata:** chapter markers and tags are kept, adjusted to the trim.
 - **Trim & preview:** a built-in player to set start and end points.
-- **Presets:** 14 built-in presets (General, 4K & HDR, Apple devices, web, ProRes production and remux). You can also save, rename, import and export your own, and import presets exported from HandBrake. Settings HyperVideo can't reproduce are mapped to the closest option and listed after the import.
+- **Presets:** 18 built-in presets (four quality profiles, General, 4K & HDR, Apple devices, web, ProRes production and remux). You can also save, rename, import and export your own, and import presets exported from HandBrake. Settings HyperVideo can't reproduce are mapped to the closest option and listed after the import.
 - **Queue:** runs several encodes at once, survives relaunching the app, and shows speed (× realtime and fps) and time left. Pending jobs run from the top of the list down: drag jobs to reorder them, or right-click for Move to Top, Move Up and Move Down; the order is saved with the queue. It also shows progress in the Dock and, when the whole queue is done, posts one notification counting converted and failed videos (permission is asked the first time one is posted). Settings add a notification per job, a Dock bounce and a sound. Notifications are only posted from the bundled app, never under `swift run` or tests. Quitting during encodes cancels them, removes their work folders and requeues them for the next launch; on logout, restart or shutdown this happens at once so the session isn't held up.
 - **Before → after summary:** resolution, codecs, duration, track counts, and an estimated output size when the settings make it predictable.
 - **Adding files:** drop files or whole folders anywhere in the window, use the Open panel, or use Finder's Open With and the Dock icon. Folders are searched recursively. When an import includes folders, a sheet asks which preset their videos get (the default preset is preselected); loose files keep the default preset.
@@ -31,7 +41,7 @@ HyperVideo Converter is a new implementation, not a port of HandBrake's code. It
 | Codecs | H.264, HEVC (8/10-bit), ProRes, passthrough | Also AV1, VP9, MPEG-2, Theora and software x264/x265 |
 | Subtitles | Copy text subtitles and captions, import SRT/WebVTT, burn in one text subtitle | Also bitmap (PGS/VobSub) burn-in and foreign audio search |
 | Filters | Crop, scale, rotate, flip, blend deinterlace, denoise, sharpen, grayscale | Also Yadif/Bwdif deinterlace, detelecine, deblock, chroma smoothing and more |
-| Interface | SwiftUI with Liquid Glass | Cocoa on Mac, GTK on Linux, WPF on Windows |
+| Interface | SwiftUI, English and Brazilian Portuguese | Cocoa on Mac, GTK on Linux, WPF on Windows |
 
 ### Limits that come from using macOS frameworks
 
@@ -67,7 +77,7 @@ Scripts/build-app.sh debug      # debug build
 
 This creates `dist/HyperVideo Converter.app` and `dist/HyperVideoConverter-<version>.dmg` (drag the app onto the Applications link inside it). The script:
 
-- builds with `swift build`, assembles the bundle and copies any SwiftPM resource bundles;
+- builds with `swift build`, assembles the bundle and copies the translations (`.lproj` folders from the SwiftPM resource bundle) into it;
 - takes the version from the latest git tag (`v1.2.0` → `1.2.0`, `0.1.0` when there is none), uses the commit count as the build number and reads `LSMinimumSystemVersion` from `Package.swift`;
 - registers video document types, so Finder's Open With lists the app;
 - builds `AppIcon.icns` from `Resources/AppIcon.png` with `sips` and `iconutil`;
@@ -100,7 +110,8 @@ Sources/HyperVideoCore        Conversion engine and models (no UI)
   Models/                     Settings, presets, jobs, media info, estimates
 Sources/HyperVideoConverter   SwiftUI app
   Stores/                     App state, queue, presets, persistence
-  Views/                      Sidebar, settings tabs, queue, presets inspector
+  Views/                      Sidebar, workspace, output inspector, pages, advanced settings tabs
+  Resources/pt-BR.lproj       Brazilian Portuguese strings (English is the base language)
 Tests/HyperVideoCoreTests     Unit and integration tests
 Scripts/                      App bundle and icon builders
 ```
