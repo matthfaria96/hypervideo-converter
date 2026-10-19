@@ -26,6 +26,8 @@ public struct EncodeJob: Codable, Hashable, Identifiable, Sendable {
     public var destination: URL
     public var settings: EncodeSettings
     public var presetName: String
+    /// The preset the settings came from; nil in queues saved before it was stored.
+    public var presetID: UUID?
     public var state: JobState
     public var createdAt: Date
     /// Output length in seconds and frame rate, used to report encode speed.
@@ -40,8 +42,10 @@ public struct EncodeJob: Codable, Hashable, Identifiable, Sendable {
 
     public init(
         source: URL, destination: URL, settings: EncodeSettings, presetName: String,
-        mediaDuration: Double? = nil, frameRate: Double? = nil, subtitleFiles: [SubtitleFile] = []
+        mediaDuration: Double? = nil, frameRate: Double? = nil, subtitleFiles: [SubtitleFile] = [],
+        presetID: UUID? = nil
     ) {
+        self.presetID = presetID
         self.id = UUID()
         self.source = source
         self.destination = destination
