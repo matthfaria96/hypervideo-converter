@@ -127,10 +127,22 @@ final class SamplePump: @unchecked Sendable {
         }
     }
 
-    /// Runs `work` once every pump's queue is idle and held, so nothing is inside the
-    /// reader or writer while it runs. Returns true if that happened within `timeout`;
-    /// otherwise `work` still runs later, whenever a stuck pump finally lets go.
+    /// Runs `work` exactly once, as soon as every pump's queue is idle and held, so
+    /// nothing is inside the reader or writer while it runs. Returns true if that
+    /// happened within `timeout`. If a pump is stuck inside the reader or writer past
+    /// the deadline, `work` runs anyway: cancelling the reader and writer is what makes
+    /// a stuck AVFoundation call return. The parked blocks are always released once
+    /// every queue reaches them, so no GCD thread stays blocked.
     static func whenIdle(_ pumps: [SamplePump], timeout: Duration, work: @escaping @Sendable () -> Void) async -> Bool {
+        let claimed = Mutex(false)
+        let runOnce: @Sendable () -> Bool = {
+            let first = claimed.withLock { claimed -> Bool in
+                defer { claimed = true }
+                return !claimed
+            }
+            if first { work() }
+            return first
+        }
         let parked = DispatchGroup()
         let release = DispatchSemaphore(value: 0)
         for pump in pumps {
@@ -140,18 +152,21 @@ final class SamplePump: @unchecked Sendable {
                 release.wait()
             }
         }
-        let ran = Mutex(false)
+        let result = OneShot()
         parked.notify(queue: .global(qos: .utility)) {
-            work()
-            ran.withLock { $0 = true }
+            let ranHere = runOnce()
             for _ in pumps { release.signal() }
+            result.resume(ranHere)
         }
-        let deadline = ContinuousClock.now + timeout
-        while ContinuousClock.now < deadline {
-            if ran.withLock({ $0 }) { return true }
-            try? await Task.sleep(for: .milliseconds(5))
+        let timer = Task.detached {
+            try? await Task.sleep(for: timeout)
+            guard !Task.isCancelled else { return }
+            _ = runOnce()
+            result.resume(false)
         }
-        return ran.withLock { $0 }
+        let idle = await result.value()
+        timer.cancel()
+        return idle
     }
 
     private func report(_ buffer: CMSampleBuffer, range: CMTimeRange, progress: @Sendable (Double) -> Void) {
