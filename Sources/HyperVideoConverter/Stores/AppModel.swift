@@ -122,8 +122,10 @@ final class AppModel {
         panel.allowsMultipleSelection = true
         panel.directoryURL = item.url.deletingLastPathComponent()
         panel.prompt = String(localized: "Add")
-        guard panel.runModal() == .OK else { return }
-        addSubtitleFiles(panel.urls, to: id)
+        PanelPresenter.present(panel) { [weak self] response in
+            guard response == .OK else { return }
+            self?.addSubtitleFiles(panel.urls, to: id)
+        }
     }
 
     func addSubtitleFiles(_ urls: [URL], to id: UUID) {
@@ -266,6 +268,9 @@ final class AppModel {
         panel.canCreateDirectories = true
         panel.directoryURL = destinationFolder
         panel.prompt = String(localized: "Choose")
-        if panel.runModal() == .OK, let url = panel.url { destinationFolder = url }
+        PanelPresenter.present(panel) { [weak self] response in
+            guard response == .OK, let url = panel.url else { return }
+            self?.destinationFolder = url
+        }
     }
 }

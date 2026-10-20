@@ -132,8 +132,10 @@ enum PresetFiles {
     static func importPresets(_ model: AppModel) {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.json]
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        Task { await runImport(from: url, model) }
+        PanelPresenter.present(panel) { response in
+            guard response == .OK, let url = panel.url else { return }
+            Task { await runImport(from: url, model) }
+        }
     }
 
     private static func runImport(from url: URL, _ model: AppModel) async {
@@ -160,7 +162,13 @@ enum PresetFiles {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.json]
         panel.nameFieldStringValue = "HyperVideo Presets.json"
-        guard panel.runModal() == .OK, let url = panel.url else { return }
+        PanelPresenter.present(panel) { response in
+            guard response == .OK, let url = panel.url else { return }
+            runExport(to: url, model)
+        }
+    }
+
+    private static func runExport(to url: URL, _ model: AppModel) {
         do {
             try model.presets.exportPresets(to: url)
         } catch {
