@@ -75,6 +75,7 @@ public struct TranscodeEngine: Sendable {
         destination: URL,
         settings: EncodeSettings,
         subtitleFiles: [SubtitleFile] = [],
+        workTag: UUID? = nil,
         progress: @escaping @Sendable (Double) -> Void
     ) async throws -> TranscodeOutput {
         guard settings.isValid else { throw TranscodeError.invalidSettings(settings.validationIssues) }
@@ -92,7 +93,7 @@ public struct TranscodeEngine: Sendable {
         let range = try Self.timeRange(settings.trim, duration: duration)
         try precheckSpace(source: source, destination: destination, container: settings.container)
         // Work in a private folder next to the output so cleanup also catches AVFoundation's sidecar files.
-        let workDir = destination.deletingLastPathComponent().appendingPathComponent(".hypervideo-\(UUID().uuidString)")
+        let workDir = destination.deletingLastPathComponent().appendingPathComponent(WorkFolder.name(jobID: workTag))
         try FileManager.default.createDirectory(at: workDir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: workDir) }
         let partial = workDir.appendingPathComponent(destination.lastPathComponent)
