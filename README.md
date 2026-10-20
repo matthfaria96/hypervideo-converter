@@ -115,3 +115,7 @@ Sources/HyperVideoConverter   SwiftUI app
 Tests/HyperVideoCoreTests     Unit and integration tests
 Scripts/                      App bundle and icon builders
 ```
+
+## License
+
+HyperVideo Converter is free software under the [GNU General Public License v3.0](LICENSE). Copyright (C) 2026 Matheus Faria.

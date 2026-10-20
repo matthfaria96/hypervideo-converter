@@ -468,3 +468,11 @@
 "≈ 2.5 Mbit/s H.264 720p, fits upload limits" = "≈ 2,5 Mbit/s H.264 720p, cabe nos limites de envio";
 "≈ estimate" = "≈ estimativa";
 "Custom Profile" = "Perfil personalizado";
+
+/* About */
+"About" = "Sobre";
+"Version %@" = "Versão %@";
+"HyperVideo Converter converts and compresses videos in batches with Apple's own media frameworks, so H.264, HEVC and ProRes run on the Mac's hardware encoders. It also trims, crops, filters and adds subtitles." = "O HyperVideo Converter converte e comprime vídeos em lote com os frameworks de mídia da própria Apple, então H.264, HEVC e ProRes rodam nos codificadores de hardware do Mac. Ele também corta, recorta, aplica filtros e adiciona legendas.";
+"HyperVideo Converter is free software under the GNU GPL v3.0." = "O HyperVideo Converter é software livre sob a GNU GPL v3.0.";
+"Open-source licenses" = "Licenças de código aberto";
+"HyperVideo Converter is open source. Its license is reproduced below." = "O HyperVideo Converter tem código aberto. A licença dele está reproduzida abaixo.";

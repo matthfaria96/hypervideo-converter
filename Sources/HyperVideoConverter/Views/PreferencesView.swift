@@ -5,6 +5,7 @@ struct PreferencesView: View {
         TabView {
             Tab("General", systemImage: "gearshape") { GeneralPreferences() }
             Tab("Queue", systemImage: "list.bullet.rectangle") { QueuePreferences() }
+            Tab("About", systemImage: "info.circle") { AboutView() }
         }
         .frame(width: 520)
         .scenePadding()
