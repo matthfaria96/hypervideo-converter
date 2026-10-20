@@ -55,7 +55,7 @@ struct QueueStoreTests {
         #expect(second.destination.lastPathComponent == "clip 2.mp4")
     }
 
-    @Test func retryPicksNewDestinationWhenAnotherJobHoldsIt() throws {
+    @Test func retryPicksNewDestinationWhenAnotherJobHoldsIt() async throws {
         let env = try TestEnvironment()
         let queue = env.makeQueue()
         let first = job(env)
@@ -64,37 +64,37 @@ struct QueueStoreTests {
         queue.add([first])
         queue.cancel(first.id)
         queue.add([second])
-        queue.retry(first.id)
+        await queue.retry(first.id).value
         let retried = try #require(queue.jobs.first { $0.id == first.id })
         #expect(retried.state == .queued)
         #expect(retried.destination.lastPathComponent == "clip 2.mp4")
         #expect(Set(queue.jobs.map(\.destination)).count == 2)
     }
 
-    @Test func retryPicksNewDestinationWhenFileExists() throws {
+    @Test func retryPicksNewDestinationWhenFileExists() async throws {
         let env = try TestEnvironment()
         let queue = env.makeQueue()
         let failed = job(env)
         queue.add([failed])
         queue.cancel(failed.id)
         try Data("x".utf8).write(to: failed.destination)
-        queue.retry(failed.id)
+        await queue.retry(failed.id).value
         let retried = try #require(queue.jobs.first)
         #expect(retried.destination.lastPathComponent == "clip 2.mp4")
     }
 
-    @Test func retryKeepsDestinationWhenFree() throws {
+    @Test func retryKeepsDestinationWhenFree() async throws {
         let env = try TestEnvironment()
         let queue = env.makeQueue()
         let cancelled = job(env)
         queue.add([cancelled])
         queue.cancel(cancelled.id)
-        queue.retry(cancelled.id)
+        await queue.retry(cancelled.id).value
         #expect(queue.jobs.first?.destination == cancelled.destination)
         #expect(queue.jobs.first?.state == .queued)
     }
 
-    @Test func retryHonoursOutputSuffix() throws {
+    @Test func retryHonoursOutputSuffix() async throws {
         let env = try TestEnvironment()
         env.defaults.set("-hv", forKey: PreferenceKey.outputSuffix)
         let queue = env.makeQueue()
@@ -102,7 +102,7 @@ struct QueueStoreTests {
         queue.add([cancelled])
         queue.cancel(cancelled.id)
         try Data("x".utf8).write(to: cancelled.destination)
-        queue.retry(cancelled.id)
+        await queue.retry(cancelled.id).value
         #expect(queue.jobs.first?.destination.lastPathComponent == "clip-hv.mp4")
     }
 }

@@ -149,7 +149,7 @@ struct WorkspaceTests {
         model.queue.cancelAll()
     }
 
-    @Test func historyHoldsFinishedJobsNewestFirst() throws {
+    @Test func historyHoldsFinishedJobsNewestFirst() async throws {
         let env = try TestEnvironment()
         func job(_ name: String, _ state: JobState) throws -> EncodeJob {
             // Waiting jobs whose source is gone fail on load, so the sources must exist.
@@ -164,7 +164,7 @@ struct WorkspaceTests {
         let model = env.makeModel()
         #expect(model.historyJobs.map(\.source.lastPathComponent) == ["stopped.mov", "failed.mov", "done.mov"])
         #expect(model.activeJobs.map(\.source.lastPathComponent) == ["waiting.mov"])
-        model.queue.retry(model.historyJobs[1].id)
+        await model.queue.retry(model.historyJobs[1].id).value
         #expect(model.activeJobs.count == 2 && model.historyJobs.count == 2)
     }
 
