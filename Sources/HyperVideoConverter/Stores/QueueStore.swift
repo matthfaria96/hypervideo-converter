@@ -17,7 +17,7 @@ final class QueueStore {
     private(set) var isProcessing = false
 
     /// Finished jobs kept in History; the oldest go first.
-    static let historyLimit = 200
+    nonisolated static let historyLimit = 200
 
     @ObservationIgnored private var tasks: [UUID: Task<Void, Never>] = [:]
     /// Running jobs the user removed; they leave the list once their encode stops.
@@ -47,43 +47,44 @@ final class QueueStore {
         saver = CoalescingSaver(store: store, delay: saveDelay)
         self.defaults = defaults
         self.notifier = notifier ?? SystemNotifier(defaults: defaults)
-        let saved = store.load() ?? []
-        let restored = Self.pruned(saved.map { $0.restoredAfterRelaunch().droppingBookmarksWhenCompleted() })
-        jobs = restored
         if resolvesInBackground {
+            jobs = []
             isReady = false
-            launchTask = Task { await finishLaunch(restored: restored, saved: saved) }
+            launchTask = Task { await finishLaunch(store: store) }
         } else {
-            jobs = restored.map { $0.resolvingBookmarks() }
+            let saved = store.load() ?? []
+            jobs = Self.restored(saved).map { $0.resolvingBookmarks() }
             if jobs != saved { persist() }
             Self.sweepStaleWorkDirectories(in: jobs)
         }
     }
 
+    /// Saved jobs as they stand after a relaunch, oldest history trimmed.
+    private nonisolated static func restored(_ saved: [EncodeJob]) -> [EncodeJob] {
+        pruned(saved.map { $0.restoredAfterRelaunch().droppingBookmarksWhenCompleted() })
+    }
+
     /// Waits until the saved queue's files have been located (see `isReady`).
     func whenReady() async { await launchTask?.value }
 
-    /// Follows bookmarks and removes leftover work folders away from the main thread, then
-    /// merges the result into the loaded jobs the user hasn't touched meanwhile.
-    private func finishLaunch(restored snapshot: [EncodeJob], saved: [EncodeJob]) async {
-        let resolved = await Task.detached(priority: .utility) {
-            let resolved = snapshot.map { $0.resolvingBookmarks() }
-            QueueStore.sweepStaleWorkDirectories(in: resolved)
-            return resolved
+    /// Reads queue.json, follows bookmarks and removes leftover work folders away from the
+    /// main thread, then puts the saved jobs ahead of any the user added meanwhile.
+    private func finishLaunch(store: JSONStore<[EncodeJob]>) async {
+        let (saved, resolved) = await Task.detached(priority: .utility) {
+            let saved = store.load() ?? []
+            let resolved = QueueStore.restored(saved).map { $0.resolvingBookmarks() }
+            QueueStore.sweepStaleWorkDirectories(in: resolved, skipping: [])
+            return (saved, resolved)
         }.value
-        let before = Dictionary(uniqueKeysWithValues: snapshot.map { ($0.id, $0) })
-        let after = Dictionary(uniqueKeysWithValues: resolved.map { ($0.id, $0) })
-        jobs = jobs.map { current in
-            guard before[current.id] == current, let new = after[current.id] else { return current }
-            return new
-        }
-        if jobs != saved { persist() }
+        let loadedIDs = Set(resolved.map(\.id))
+        jobs = resolved + jobs.filter { !loadedIDs.contains($0.id) }
         isReady = true
+        if jobs != saved { persist() }
         schedule()
     }
 
     /// Drops the oldest finished jobs beyond `historyLimit`.
-    static func pruned(_ jobs: [EncodeJob], limit: Int = historyLimit) -> [EncodeJob] {
+    nonisolated static func pruned(_ jobs: [EncodeJob], limit: Int = historyLimit) -> [EncodeJob] {
         var excess = jobs.filter(\.state.isFinished).count - limit
         guard excess > 0 else { return jobs }
         return jobs.filter { job in
@@ -169,11 +170,24 @@ final class QueueStore {
         jobs.filter { !$0.state.isFinished }.forEach { cancel($0.id) }
     }
 
-    func retry(_ id: UUID) {
+    /// Requeues a finished job, picking a new name if its output is taken. The file check
+    /// runs off the main thread; await the task to know when the job is requeued.
+    @discardableResult
+    func retry(_ id: UUID) -> Task<Void, Never> {
+        guard let destination = jobs.first(where: { $0.id == id })?.destination else { return Task {} }
+        return Task {
+            let exists = await Task.detached(priority: .userInitiated) {
+                FileManager.default.fileExists(atPath: destination.path)
+            }.value
+            requeue(id, destinationExists: exists)
+        }
+    }
+
+    private func requeue(_ id: UUID, destinationExists: Bool) {
         replace(id) { job in
             var retried = job.with(state: .queued)
             let othersTaken = Set(jobs.filter { $0.id != id && !$0.isCompleted }.map(\.destination))
-            if othersTaken.contains(job.destination) || FileManager.default.fileExists(atPath: job.destination.path) {
+            if othersTaken.contains(job.destination) || destinationExists {
                 let suffix = defaults.string(forKey: PreferenceKey.outputSuffix) ?? ""
                 retried.destination = OutputNaming.destination(
                     for: job.source, in: job.destination.deletingLastPathComponent(),
@@ -342,6 +356,7 @@ final class QueueStore {
     /// folders. Interrupted jobs go back to queued so they resume after relaunch.
     func stopForQuit() async {
         isProcessing = false
+        await launchTask?.value
         let interrupted = tasks
         interrupted.values.forEach { $0.cancel() }
         for task in interrupted.values { await task.value }
@@ -394,10 +409,19 @@ final class QueueStore {
         return owner.map(owners.contains) ?? false
     }
 
-    private func persist() { saver.save(jobs) }
+    /// A no-op until the saved queue has loaded, so a partial list never overwrites it;
+    /// the launch task saves the merged list.
+    private func persist() {
+        guard isReady else { return }
+        saver.save(jobs)
+    }
 
     /// Writes any change still waiting for its turn (called when the app quits).
-    func flushPersistence() { saver.flush() }
+    /// Skipped before the saved queue has loaded, for the same reason as `persist`.
+    func flushPersistence() {
+        guard isReady else { return }
+        saver.flush()
+    }
 
     /// Progress ticks pass `force: false` and are throttled; state changes always refresh.
     private func refreshDock(force: Bool = true) {
