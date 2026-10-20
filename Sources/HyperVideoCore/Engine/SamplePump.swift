@@ -45,6 +45,28 @@ final class SamplePump: @unchecked Sendable {
         self.queue = DispatchQueue(label: "HyperVideo.pump.\(label)", qos: .userInitiated)
     }
 
+    /// Pulls samples from an arbitrary source; lets tests inject a stalled reader.
+    init(next: @escaping () -> CMSampleBuffer?, input: AVAssetWriterInput, label: String) {
+        self.input = input
+        self.reportsProgress = false
+        self.next = next
+        self.queue = DispatchQueue(label: "HyperVideo.pump.\(label)", qos: .userInitiated)
+    }
+
+    /// True once a probe block enqueued on the pump queue has run within `timeout`,
+    /// proving no earlier block is parked there.
+    func drained(timeout: Duration) async -> Bool {
+        let result = OneShot()
+        queue.async { result.resume(true) }
+        let timer = Task {
+            try? await Task.sleep(for: timeout)
+            result.resume(false)
+        }
+        let value = await result.value()
+        timer.cancel()
+        return value
+    }
+
     func run(
         range: CMTimeRange,
         cancel: CancelFlag,
@@ -139,6 +161,36 @@ final class SamplePump: @unchecked Sendable {
         if fraction - lastReported >= 0.002 {
             lastReported = fraction
             progress(fraction)
+        }
+    }
+}
+
+/// A Bool delivered exactly once to a single waiter; later results are ignored.
+final class OneShot: Sendable {
+    private struct State {
+        var result: Bool?
+        var waiter: CheckedContinuation<Bool, Never>?
+    }
+    private let state = Mutex(State())
+
+    func resume(_ value: Bool) {
+        let waiter: CheckedContinuation<Bool, Never>? = state.withLock { state in
+            guard state.result == nil else { return nil }
+            state.result = value
+            defer { state.waiter = nil }
+            return state.waiter
+        }
+        waiter?.resume(returning: value)
+    }
+
+    func value() async -> Bool {
+        await withCheckedContinuation { (continuation: CheckedContinuation<Bool, Never>) in
+            let ready: Bool? = state.withLock { state in
+                if let result = state.result { return result }
+                state.waiter = continuation
+                return nil
+            }
+            if let ready { continuation.resume(returning: ready) }
         }
     }
 }
