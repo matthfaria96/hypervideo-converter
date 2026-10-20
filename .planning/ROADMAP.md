@@ -31,7 +31,10 @@
 1. Removing a running job removes it (test)
 2. Sweep leaves foreign/running work folders alone (test)
 3. No synchronous file I/O or runModal on the main actor in the listed spots
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 02-01-PLAN.md — remove running job + job-id work folders, scoped sweep (QUE-01, QUE-02)
+- [ ] 02-02-PLAN.md — async preset import + sheet panels (UI-01, UI-02)
+- [ ] 02-03-PLAN.md — Dock throttle + background queue.json load and retry check (QUE-03, UI-01)
 
 ### Phase 3: macOS 15 support
 **Goal**: App runs on macOS 15 Sequoia and up.
