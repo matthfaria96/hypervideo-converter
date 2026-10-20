@@ -133,19 +133,27 @@ enum PresetFiles {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.json]
         guard panel.runModal() == .OK, let url = panel.url else { return }
+        Task { await runImport(from: url, model) }
+    }
+
+    private static func runImport(from url: URL, _ model: AppModel) async {
         do {
-            let (count, notes) = try model.presets.importPresets(from: url)
-            var message = String(localized: "Imported \(count) presets.")
-            if !notes.isEmpty {
-                let shown = notes.prefix(6).joined(separator: "\n")
-                let more = notes.count > 6 ? "\n" + String(localized: "…and \(notes.count - 6) more adjustments.") : ""
-                message += "\n\n" + String(localized: "Adjusted to what HyperVideo supports:") + "\n" + shown + more
-            }
-            model.showAlert(String(localized: "Profiles imported"), message)
+            let (count, notes) = try await model.presets.importPresets(from: url)
+            model.showAlert(String(localized: "Profiles imported"), importMessage(count: count, notes: notes))
         } catch {
             model.showAlert(String(localized: "Couldn't import profiles"),
                             String(localized: "That file isn't a HyperVideo or HandBrake preset export."))
         }
+    }
+
+    private static func importMessage(count: Int, notes: [String]) -> String {
+        var message = String(localized: "Imported \(count) presets.")
+        if !notes.isEmpty {
+            let shown = notes.prefix(6).joined(separator: "\n")
+            let more = notes.count > 6 ? "\n" + String(localized: "…and \(notes.count - 6) more adjustments.") : ""
+            message += "\n\n" + String(localized: "Adjusted to what HyperVideo supports:") + "\n" + shown + more
+        }
+        return message
     }
 
     static func exportPresets(_ model: AppModel) {

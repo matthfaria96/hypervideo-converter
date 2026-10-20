@@ -78,23 +78,28 @@ final class PresetStore {
         store.save(custom)
     }
 
-    /// Imports a HyperVideo export or a HandBrake preset export. Returns how many
-    /// presets were added and notes on HandBrake settings that had to change.
-    func importPresets(from url: URL) throws -> (count: Int, notes: [String]) {
-        let data = try Data(contentsOf: url)
-        let imported: [Preset]
-        var notes: [String] = []
+    /// Imports a HyperVideo export or a HandBrake preset export. The file is read and
+    /// parsed off the main actor; presets are appended here. Returns how many presets
+    /// were added and notes on HandBrake settings that had to change.
+    func importPresets(from url: URL) async throws -> (count: Int, notes: [String]) {
+        let parsed = try await Task.detached(priority: .userInitiated) {
+            try PresetStore.parseImport(Data(contentsOf: url))
+        }.value
+        custom = custom + parsed.presets
+        store.save(custom)
+        return (parsed.presets.count, parsed.notes)
+    }
+
+    /// Pure parse of an export: HandBrake format or a HyperVideo `[Preset]` list,
+    /// given fresh ids so imports never collide with existing presets.
+    nonisolated static func parseImport(_ data: Data) throws -> (presets: [Preset], notes: [String]) {
         if HandBrakePresets.isHandBrakeExport(data) {
             let converted = try HandBrakePresets.parse(data)
-            imported = converted.map(\.preset)
-            notes = converted.flatMap(\.notes)
-        } else {
-            imported = try JSONDecoder().decode([Preset].self, from: data)
-                .map { Preset(name: $0.name, category: $0.category, symbol: $0.symbol, summary: $0.summary, settings: $0.settings) }
+            return (converted.map(\.preset), converted.flatMap(\.notes))
         }
-        custom = custom + imported
-        store.save(custom)
-        return (imported.count, notes)
+        let presets = try JSONDecoder().decode([Preset].self, from: data)
+            .map { Preset(name: $0.name, category: $0.category, symbol: $0.symbol, summary: $0.summary, settings: $0.settings) }
+        return (presets, [])
     }
 
     func exportPresets(to url: URL) throws {
