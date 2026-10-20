@@ -4,7 +4,7 @@ import PackageDescription
 let package = Package(
     name: "HyperVideoConverter",
     defaultLocalization: "en",
-    platforms: [.macOS(.v26)],
+    platforms: [.macOS(.v15)],
     products: [
         .executable(name: "HyperVideoConverter", targets: ["HyperVideoConverter"])
     ],
