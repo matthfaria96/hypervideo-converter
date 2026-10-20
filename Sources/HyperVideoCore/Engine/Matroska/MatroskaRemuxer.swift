@@ -272,13 +272,20 @@ extension MatroskaRemuxer {
             let size = CMSampleBufferGetSampleSize(buffer, at: index)
             var timing = CMSampleTimingInfo()
             CMSampleBufferGetSampleTimingInfo(buffer, at: index, timingInfoOut: &timing)
-            var bytes = Data(count: size)
-            let status = bytes.withUnsafeMutableBytes {
-                CMBlockBufferCopyDataBytes(block, atOffset: position, dataLength: size, destination: $0.baseAddress!)
+            let data: Data
+            if size > 0 {
+                var bytes = Data(count: size)
+                let status = bytes.withUnsafeMutableBytes { raw -> OSStatus in
+                    guard let base = raw.baseAddress else { return kCMBlockBufferBadPointerParameterErr }
+                    return CMBlockBufferCopyDataBytes(block, atOffset: position, dataLength: size, destination: base)
+                }
+                position += size
+                guard status == noErr else { continue }
+                data = isText ? Data(text(fromTimedText: bytes).utf8) : bytes
+            } else {
+                // An empty sample (e.g. a subtitle gap) keeps its timing as an empty packet.
+                data = Data()
             }
-            position += size
-            guard status == noErr else { continue }
-            let data = isText ? Data(text(fromTimedText: bytes).utf8) : bytes
             packets.append(Packet(track: track, pts: timing.presentationTimeStamp, dts: timing.decodeTimeStamp,
                                   duration: timing.duration, isKeyframe: index < notSync.count ? !notSync[index] : true,
                                   data: data, trimStart: index == 0 ? trim : .invalid))
