@@ -114,7 +114,7 @@ struct MatroskaRemuxer {
     // MARK: Copying
 
     /// One compressed frame split out of a sample buffer, which may hold several (audio).
-    private struct Packet {
+    struct Packet {
         var track: Int
         var pts: CMTime
         var dts: CMTime
@@ -259,7 +259,7 @@ struct MatroskaRemuxer {
 
 extension MatroskaRemuxer {
     /// Splits a sample buffer into its frames. Text samples become plain UTF-8.
-    private static func packets(in buffer: CMSampleBuffer, track: Int, isText: Bool) -> [Packet] {
+    static func packets(in buffer: CMSampleBuffer, track: Int, isText: Bool) -> [Packet] {
         guard let block = CMSampleBufferGetDataBuffer(buffer) else { return [] }
         let count = CMSampleBufferGetNumSamples(buffer)
         guard count > 0 else { return [] }
