@@ -20,6 +20,8 @@ final class QueueStore {
     static let historyLimit = 200
 
     @ObservationIgnored private var tasks: [UUID: Task<Void, Never>] = [:]
+    /// Running jobs the user removed; they leave the list once their encode stops.
+    @ObservationIgnored private var pendingRemoval: Set<UUID> = []
     @ObservationIgnored private var startTimes: [UUID: Date] = [:]
     /// Progress of the running jobs, outside `jobs` so ticks don't redraw the whole list.
     @ObservationIgnored private var progressBoxes: [UUID: JobProgress] = [:]
@@ -183,8 +185,10 @@ final class QueueStore {
     }
 
     func remove(_ ids: Set<UUID>) {
-        ids.forEach { tasks[$0]?.cancel() }
-        removeJobs { ids.contains($0.id) && !$0.state.isRunning }
+        let running = ids.filter { tasks[$0] != nil }
+        pendingRemoval.formUnion(running)
+        running.forEach { tasks[$0]?.cancel() }
+        removeJobs { ids.contains($0.id) && !running.contains($0.id) && !$0.state.isRunning }
     }
 
     func clearFinished() { removeJobs { $0.state.isFinished } }
@@ -258,7 +262,7 @@ final class QueueStore {
             do {
                 let output = try await engine.transcode(
                     source: job.source, destination: job.destination, settings: job.settings,
-                    subtitleFiles: job.subtitleFiles ?? []
+                    subtitleFiles: job.subtitleFiles ?? [], workTag: job.id
                 ) { progress in
                     guard throttle.accepts(progress) else { return }
                     Task { @MainActor in self.updateProgress(job.id, progress) }
@@ -281,6 +285,17 @@ final class QueueStore {
         tasks[job.id] = nil
         progressBoxes[job.id] = nil
         let elapsed = Date().timeIntervalSince(startTimes.removeValue(forKey: job.id) ?? Date())
+        if pendingRemoval.remove(job.id) != nil {
+            removeJobs { $0.id == job.id }
+        } else {
+            record(job, result: result, elapsed: elapsed)
+        }
+        trimHistory()
+        schedule()
+        reportIfDrained()
+    }
+
+    private func record(_ job: EncodeJob, result: Result<TranscodeOutput, Error>, elapsed: TimeInterval) {
         switch result {
         case .success(let output):
             let completed = JobState.completed(outputBytes: output.bytes, elapsed: elapsed)
@@ -297,9 +312,6 @@ final class QueueStore {
             batch.failed += 1
             notifier.jobFinished(job, succeeded: false)
         }
-        trimHistory()
-        schedule()
-        reportIfDrained()
     }
 
     private func trimHistory() {
@@ -332,7 +344,15 @@ final class QueueStore {
         let interrupted = tasks
         interrupted.values.forEach { $0.cancel() }
         for task in interrupted.values { await task.value }
-        jobs = jobs.map { interrupted[$0.id] != nil ? $0.with(state: .queued) : $0 }
+        settleInterrupted(Set(interrupted.keys))
+    }
+
+    /// Drops interrupted jobs the user had removed and requeues the rest, then saves.
+    private func settleInterrupted(_ interrupted: Set<UUID>) {
+        let dropped = pendingRemoval
+        pendingRemoval = []
+        removeJobs { dropped.contains($0.id) }
+        jobs = jobs.map { interrupted.contains($0.id) ? $0.with(state: .queued) : $0 }
         persist()
         flushPersistence()
     }
@@ -344,21 +364,33 @@ final class QueueStore {
         isProcessing = false
         let interrupted = tasks
         interrupted.values.forEach { $0.cancel() }
-        jobs = jobs.map { interrupted[$0.id] != nil ? $0.with(state: .queued) : $0 }
-        persist()
-        flushPersistence()
-        Self.sweepStaleWorkDirectories(in: jobs.filter { interrupted[$0.id] != nil })
+        let owners = Set(interrupted.keys).union(pendingRemoval)
+        let swept = jobs.filter { owners.contains($0.id) }
+        settleInterrupted(Set(interrupted.keys))
+        Self.sweepStaleWorkDirectories(in: swept, onlyOwnedBy: owners)
     }
 
-    /// Removes work folders left behind by encodes interrupted by a crash or forced quit.
-    nonisolated static func sweepStaleWorkDirectories(in sweptJobs: [EncodeJob]) {
+    /// Removes work folders left behind by encodes interrupted by a crash or forced quit,
+    /// next to `sweptJobs`' outputs. Folders of `running` jobs are never touched; when
+    /// `owners` is given, only folders tagged with one of those job ids go.
+    nonisolated static func sweepStaleWorkDirectories(in sweptJobs: [EncodeJob], skipping running: Set<UUID> = [],
+                                                      onlyOwnedBy owners: Set<UUID>? = nil) {
         let folders = Set(sweptJobs.map { $0.destination.deletingLastPathComponent() })
         let manager = FileManager.default
         for folder in folders {
             let contents = (try? manager.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
-            contents.filter { $0.lastPathComponent.hasPrefix(".hypervideo-") }
+            contents.filter { shouldSweep($0.lastPathComponent, skipping: running, onlyOwnedBy: owners) }
                 .forEach { try? manager.removeItem(at: $0) }
         }
+    }
+
+    private nonisolated static func shouldSweep(_ name: String, skipping running: Set<UUID>,
+                                                onlyOwnedBy owners: Set<UUID>?) -> Bool {
+        guard WorkFolder.isWorkFolder(name: name) else { return false }
+        let owner = WorkFolder.jobID(fromName: name)
+        if let owner, running.contains(owner) { return false }
+        guard let owners else { return true }
+        return owner.map(owners.contains) ?? false
     }
 
     private func persist() { saver.save(jobs) }
