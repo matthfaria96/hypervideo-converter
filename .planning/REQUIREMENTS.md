@@ -3,10 +3,10 @@
 ## v1 Requirements
 
 ### Engine robustness (ENG)
-- [ ] **ENG-01**: MKV remux never crashes on zero-byte samples (MatroskaRemuxer.swift:275)
-- [ ] **ENG-02**: Final output move never fails because a same-name file appeared mid-encode (pick unique name at move time)
-- [ ] **ENG-03**: A stalled encode cancels its reader/writer and does not leak blocked threads
-- [ ] **ENG-04**: Jobs check free disk space in destination before starting (MKV needs ~2x) and fail with a clear, translated message
+- [x] **ENG-01**: MKV remux never crashes on zero-byte samples (MatroskaRemuxer.swift:275)
+- [x] **ENG-02**: Final output move never fails because a same-name file appeared mid-encode (pick unique name at move time)
+- [x] **ENG-03**: A stalled encode cancels its reader/writer and does not leak blocked threads
+- [x] **ENG-04**: Jobs check free disk space in destination before starting (MKV needs ~2x) and fail with a clear, translated message
 
 ### Queue correctness (QUE)
 - [ ] **QUE-01**: Removing a running job cancels it and removes it from the list

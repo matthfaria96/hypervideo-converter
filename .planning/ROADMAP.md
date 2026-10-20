@@ -1,7 +1,7 @@
 # Roadmap — v1.x Stabilize & Release
 
 ## Phases
-- [ ] **Phase 1: Engine robustness** — no crashes, no failed final moves, no leaked threads, disk-space check
+- [x] **Phase 1: Engine robustness** — no crashes, no failed final moves, no leaked threads, disk-space check (completed 2026-10-20)
 - [ ] **Phase 2: Queue & responsiveness** — correct remove/sweep, nothing blocking the main thread
 - [ ] **Phase 3: macOS 15 support** — deployment target 15.0 with compat helpers, verified in VM
 - [ ] **Phase 4: Release** — docs, DMG, GitHub release, site link
@@ -18,10 +18,10 @@
 3. Stall test shows reader/writer cancelled and pump completes
 4. Job with insufficient free space fails before encoding with a translated message
 **Plans**: 4 plans
-- [ ] 01-01-PLAN.md — MKV remux safe on zero-byte samples (ENG-01)
-- [ ] 01-02-PLAN.md — stall cancels reader/writer, no leaked pump threads (ENG-03)
-- [ ] 01-03-PLAN.md — unique name at final move + disk-space precheck in engine (ENG-02, ENG-04)
-- [ ] 01-04-PLAN.md — translated space error + real output URL in queue, full suite (ENG-02, ENG-04)
+- [x] 01-01-PLAN.md — MKV remux safe on zero-byte samples (ENG-01)
+- [x] 01-02-PLAN.md — stall cancels reader/writer, no leaked pump threads (ENG-03)
+- [x] 01-03-PLAN.md — unique name at final move + disk-space precheck in engine (ENG-02, ENG-04)
+- [x] 01-04-PLAN.md — translated space error + real output URL in queue, full suite (ENG-02, ENG-04)
 
 ### Phase 2: Queue & responsiveness
 **Goal**: The queue behaves as the user expects and the UI never hitches.
