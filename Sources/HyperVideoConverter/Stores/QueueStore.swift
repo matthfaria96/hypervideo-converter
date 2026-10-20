@@ -254,16 +254,16 @@ final class QueueStore {
         tasks[job.id] = Task {
             let scoped = FileBookmarks.startAccessing(job.accessedURLs)
             defer { FileBookmarks.stopAccessing(scoped) }
-            let result: Result<Int64, Error>
+            let result: Result<TranscodeOutput, Error>
             do {
-                let bytes = try await engine.run(
+                let output = try await engine.transcode(
                     source: job.source, destination: job.destination, settings: job.settings,
                     subtitleFiles: job.subtitleFiles ?? []
                 ) { progress in
                     guard throttle.accepts(progress) else { return }
                     Task { @MainActor in self.updateProgress(job.id, progress) }
                 }
-                result = .success(bytes)
+                result = .success(output)
             } catch {
                 result = .failure(error)
             }
@@ -277,21 +277,23 @@ final class QueueStore {
         refreshDock()
     }
 
-    private func finish(_ job: EncodeJob, result: Result<Int64, Error>) {
+    private func finish(_ job: EncodeJob, result: Result<TranscodeOutput, Error>) {
         tasks[job.id] = nil
         progressBoxes[job.id] = nil
         let elapsed = Date().timeIntervalSince(startTimes.removeValue(forKey: job.id) ?? Date())
         switch result {
-        case .success(let bytes):
-            let completed = JobState.completed(outputBytes: bytes, elapsed: elapsed)
-            replace(job.id) { $0.with(state: completed).droppingBookmarksWhenCompleted() }
+        case .success(let output):
+            let completed = JobState.completed(outputBytes: output.bytes, elapsed: elapsed)
+            // The engine may have picked a new name if the destination appeared mid-encode.
+            replace(job.id) { $0.with(destination: output.url).with(state: completed).droppingBookmarksWhenCompleted() }
             batch.done += 1
-            notifier.jobFinished(job, succeeded: true)
+            notifier.jobFinished(job.with(destination: output.url), succeeded: true)
         case .failure(is CancellationError):
             replace(job.id) { $0.with(state: .cancelled) }
         case .failure(let error):
             appLog.error("Job failed: \(error.localizedDescription, privacy: .public)")
-            replace(job.id) { $0.with(state: .failed(message: error.localizedDescription)) }
+            let message = JobErrorMessage.text(for: error)
+            replace(job.id) { $0.with(state: .failed(message: message)) }
             batch.failed += 1
             notifier.jobFinished(job, succeeded: false)
         }
@@ -366,5 +368,15 @@ final class QueueStore {
 
     private func refreshDock() {
         SystemIntegration.updateDock(progress: overallProgress, pendingCount: pendingCount)
+    }
+}
+
+private extension EncodeJob {
+    /// A copy pointing at the file the engine actually wrote.
+    func with(destination: URL) -> EncodeJob {
+        guard destination != self.destination else { return self }
+        var copy = self
+        copy.destination = destination
+        return copy
     }
 }
