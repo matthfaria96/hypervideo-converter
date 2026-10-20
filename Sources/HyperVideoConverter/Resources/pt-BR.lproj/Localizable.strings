@@ -476,3 +476,4 @@
 "HyperVideo Converter is free software under the GNU GPL v3.0." = "O HyperVideo Converter é software livre sob a GNU GPL v3.0.";
 "Open-source licenses" = "Licenças de código aberto";
 "HyperVideo Converter is open source. Its license is reproduced below." = "O HyperVideo Converter tem código aberto. A licença dele está reproduzida abaixo.";
+"There isn't enough free space in the destination folder. This video needs about %@, but only %@ is free." = "Não há espaço livre suficiente na pasta de destino. Este vídeo precisa de cerca de %@, mas só há %@ livres.";
