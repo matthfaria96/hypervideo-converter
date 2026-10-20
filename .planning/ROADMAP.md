@@ -2,7 +2,7 @@
 
 ## Phases
 - [x] **Phase 1: Engine robustness** — no crashes, no failed final moves, no leaked threads, disk-space check (completed 2026-10-20)
-- [ ] **Phase 2: Queue & responsiveness** — correct remove/sweep, nothing blocking the main thread
+- [x] **Phase 2: Queue & responsiveness** — correct remove/sweep, nothing blocking the main thread
 - [ ] **Phase 3: macOS 15 support** — deployment target 15.0 with compat helpers, verified in VM
 - [ ] **Phase 4: Release** — docs, DMG, GitHub release, site link
 
@@ -32,9 +32,9 @@
 2. Sweep leaves foreign/running work folders alone (test)
 3. No synchronous file I/O or runModal on the main actor in the listed spots
 **Plans**: 3 plans
-- [ ] 02-01-PLAN.md — remove running job + job-id work folders, scoped sweep (QUE-01, QUE-02)
-- [ ] 02-02-PLAN.md — async preset import + sheet panels (UI-01, UI-02)
-- [ ] 02-03-PLAN.md — Dock throttle + background queue.json load and retry check (QUE-03, UI-01)
+- [x] 02-01-PLAN.md — remove running job + job-id work folders, scoped sweep (QUE-01, QUE-02)
+- [x] 02-02-PLAN.md — async preset import + sheet panels (UI-01, UI-02)
+- [x] 02-03-PLAN.md — Dock throttle + background queue.json load and retry check (QUE-03, UI-01)
 
 ### Phase 3: macOS 15 support
 **Goal**: App runs on macOS 15 Sequoia and up.

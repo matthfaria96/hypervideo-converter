@@ -9,13 +9,13 @@
 - [x] **ENG-04**: Jobs check free disk space in destination before starting (MKV needs ~2x) and fail with a clear, translated message
 
 ### Queue correctness (QUE)
-- [ ] **QUE-01**: Removing a running job cancels it and removes it from the list
-- [ ] **QUE-02**: Work-folder sweep only deletes folders not owned by a running job of this process
-- [ ] **QUE-03**: Dock progress refresh is throttled
+- [x] **QUE-01**: Removing a running job cancels it and removes it from the list
+- [x] **QUE-02**: Work-folder sweep only deletes folders not owned by a running job of this process
+- [x] **QUE-03**: Dock progress refresh is throttled
 
 ### Responsiveness (UI)
-- [ ] **UI-01**: queue.json load, preset import read and retry fileExists run off the main thread
-- [ ] **UI-02**: Open panels use sheet presentation instead of runModal
+- [x] **UI-01**: queue.json load, preset import read and retry fileExists run off the main thread
+- [x] **UI-02**: Open panels use sheet presentation instead of runModal
 
 ### Compatibility (CMP)
 - [ ] **CMP-01**: App builds with deployment target macOS 15.0
