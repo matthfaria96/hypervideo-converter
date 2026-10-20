@@ -161,22 +161,25 @@ struct PipelineFactory {
                 filters: settings.filters, deinterlace: deinterlace, subtitles: subtitles
             )
         } else {
-            var layer = AVVideoCompositionLayerInstruction.Configuration(assetTrack: track)
+            let layer = AVMutableVideoCompositionLayerInstruction(assetTrack: track)
             layer.setTransform(plan.transform, at: .zero)
-            instruction = AVVideoCompositionInstruction(configuration: .init(
-                layerInstructions: [AVVideoCompositionLayerInstruction(configuration: layer)],
-                timeRange: timeRange
-            ))
+            let plain = AVMutableVideoCompositionInstruction()
+            plain.timeRange = timeRange
+            plain.layerInstructions = [layer]
+            instruction = plain
         }
-        return AVVideoComposition(configuration: .init(
-            colorPrimaries: color.primaries,
-            colorTransferFunction: color.transfer,
-            colorYCbCrMatrix: color.matrix,
-            customVideoCompositorClass: filtered ? FilterCompositor.self : nil,
-            frameDuration: CMTime(value: 1_000, timescale: CMTimeScale((rate * 1_000).rounded())),
-            instructions: [instruction],
-            renderSize: plan.renderSize
-        ))
+        // Pre-macOS 26 mutable API (deployment target is macOS 15); same settings as the
+        // macOS 26 Configuration initialiser.
+        let composition = AVMutableVideoComposition()
+        composition.colorPrimaries = color.primaries
+        composition.colorTransferFunction = color.transfer
+        composition.colorYCbCrMatrix = color.matrix
+        composition.customVideoCompositorClass = filtered ? FilterCompositor.self : nil
+        composition.frameDuration = CMTime(value: 1_000, timescale: CMTimeScale((rate * 1_000).rounded()))
+        composition.instructions = [instruction]
+        composition.renderSize = plan.renderSize
+        guard let immutable = composition.copy() as? AVVideoComposition else { return composition }
+        return immutable
     }
 
     // MARK: Audio
