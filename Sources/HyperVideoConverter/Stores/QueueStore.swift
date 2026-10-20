@@ -30,6 +30,7 @@ final class QueueStore {
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let notifier: any QueueNotifying
     @ObservationIgnored private var launchTask: Task<Void, Never>?
+    @ObservationIgnored private var dockThrottle = DockThrottle()
     /// False while the saved queue's files are being looked up after launch.
     private(set) var isReady = true
     /// Called with the sources of jobs that left the queue (removed, cleared, trimmed).
@@ -278,7 +279,7 @@ final class QueueStore {
     private func updateProgress(_ id: UUID, _ progress: Double) {
         guard let box = progressBoxes[id] else { return }
         box.advance(to: progress)
-        refreshDock()
+        refreshDock(force: false)
     }
 
     private func finish(_ job: EncodeJob, result: Result<TranscodeOutput, Error>) {
@@ -398,7 +399,11 @@ final class QueueStore {
     /// Writes any change still waiting for its turn (called when the app quits).
     func flushPersistence() { saver.flush() }
 
-    private func refreshDock() {
+    /// Progress ticks pass `force: false` and are throttled; state changes always refresh.
+    private func refreshDock(force: Bool = true) {
+        let now = Date()
+        guard dockThrottle.accepts(now: now, force: force) else { return }
+        dockThrottle = dockThrottle.recording(now)
         SystemIntegration.updateDock(progress: overallProgress, pendingCount: pendingCount)
     }
 }
