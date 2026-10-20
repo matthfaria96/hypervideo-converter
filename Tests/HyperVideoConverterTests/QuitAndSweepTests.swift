@@ -107,4 +107,28 @@ struct StopImmediatelyTests {
         // Let the cancelled task wind down before the temp folder goes away.
         #expect(try await TestEnvironment.waitUntil { queue.runningCount == 0 })
     }
+
+    @Test func stopImmediatelyLeavesForeignWorkFolders() async throws {
+        let env = try TestEnvironment()
+        let clip = try await AppTestClip.make(in: env.root, .init(
+            name: "long", size: CGSize(width: 1920, height: 1080),
+            frameTimes: (0..<180).map { Double($0) / 30 }, seconds: 6
+        ))
+        var settings = EncodeSettings()
+        settings.videoCodec = .proRes422HQ
+        settings.container = .mov
+        let job = EncodeJob(source: clip, destination: env.output.appendingPathComponent("a.mov"),
+                            settings: settings, presetName: "Test")
+        let foreign = env.output.appendingPathComponent(WorkFolder.name(jobID: UUID()))
+        try FileManager.default.createDirectory(at: foreign, withIntermediateDirectories: true)
+        let queue = env.makeQueue()
+        queue.add([job])
+        queue.start()
+        #expect(try await TestEnvironment.waitUntil { (try? env.workDirectories().count) == 2 })
+
+        queue.stopImmediately()
+
+        #expect(try env.workDirectories() == [foreign.lastPathComponent])
+        #expect(try await TestEnvironment.waitUntil { queue.runningCount == 0 })
+    }
 }
