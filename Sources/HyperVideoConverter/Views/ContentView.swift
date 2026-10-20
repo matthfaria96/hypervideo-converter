@@ -77,7 +77,7 @@ private struct WindowToolbar: ToolbarContent {
             }
             .padding(.horizontal, 6)
         }
-        .sharedBackgroundVisibility(.hidden)
+        .compatHiddenSharedBackground()
 
         ToolbarItem(placement: .primaryAction) {
             Text(model.statusText)
@@ -86,7 +86,7 @@ private struct WindowToolbar: ToolbarContent {
                 .monospacedDigit()
                 .padding(.horizontal, 8)
         }
-        .sharedBackgroundVisibility(.hidden)
+        .compatHiddenSharedBackground()
 
         ToolbarItem(placement: .primaryAction) {
             SettingsLink {
