@@ -28,6 +28,13 @@ struct LocalizationTests {
         #expect(String(format: format, 2, 5) == "Arquivo 2 de 5")
     }
 
+    @Test func formatsInsufficientSpaceInPortuguese() throws {
+        let key = "There isn't enough free space in the destination folder. This video needs about %@, but only %@ is free."
+        let format = try portuguese().localizedString(forKey: key, value: "MISSING", table: nil)
+        #expect(String(format: format, "A", "B")
+            == "Não há espaço livre suficiente na pasta de destino. Este vídeo precisa de cerca de A, mas só há B livres.")
+    }
+
     @Test func everyQualityProfileIsTranslated() throws {
         let bundle = try portuguese()
         for name in ["Balanced", "High Quality", "Smaller File", "Keep Original", "Quality Profiles"] {
