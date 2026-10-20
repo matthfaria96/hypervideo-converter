@@ -7,6 +7,7 @@ public enum TranscodeError: LocalizedError {
     case readerFailed(String)
     case writerFailed(String)
     case stalled
+    case insufficientSpace(required: Int64, available: Int64)
 
     public var errorDescription: String? {
         switch self {
@@ -16,7 +17,24 @@ public enum TranscodeError: LocalizedError {
         case .readerFailed(let detail): "Couldn't decode the source: \(detail)"
         case .writerFailed(let detail): "Couldn't write the output: \(detail)"
         case .stalled: "The conversion stopped making progress, so it was stopped. Try again, or choose fewer subtitle or audio tracks."
+        case .insufficientSpace(let required, let available):
+            "There isn't enough free space to save this video. It needs about \(Self.bytes(required)) but only \(Self.bytes(available)) is free."
         }
+    }
+
+    static func bytes(_ count: Int64) -> String {
+        ByteCountFormatter.string(fromByteCount: count, countStyle: .file)
+    }
+}
+
+/// Where a finished encode ended up and how big it is.
+public struct TranscodeOutput: Sendable, Equatable {
+    public let url: URL
+    public let bytes: Int64
+
+    public init(url: URL, bytes: Int64) {
+        self.url = url
+        self.bytes = bytes
     }
 }
 
@@ -26,13 +44,18 @@ public struct TranscodeEngine: Sendable {
     /// treated as stuck. AVFoundation can deadlock when the reader and the writer's
     /// interleaving wait on each other; this turns a frozen queue into an error.
     let stallTimeout: Duration
+    /// Free bytes on the volume holding a folder; nil when unknown (the check is skipped).
+    let availableCapacity: @Sendable (URL) -> Int64?
 
-    public init(stallTimeout: Duration = .seconds(60)) {
+    public init(
+        stallTimeout: Duration = .seconds(60),
+        availableCapacity: @escaping @Sendable (URL) -> Int64? = DiskSpace.availableCapacity(at:)
+    ) {
         self.stallTimeout = stallTimeout
+        self.availableCapacity = availableCapacity
     }
 
     /// Encodes `source` to `destination`, returning the output size in bytes.
-    /// `subtitleFiles` are external SRT/WebVTT files added after the source's own text tracks.
     public func run(
         source: URL,
         destination: URL,
@@ -40,6 +63,20 @@ public struct TranscodeEngine: Sendable {
         subtitleFiles: [SubtitleFile] = [],
         progress: @escaping @Sendable (Double) -> Void
     ) async throws -> Int64 {
+        try await transcode(source: source, destination: destination, settings: settings,
+                            subtitleFiles: subtitleFiles, progress: progress).bytes
+    }
+
+    /// Encodes `source` next to `destination`. If a file with that name appears while
+    /// encoding, the result gets a unique name instead; the returned URL is the real one.
+    /// `subtitleFiles` are external SRT/WebVTT files added after the source's own text tracks.
+    public func transcode(
+        source: URL,
+        destination: URL,
+        settings: EncodeSettings,
+        subtitleFiles: [SubtitleFile] = [],
+        progress: @escaping @Sendable (Double) -> Void
+    ) async throws -> TranscodeOutput {
         guard settings.isValid else { throw TranscodeError.invalidSettings(settings.validationIssues) }
 
         let asset = AVURLAsset(url: source)
@@ -53,6 +90,7 @@ public struct TranscodeEngine: Sendable {
             throw TranscodeError.readerFailed("“\(source.lastPathComponent)” can't be opened (\(error.localizedDescription)).")
         }
         let range = try Self.timeRange(settings.trim, duration: duration)
+        try precheckSpace(source: source, destination: destination, container: settings.container)
         // Work in a private folder next to the output so cleanup also catches AVFoundation's sidecar files.
         let workDir = destination.deletingLastPathComponent().appendingPathComponent(".hypervideo-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: workDir, withIntermediateDirectories: true)
@@ -139,14 +177,41 @@ public struct TranscodeEngine: Sendable {
             try await remux(encoded, to: partial) { progress(encodeShare + $0 * (1 - encodeShare)) }
         }
 
-        do {
-            try FileManager.default.moveItem(at: partial, to: destination)
-        } catch {
-            throw TranscodeError.writerFailed("Couldn't move the finished file into place (\(error.localizedDescription)).")
-        }
+        let final = try Self.moveIntoPlace(partial, destination: destination, container: settings.container)
         progress(1)
-        let size = try? destination.resourceValues(forKeys: [.fileSizeKey]).fileSize
-        return Int64(size ?? 0)
+        let size = try? final.resourceValues(forKeys: [.fileSizeKey]).fileSize
+        return TranscodeOutput(url: final, bytes: Int64(size ?? 0))
+    }
+
+    /// Fails early when the destination volume can't hold the output (and, for MKV, the intermediate).
+    private func precheckSpace(source: URL, destination: URL, container: ContainerFormat) throws {
+        guard let sourceSize = try? source.resourceValues(forKeys: [.fileSizeKey]).fileSize else { return }
+        let required = DiskSpace.requiredBytes(sourceBytes: Int64(sourceSize), container: container)
+        guard let available = availableCapacity(destination.deletingLastPathComponent()), available < required else { return }
+        throw TranscodeError.insufficientSpace(required: required, available: available)
+    }
+
+    /// Moves the finished file to `destination`, or to a fresh unique name if something
+    /// took that name meanwhile. Never overwrites; retries if a name is taken mid-move.
+    static func moveIntoPlace(_ partial: URL, destination: URL, container: ContainerFormat) throws -> URL {
+        let folder = destination.deletingLastPathComponent()
+        var lastError: Error?
+        for _ in 0..<4 {
+            let target = FileManager.default.fileExists(atPath: destination.path)
+                ? OutputNaming.destination(for: destination, in: folder, container: container)
+                : destination
+            do {
+                try FileManager.default.moveItem(at: partial, to: target)
+                return target
+            } catch CocoaError.fileWriteFileExists {
+                lastError = CocoaError(.fileWriteFileExists)
+            } catch {
+                lastError = error
+                break
+            }
+        }
+        let detail = lastError?.localizedDescription ?? "unknown error"
+        throw TranscodeError.writerFailed("Couldn't move the finished file into place (\(detail)).")
     }
 
     /// Copies the finished intermediate movie into Matroska, stopping if the task is cancelled.

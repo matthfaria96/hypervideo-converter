@@ -25,7 +25,12 @@ struct FinalMoveTests {
         }
         #expect(output.url == dir.appendingPathComponent("out 2.\(ext)"))
         #expect(output.bytes > 0)
-        _ = try await MediaInspector.inspect(output.url)
+        if container == .mkv {
+            // AVFoundation can't open Matroska; check the EBML magic instead.
+            #expect(try Data(contentsOf: output.url).prefix(4) == Data([0x1A, 0x45, 0xDF, 0xA3]))
+        } else {
+            _ = try await MediaInspector.inspect(output.url)
+        }
         #expect(try Data(contentsOf: destination) == foreign)
     }
 
