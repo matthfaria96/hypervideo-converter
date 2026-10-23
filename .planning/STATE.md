@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-10-19)
 
 Phase: 4 (Release) is next; Phase 3 still needs its 03-03 VM verification
 Plan: Not started
-Status: Phase 03.1 complete (14/14 plans, 322 + 190 tests green); 03.1-HUMAN-UAT.md has 6 pending manual checks
+Status: Phase 03.1.2 (premium native design) complete, 322 + 199 tests green; 03.1-HUMAN-UAT.md still has 6 manual checks; phase 3 VM check pending
 Last activity: 2026-10-23 — Phase 03.1 HandBrake parity executed, reviewed, fixed and verified
 
 Progress: [█████░░░░░] 50%
