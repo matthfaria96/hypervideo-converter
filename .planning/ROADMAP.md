@@ -76,6 +76,22 @@ Plans:
 - [x] 03.1-13-PLAN.md — pt-BR translations + localization tests (wave 5)
 - [x] 03.1-14-PLAN.md — full build/test audit + tab screenshots (wave 6)
 
+### Phase 03.1.2: Premium native macOS design (INSERTED)
+
+**Goal:** The window looks and feels like a first-party Apple app at the macOS 26/27 standard: every visual defect fixed, consistent spacing/typography/controls, Liquid Glass where native, and a purposeful animation for every user action — while keeping the full HandBrake feature set visible.
+**Requirements**: HBD-01, HBD-02, HBD-03, HBD-04, HBD-05
+**Depends on:** Phase 03.1
+**Success Criteria**:
+1. A UI audit (UI-REVIEW.md) lists every visual defect in the current screenshots and each is fixed with a before/after screenshot
+2. A single design system (Theme/Compat) drives spacing, radii, type, colors and control styles; no ad-hoc values in views; sidebar, workspace, inspector and the 8 tabs follow HIG layout (toolbar, sidebar, inspector, sheets)
+3. Every user action animates (add/remove rows, select, tab switch, inspector expand/collapse, mode switch, progress, finish banner, hover/press) with SwiftUI transitions and matchedGeometry where appropriate; Reduce Motion respected
+4. Light and dark appearance both correct; macOS 15 fallback still looks right (compat helpers)
+5. Build + all tests green; screenshot set of every screen and tab in pt-BR and EN
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 03.1.2 to break down)
+
 ### Phase 4: Release
 **Goal**: New version available to users on the site.
 **Depends on**: Phase 03.1

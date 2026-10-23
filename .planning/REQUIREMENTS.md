@@ -29,6 +29,13 @@
 - [x] **HBP-04**: Missing feasible audio/subtitle/chapter/tag settings implemented (per-track audio list with encoder/mixdown/samplerate/bitrate/gain, subtitle forced/default flags, editable chapter names, metadata tags)
 - [x] **HBP-05**: HandBrake preset import maps the newly supported keys
 
+### Premium native design (HBD)
+- [ ] **HBD-01**: All visual defects in the 03.1 screenshots fixed (clipped/squeezed fields, misaligned labels, inconsistent paddings, truncated text, tab bar sizing, window min size)
+- [ ] **HBD-02**: One design system: tokens for spacing, radius, type, color, elevation; native control styles (Liquid Glass on 26+, fallback on 15) used everywhere
+- [ ] **HBD-03**: HIG-conformant structure: NavigationSplitView sidebar, unified toolbar, inspector column, sheets/popovers, keyboard focus and accessibility labels
+- [ ] **HBD-04**: Motion: transitions on every list/selection/tab/mode/progress change, hover and press feedback, spring curves, Reduce Motion honored
+- [ ] **HBD-05**: Light + dark appearance verified; EN + pt-BR screenshots of every screen
+
 ### Release (REL)
 - [ ] **REL-01**: README and site say macOS 15+; version bumped
 - [ ] **REL-02**: DMG built with Scripts/build-app.sh, GitHub release published, witchmymac apps.js link updated
@@ -41,4 +48,5 @@
 | UI-01..02 | 2 |
 | CMP-01..03 | 3 |
 | HBP-01..05 | 03.1 |
+| HBD-01..05 | 03.1.2 |
 | REL-01..02 | 4 |
