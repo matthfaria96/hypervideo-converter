@@ -57,6 +57,25 @@ enum ChapterEditing {
     }
 }
 
+/// A chapter file that couldn't be read or written, with the alert title to match.
+enum ChapterFileProblem: Equatable {
+    case `import`(String)
+    case export(String)
+
+    var title: String {
+        switch self {
+        case .import: String(localized: "Chapters not imported")
+        case .export: String(localized: "Chapters not exported")
+        }
+    }
+
+    var message: String {
+        switch self {
+        case .import(let text), .export(let text): text
+        }
+    }
+}
+
 extension MetadataTags {
     /// A copy with the field set to `text`; blank text clears it.
     func setting(_ keyPath: WritableKeyPath<MetadataTags, String?>, _ text: String) -> MetadataTags {

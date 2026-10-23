@@ -7,7 +7,7 @@ import UniformTypeIdentifiers
 struct ChaptersSettingsTab: View {
     let info: MediaInfo
     @Binding var settings: EncodeSettings
-    @State private var importError: String?
+    @State private var problem: ChapterFileProblem?
 
     var body: some View {
         SettingsSection(title: "Chapters", symbol: "list.bullet.indent") {
@@ -26,10 +26,11 @@ struct ChaptersSettingsTab: View {
                 .buttonStyle(.subtle)
             }
         }
-        .alert("Chapters not imported", isPresented: Binding(get: { importError != nil }, set: { if !$0 { importError = nil } })) {
+        .alert(Text(verbatim: problem?.title ?? ""),
+               isPresented: Binding(get: { problem != nil }, set: { if !$0 { problem = nil } })) {
             Button("OK", role: .cancel) {}
         } message: {
-            Text(importError ?? "")
+            Text(verbatim: problem?.message ?? "")
         }
     }
 
@@ -79,7 +80,7 @@ struct ChaptersSettingsTab: View {
                         from: url, chapterCount: count, existing: existing
                     )
                 } catch {
-                    importError = Self.message(for: error)
+                    problem = .import(Self.message(for: error))
                 }
             }
         }
@@ -93,7 +94,7 @@ struct ChaptersSettingsTab: View {
         PanelPresenter.present(panel) { response in
             guard response == .OK, let url = panel.url else { return }
             Task {
-                do { try await ChapterEditing.exportCSV(titles: titles, to: url) } catch { importError = Self.message(for: error) }
+                do { try await ChapterEditing.exportCSV(titles: titles, to: url) } catch { problem = .export(Self.message(for: error)) }
             }
         }
     }

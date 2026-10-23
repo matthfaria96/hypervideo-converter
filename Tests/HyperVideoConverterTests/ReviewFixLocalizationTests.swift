@@ -12,7 +12,8 @@ struct ReviewFixLocalizationTests {
     }
 
     @Test(arguments: [
-        "%lld tracks"
+        "%lld tracks",
+        "Chapters not exported"
     ])
     func isTranslated(key: String) throws {
         let value = try #require(try table()[key], "missing \(key)")
