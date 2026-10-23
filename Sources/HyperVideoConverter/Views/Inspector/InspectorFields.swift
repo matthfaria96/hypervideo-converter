@@ -18,44 +18,11 @@ struct ProfileCards: View {
     }
 
     private func card(_ profile: QualityProfile, isSelected: Bool) -> some View {
-        Button {
-            choose(profile)
-        } label: {
-            HStack(spacing: Spacing.m) {
-                Image(systemName: profile.symbol)
-                    .font(.body.weight(.medium))
-                    .foregroundStyle(isSelected ? AnyShapeStyle(Theme.accent) : AnyShapeStyle(.secondary))
-                    .frame(width: 30, height: 30)
-                    .background(isSelected ? AnyShapeStyle(Theme.accent.opacity(0.18)) : AnyShapeStyle(.fill.tertiary),
-                                in: .rect(cornerRadius: Radius.s + 2))
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: Spacing.xs + 2) {
-                        Text(localizing: profile.name).font(.body.weight(.medium))
-                        if profile == .balanced {
-                            Text("Recommended")
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(Theme.accentText)
-                                .padding(.horizontal, 6).padding(.vertical, 2)
-                                .background(Theme.accent.opacity(0.14), in: .capsule)
-                        }
-                    }
-                    Text(localizing: profile.summary).font(.caption).foregroundStyle(.secondary)
-                }
-                Spacer(minLength: Spacing.xs)
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(.body)
-                    .foregroundStyle(isSelected ? AnyShapeStyle(Theme.accent) : AnyShapeStyle(.tertiary))
-                    .contentTransition(.symbolEffect(.replace))
-            }
-            .padding(Spacing.m)
-            .card(isSelected ? .selected : .standard)
-            .contentShape(.rect)
-        }
-        .buttonStyle(.plain)
-        .hoverLift()
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text("\(Text(localizing: profile.name)), \(Text(localizing: profile.summary))"))
-        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+        ChoiceCard(symbol: profile.symbol,
+                   title: String(localized: String.LocalizationValue(profile.name)),
+                   tag: profile == .balanced ? StatusTag(text: String(localized: "Recommended"), tone: .accent) : nil,
+                   summary: String(localized: String.LocalizationValue(profile.summary)),
+                   isSelected: isSelected) { choose(profile) }
     }
 }
 

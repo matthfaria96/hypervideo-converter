@@ -7,8 +7,8 @@ struct UpscalePredictionCard: View {
     let estimate: UpscaleEstimate
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.m) {
-            Eyebrow(text: "Result preview")
+        // A section like every other card in the panels.
+        SettingsSection(title: "Result preview", symbol: "eye") {
             if estimate.count == 0 {
                 Text("Add videos to see the new resolution, file size and time before starting.")
                     .foregroundStyle(.secondary)
@@ -27,9 +27,6 @@ struct UpscalePredictionCard: View {
                 }
             }
         }
-        .padding(Spacing.l)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .card(.raised, radius: Radius.l)
         .motion(Motion.snappy, value: estimate)
     }
 

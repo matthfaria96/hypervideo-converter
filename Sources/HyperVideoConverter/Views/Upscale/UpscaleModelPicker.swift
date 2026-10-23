@@ -1,61 +1,42 @@
 import HyperVideoCore
 import SwiftUI
 
-/// The AI models as cards, each with how fast it is, so the slow ones are a choice
-/// made knowingly.
+/// The AI models as the same cards the quality profiles use, each tagged with how fast
+/// it is, so the slow ones are a choice made knowingly.
 struct UpscaleModelPicker: View {
     @Binding var selection: UpscaleModel
 
     var body: some View {
         SettingsSection(title: "AI Model", symbol: "cpu") {
             VStack(spacing: Spacing.s) {
-                ForEach(UpscaleModel.allCases) { model in card(model) }
-            }
-        }
-    }
-
-    private func card(_ model: UpscaleModel) -> some View {
-        let selected = model == selection
-        return Button { selection = model } label: {
-            HStack(spacing: Spacing.m) {
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: Spacing.xs + 2) {
-                        Text(localizing: model.displayName).font(.body.weight(.medium))
-                        SpeedTag(model: model)
-                    }
-                    Text(localizing: model.summary).font(.caption).foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                ForEach(UpscaleModel.allCases) { model in
+                    ChoiceCard(symbol: Self.symbol(model),
+                               title: String(localized: String.LocalizationValue(model.displayName)),
+                               tag: Self.speedTag(model),
+                               summary: String(localized: String.LocalizationValue(model.summary)),
+                               isSelected: model == selection) { selection = model }
                 }
-                Spacer(minLength: Spacing.xs)
-                Image(systemName: selected ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(selected ? AnyShapeStyle(Theme.accent) : AnyShapeStyle(.tertiary))
-                    .contentTransition(.symbolEffect(.replace))
             }
-            .padding(Spacing.m)
-            .card(selected ? .selected : .standard)
-            .contentShape(.rect)
+            .motion(value: selection)
         }
-        .buttonStyle(.plain)
-        .hoverLift()
-        .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
     }
-}
 
-/// "Recommended", "Slow", "Very slow" from the model's measured speed (the fast model
-/// is already called Fast, so its tag recommends it instead of repeating the name).
-private struct SpeedTag: View {
-    let model: UpscaleModel
-
-    var body: some View {
-        let (text, tint): (LocalizedStringKey, Color) = switch model.secondsPerSourceMegapixel {
-        case ..<2: ("Recommended", Theme.success)
-        case ..<10: ("Slow", Theme.warning)
-        default: ("Very slow", Theme.danger)
+    static func symbol(_ model: UpscaleModel) -> String {
+        switch model {
+        case .lite: "hare"
+        case .digitalArt: "paintpalette"
+        case .standard: "photo"
+        case .highFidelity: "sparkle.magnifyingglass"
         }
-        Text(text)
-            .font(.caption2.weight(.semibold))
-            .foregroundStyle(tint)
-            .padding(.horizontal, 6).padding(.vertical, 2)
-            .background(tint.opacity(0.14), in: .capsule)
+    }
+
+    /// "Recommended", "Slow", "Very slow" from the model's measured speed (the fast model
+    /// is already called Fast, so its tag recommends it instead of repeating the name).
+    static func speedTag(_ model: UpscaleModel) -> StatusTag {
+        switch model.secondsPerSourceMegapixel {
+        case ..<2: StatusTag(text: String(localized: "Recommended"), tone: .success)
+        case ..<10: StatusTag(text: String(localized: "Slow"), tone: .warning)
+        default: StatusTag(text: String(localized: "Very slow"), tone: .danger)
+        }
     }
 }

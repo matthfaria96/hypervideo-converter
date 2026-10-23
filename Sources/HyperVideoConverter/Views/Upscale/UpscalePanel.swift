@@ -29,27 +29,17 @@ struct UpscalePanel: View {
         }
     }
 
+    /// The same header as the Convert and Compress panels: title, then who it applies to.
     private var header: some View {
-        VStack(alignment: .leading, spacing: Spacing.xs) {
-            Label("AI Upscale", systemImage: "sparkles")
-                .font(.title3.weight(.semibold))
-                .symbolRenderingMode(.multicolor)
-            Text(verbatim: scopeText)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .lineLimit(2)
+        VStack(alignment: .leading, spacing: Spacing.m) {
+            HStack(alignment: .firstTextBaseline) {
+                Label("AI Upscale", systemImage: "sparkles")
+                    .font(.title3.weight(.semibold))
+                Spacer()
+            }
+            ScopeChip()
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(Spacing.l)
-    }
-
-    private var scopeText: String {
-        let count = model.upscaleTargets.count
-        if model.sources.isEmpty { return String(localized: "Enlarges videos with Real-ESRGAN. Add videos to see the result before starting.") }
-        if model.inspectsSelection {
-            return count == 1 ? String(localized: "For the selected video") : String(localized: "For the \(count) selected videos")
-        }
-        return count == 1 ? String(localized: "For the video in the list") : String(localized: "For all \(count) videos in the list")
     }
 
     private var scaleSection: some View {
