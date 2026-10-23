@@ -41,19 +41,10 @@ extension PipelineFactory {
             .naturalSize, .preferredTransform, .nominalFrameRate, .formatDescriptions
         )
         guard settings.videoCodec != .passthrough else {
-            let output = AVAssetReaderTrackOutput(track: track, outputSettings: nil)
-            let input = AVAssetWriterInput(mediaType: .video, outputSettings: nil, sourceFormatHint: formats.first)
-            input.transform = transform
-            return try attach(output: output, input: input, label: "video", reportsProgress: true)
+            return try passthroughVideoPump(track: track, transform: transform, format: formats.first)
         }
         let sourceFPS = fps > 0 ? Double(fps) : nil
-        let crop = await effectiveCrop()
-        let plan = GeometryPlanner.plan(
-            naturalSize: natural, preferredTransform: transform, crop: crop,
-            rotation: settings.rotation, flipHorizontal: settings.flipHorizontal,
-            maxResolution: settings.maxResolution, picture: settings.pictureOptions,
-            sourcePixelAspect: formats.first.flatMap(Self.pixelAspect(of:)) ?? CGSize(width: 1, height: 1)
-        )
+        let plan = await geometryPlan(naturalSize: natural, transform: transform, format: formats.first)
         let sourceColor = formats.first.flatMap(MediaInspector.colorSpace(of:))
         let color = OutputSettingsBuilder.outputColorSpace(
             for: settings.videoCodec, source: sourceColor, target: settings.filters.colorspace
@@ -85,6 +76,28 @@ extension PipelineFactory {
         return try attach(
             output: output, input: input, label: "video", reportsProgress: true,
             transform: timing.peak.map(Self.peakTransform(peak:))
+        )
+    }
+
+    /// Copies the compressed video unchanged, keeping its orientation.
+    private func passthroughVideoPump(
+        track: AVAssetTrack, transform: CGAffineTransform, format: CMFormatDescription?
+    ) throws -> SamplePump {
+        let output = AVAssetReaderTrackOutput(track: track, outputSettings: nil)
+        let input = AVAssetWriterInput(mediaType: .video, outputSettings: nil, sourceFormatHint: format)
+        input.transform = transform
+        return try attach(output: output, input: input, label: "video", reportsProgress: true)
+    }
+
+    /// Crop, rotation, scaling, anamorphic and padding for this track and the job's settings.
+    private func geometryPlan(
+        naturalSize: CGSize, transform: CGAffineTransform, format: CMFormatDescription?
+    ) async -> GeometryPlan {
+        GeometryPlanner.plan(
+            naturalSize: naturalSize, preferredTransform: transform, crop: await effectiveCrop(),
+            rotation: settings.rotation, flipHorizontal: settings.flipHorizontal,
+            maxResolution: settings.maxResolution, picture: settings.pictureOptions,
+            sourcePixelAspect: format.flatMap(Self.pixelAspect(of:)) ?? CGSize(width: 1, height: 1)
         )
     }
 
