@@ -47,7 +47,7 @@ struct ChaptersSettingsTab: View {
                     Text("\(index + 1)").monospacedDigit().foregroundStyle(Theme.muted)
                     Text(Format.duration(chapter.start)).monospacedDigit()
                     Text(Format.duration(chapter.duration)).monospacedDigit().foregroundStyle(Theme.muted)
-                    TextField("Title", text: titleBinding(index)).textFieldStyle(.roundedBorder)
+                    CommittingTextField(title: "Title", text: titleBinding(index)).textFieldStyle(.roundedBorder)
                 }
                 .accessibilityElement(children: .combine)
             }
