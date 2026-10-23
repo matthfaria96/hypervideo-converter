@@ -145,6 +145,12 @@ struct ParityModelTests {
         #expect(!LanguageFilter.matches(nil, in: ["eng"]))
     }
 
+    @Test(arguments: [("fr", "fre"), ("de", "ger"), ("zh", "chi"), ("cs", "cze"), ("nl", "dut"), ("fra", "fre"), ("deu", "GER")])
+    func bibliographicCodesMatch(track: String, wanted: String) {
+        #expect(LanguageFilter.matches(track, in: [wanted]))
+        #expect(LanguageFilter.matches(wanted, in: [track]))
+    }
+
     @Test func chapterAndTagHelpers() {
         #expect(!ChapterOptions().writesMarkers(keepMetadata: false))
         var chapters = ChapterOptions()
