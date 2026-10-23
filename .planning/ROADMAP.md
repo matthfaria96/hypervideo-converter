@@ -90,7 +90,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 03.1.2 to break down)
+- [x] Executed inline — see 03.1.2-SUMMARY.md
 
 ### Phase 4: Release
 **Goal**: New version available to users on the site.

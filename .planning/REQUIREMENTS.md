@@ -30,11 +30,11 @@
 - [x] **HBP-05**: HandBrake preset import maps the newly supported keys
 
 ### Premium native design (HBD)
-- [ ] **HBD-01**: All visual defects in the 03.1 screenshots fixed (clipped/squeezed fields, misaligned labels, inconsistent paddings, truncated text, tab bar sizing, window min size)
-- [ ] **HBD-02**: One design system: tokens for spacing, radius, type, color, elevation; native control styles (Liquid Glass on 26+, fallback on 15) used everywhere
-- [ ] **HBD-03**: HIG-conformant structure: NavigationSplitView sidebar, unified toolbar, inspector column, sheets/popovers, keyboard focus and accessibility labels
-- [ ] **HBD-04**: Motion: transitions on every list/selection/tab/mode/progress change, hover and press feedback, spring curves, Reduce Motion honored
-- [ ] **HBD-05**: Light + dark appearance verified; EN + pt-BR screenshots of every screen
+- [x] **HBD-01**: All visual defects in the 03.1 screenshots fixed (clipped/squeezed fields, misaligned labels, inconsistent paddings, truncated text, tab bar sizing, window min size)
+- [x] **HBD-02**: One design system: tokens for spacing, radius, type, color, elevation; native control styles (Liquid Glass on 26+, fallback on 15) used everywhere
+- [x] **HBD-03**: HIG-conformant structure: NavigationSplitView sidebar, unified toolbar, inspector column, sheets/popovers, keyboard focus and accessibility labels
+- [x] **HBD-04**: Motion: transitions on every list/selection/tab/mode/progress change, hover and press feedback, spring curves, Reduce Motion honored
+- [x] **HBD-05**: Light + dark appearance verified; EN + pt-BR screenshots of every screen
 
 ### Release (REL)
 - [ ] **REL-01**: README and site say macOS 15+; version bumped
