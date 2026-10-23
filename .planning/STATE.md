@@ -4,8 +4,8 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Initialization complete
-last_updated: "2026-10-23T03:09:49.924Z"
-last_activity: 2026-10-23 -- Phase 03.1 planning complete
+last_updated: "2026-10-23T03:10:10.367Z"
+last_activity: 2026-10-23 -- Phase 03.1 execution started
 progress:
   total_phases: 5
   completed_phases: 2
@@ -20,14 +20,14 @@ progress:
 
 See: .planning/PROJECT.md (updated 2026-10-19)
 **Core value:** Converting a video must never crash, lose work or hang the UI.
-**Current focus:** Phase 3 — macOS 15 support
+**Current focus:** Phase 03.1 — handbrake-parity-in-the-new-layout
 
 ## Current Position
 
-Phase: 3 of 4 (macOS 15 support)
-Plan: 0 of TBD
-Status: Ready to execute
-Last activity: 2026-10-23 -- Phase 03.1 planning complete
+Phase: 03.1 (handbrake-parity-in-the-new-layout) — EXECUTING
+Plan: 1 of 14
+Status: Executing Phase 03.1
+Last activity: 2026-10-23 -- Phase 03.1 execution started
 
 Progress: [█████░░░░░] 50%
 
