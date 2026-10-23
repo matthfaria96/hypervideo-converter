@@ -44,26 +44,12 @@ public enum HandBrakePresets {
         var notes: [String] = []
         var s = EncodeSettings()
 
-        s.container = container(p.string("FileFormat"), notes: &notes)
-        s.videoCodec = videoCodec(p.string("VideoEncoder"), notes: &notes)
-        s.rateControl = rateControl(p, codec: p.string("VideoEncoder"))
-        s.prioritizeSpeed = ["ultrafast", "superfast", "veryfast", "faster", "fast", "speed"].contains(p.string("VideoPreset"))
-        s.frameRate = frameRate(p.string("VideoFramerate"), mode: p.string("VideoFramerateMode"))
-        s.maxResolution = maxResolution(height: p.int("PictureHeight"))
-        (s.rotation, s.flipHorizontal) = rotation(p.string("PictureRotate"))
-        if p.int("PictureCropMode") == 1 {
-            s.crop = Crop(top: p.int("PictureTopCrop"), bottom: p.int("PictureBottomCrop"),
-                          left: p.int("PictureLeftCrop"), right: p.int("PictureRightCrop"))
-        }
-
-        s.filters.deinterlace = (p.string("PictureDeinterlaceFilter") ?? "off") == "off" ? .off : .auto
-        s.filters.denoise = strength(filter: p.string("PictureDenoiseFilter"), preset: p.string("PictureDenoisePreset"))
-        s.filters.sharpen = strength(filter: p.string("PictureSharpenFilter"), preset: p.string("PictureSharpenPreset"))
-        s.filters.grayscale = p.bool("VideoGrayScale") ?? false
-
+        applyVideo(p, to: &s, notes: &notes)
+        applyPicture(p, to: &s, notes: &notes)
+        applyFilters(p, to: &s, notes: &notes)
         applyAudio(p, to: &s, notes: &notes)
-        s.subtitles = SubtitleSelection(rawValue: p.string("SubtitleTrackSelectionBehavior") ?? "") ?? .none
-        s.optimizeForWeb = p.bool("Optimize") ?? s.optimizeForWeb
+        applySubtitles(p, to: &s, notes: &notes)
+        applySummary(p, to: &s, notes: &notes)
 
         // Combinations only QuickTime can hold.
         let needsALAC = s.audioEncodings.contains(where: { $0.codec == .alac }) && !s.container.supportsALAC
@@ -77,6 +63,12 @@ public enum HandBrakePresets {
             summary: p.string("PresetDescription") ?? "Imported from HandBrake",
             settings: s
         )
-        return Imported(preset: preset, notes: notes.map { "\(name): \($0)" })
+        return Imported(preset: preset, notes: unique(notes).map { "\(name): \($0)" })
+    }
+
+    /// The same limitation reported by both audio entries is listed once.
+    private static func unique(_ notes: [String]) -> [String] {
+        var seen = Set<String>()
+        return notes.filter { seen.insert($0).inserted }
     }
 }

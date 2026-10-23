@@ -13,7 +13,7 @@ struct HandBrakeParityImportTests {
     "FileFormat": "av_mp4", "VideoEncoder": "vt_h264", "VideoQualityType": 2, "VideoQualitySlider": 60,
     "VideoPreset": "quality", "VideoProfile": "high", "VideoLevel": "4.1",
     "VideoFramerate": "24", "VideoFramerateMode": "cfr",
-    "PictureCropMode": 1, "PictureAllowUpscaling": true, "PictureHeight": 4320,
+    "PictureCropMode": 1, "PictureAllowUpscaling": true, "PictureHeight": 2160,
     "PicturePAR": "auto", "PicturePadMode": "letterbox", "PicturePadColor": "#FF8000",
     "PictureDeinterlaceFilter": "decomb", "PictureCombDetectPreset": "off", "PictureDeinterlacePreset": "bob",
     "PictureDenoiseFilter": "hqdn3d", "PictureDenoisePreset": "strong", "PictureDenoiseTune": "grain",
@@ -39,7 +39,7 @@ struct HandBrakeParityImportTests {
         #expect(s.videoOptions.speed == .quality && s.videoOptions.profile == .high && s.videoOptions.level == .l41)
         #expect(s.frameRate == .fps24 && s.videoOptions.frameRateMode == .constant)
         #expect(s.pictureOptions.cropMode == .conservative && s.pictureOptions.allowUpscaling)
-        #expect(s.maxResolution == .uhd4320 && s.pictureOptions.anamorphic == .automatic)
+        #expect(s.maxResolution == .uhd2160 && s.pictureOptions.anamorphic == .automatic)
         #expect(s.pictureOptions.padding.mode == .letterbox && s.pictureOptions.padding.color == .custom)
         #expect(s.pictureOptions.padding.customHex == "FF8000")
         #expect(s.filters.deinterlace == .always && s.filters.deinterlaceMethod == .bob)
@@ -86,6 +86,32 @@ struct HandBrakeParityImportTests {
     func sampleRates(raw: String, rate: AudioSampleRate) throws {
         let r = try imported("\"AudioList\": [{ \"AudioEncoder\": \"av_aac\", \"AudioSamplerate\": \"\(raw)\" }]")
         #expect(r.preset.settings.audioOptions.sampleRate == rate)
+    }
+
+    /// Keys of HandBrake 1.10's built-in "Fast 1080p30".
+    @Test func builtInFast1080p30() throws {
+        let r = try imported("""
+        "FileFormat": "av_mp4", "VideoEncoder": "x264", "VideoQualityType": 2, "VideoQualitySlider": 22.0,
+        "VideoPreset": "veryfast", "VideoProfile": "high", "VideoLevel": "4.0", "VideoTune": "",
+        "VideoFramerate": "30", "VideoFramerateMode": "pfr", "VideoMultiPass": false,
+        "PictureWidth": 1920, "PictureHeight": 1080, "PictureCropMode": 0, "PicturePAR": "auto",
+        "PicturePadMode": "none", "PicturePadColor": "black", "PictureAllowUpscaling": false,
+        "PictureDeinterlaceFilter": "decomb", "PictureDeinterlacePreset": "default", "PictureCombDetectPreset": "default",
+        "PictureDeblockPreset": "off", "PictureDetelecine": "off", "PictureColorspacePreset": "off",
+        "PictureDenoiseFilter": "off", "PictureSharpenFilter": "off", "PictureChromaSmoothPreset": "off",
+        "AudioTrackSelectionBehavior": "first", "AudioEncoderFallback": "av_aac",
+        "AudioList": [{ "AudioEncoder": "av_aac", "AudioBitrate": 160, "AudioMixdown": "stereo", "AudioSamplerate": "auto",
+                        "AudioTrackGainSlider": 0, "AudioTrackDRCSlider": 0 }],
+        "SubtitleTrackSelectionBehavior": "none", "SubtitleBurnBehavior": "foreign", "ChapterMarkers": true,
+        "Optimize": false, "Mp4iPodCompatible": false
+        """)
+        let s = r.preset.settings
+        #expect(s.videoCodec == .h264 && s.frameRate == .fps30 && s.videoOptions.frameRateMode == .peak)
+        #expect(s.maxResolution == .fhd1080 && s.pictureOptions.cropMode == .automatic)
+        #expect(s.pictureOptions.anamorphic == .automatic && s.filters.deinterlace == .auto)
+        #expect(s.audioCodec == .aac && s.audioMixdown == .stereo && s.audioBitrateKbps == 160)
+        #expect(r.notes.isEmpty, "\(r.notes)")
+        #expect(s.isValid)
     }
 
     @Test func rareValuesFallBackWithNotes() throws {
