@@ -51,7 +51,7 @@ enum SubtitleTrackPlanner {
         var entries: [SubtitlePlanEntry] = []
         for source in candidates {
             guard let setting = settings.subtitleOptions.tracks.first(where: { $0.sourceTrackID == source.id }),
-                  setting.include, !setting.forcedOnly || source.forcedOnly else { continue }
+                  setting.include, !setting.forcedOnly || source.kind == .subtitle else { continue }
             // Only text subtitles join the alternate group, so a caption can't be its default.
             let isDefault = setting.isDefault && !defaultTaken && source.kind == .subtitle
             defaultTaken = defaultTaken || isDefault

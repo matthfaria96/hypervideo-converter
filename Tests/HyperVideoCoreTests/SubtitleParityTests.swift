@@ -87,16 +87,27 @@ struct SubtitleParityTests {
         #expect(inputs.allSatisfy { !$0.marksOutputTrackAsEnabled })
     }
 
-    @Test func forcedOnlyFiltersNonForcedSources() {
+    /// HandBrake's "Forced only" keeps a mixed track and filters its cues; captions can't be filtered.
+    @Test func forcedOnlyKeepsTextTracksForCueFiltering() {
         let forced = SubtitleSourceTrack(id: 4, kind: .subtitle, language: "en", forcedOnly: true)
-        let result = plan(sources + [forced]) {
+        let result = plan(sources + [forced], container: .mov) {
             $0.subtitleOptions.tracks = [
                 SubtitleTrackSetting(sourceTrackID: 1, forcedOnly: true),
+                SubtitleTrackSetting(sourceTrackID: 3, forcedOnly: true),
                 SubtitleTrackSetting(sourceTrackID: 4, forcedOnly: true)
             ]
         }
-        #expect(result.entries.map(\.sourceTrackID) == [4])
-        #expect(result.entries.first?.forced == true)
+        #expect(result.entries.map(\.sourceTrackID) == [1, 4])
+        #expect(result.entries.allSatisfy { $0.forced })
+    }
+
+    @Test func forcedBoxIsFoundAfterTheText() {
+        let text: [UInt8] = [0, 2, 0x48, 0x69]
+        let style: [UInt8] = [0, 0, 0, 10] + Array("styl".utf8) + [0, 0]
+        let forced: [UInt8] = [0, 0, 0, 8] + Array("frcd".utf8)
+        #expect(ForcedSubtitles.hasForcedBox(text + style + forced))
+        #expect(!ForcedSubtitles.hasForcedBox(text + style))
+        #expect(!ForcedSubtitles.hasForcedBox([0, 9, 1]))
     }
 
     @Test func fileDefaultOnlyWithoutSourceDefault() {
