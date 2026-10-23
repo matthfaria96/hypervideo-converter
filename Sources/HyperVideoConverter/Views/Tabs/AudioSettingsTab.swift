@@ -47,8 +47,8 @@ struct AudioSettingsTab: View {
             if settings.audioOptions.tracks.isEmpty {
                 Text("Tracks follow the selection behavior above.").foregroundStyle(.secondary)
             }
-            ForEach(Array($settings.audioOptions.tracks.enumerated()), id: \.element.id) { index, $track in
-                AudioTrackCard(setting: $track, number: index + 1, sources: info.audioTracks) {
+            ForEach(Array(settings.audioOptions.tracks.enumerated()), id: \.element.id) { index, track in
+                AudioTrackCard(setting: trackBinding(track), number: index + 1, sources: info.audioTracks) {
                     settings = settings.removingAudioTrack(track.id)
                 }
             }
@@ -65,6 +65,15 @@ struct AudioSettingsTab: View {
             .buttonStyle(.subtle)
             .disabled(info.audioTracks.isEmpty)
         }
+    }
+
+    /// Looks the track up by id on every access, so a field committing after its card
+    /// was removed can't write through a stale array index.
+    private func trackBinding(_ track: AudioTrackSetting) -> Binding<AudioTrackSetting> {
+        Binding(
+            get: { settings.audioOptions.tracks.first { $0.id == track.id } ?? track },
+            set: { settings = settings.updatingAudioTrack($0) }
+        )
     }
 
     private var sourceTracksSection: some View {

@@ -34,6 +34,17 @@ struct TrackListEditingTests {
         #expect(s.audioOptions.tracks.map(\.sourceTrackID) == [1, 2, 1])
     }
 
+    @Test func updatingAudioTrackByIDIgnoresRemovedTracks() throws {
+        var s = EncodeSettings().addingAllAudioTracks(from: info())
+        let first = try #require(s.audioOptions.tracks.first)
+        var renamed = first
+        renamed.encoding.trackName = "Main"
+        s = s.updatingAudioTrack(renamed)
+        #expect(s.audioOptions.tracks.first?.encoding.trackName == "Main" && s.audioOptions.tracks.count == 2)
+        let removed = s.removingAudioTrack(first.id)
+        #expect(removed.updatingAudioTrack(renamed) == removed, "a late write to a removed card changes nothing")
+    }
+
     @Test func defaultEncodingWithoutAudioIsAAC() {
         var s = EncodeSettings()
         s.audioCodec = .none
