@@ -73,6 +73,17 @@ public enum SubtitleParser {
         text.replacing(/<[^>]*>/, with: "").replacing(/\{\\[^}]*\}/, with: "")
     }
 
+    /// Cues moved by `offset` milliseconds; starts clamp at 0 and cues ending at or before 0 are dropped.
+    public static func shifted(_ cues: [SubtitleCue], byMs offset: Int) -> [SubtitleCue] {
+        guard offset != 0 else { return cues }
+        let delta = Double(offset) / 1000
+        return cues.compactMap { cue in
+            let end = cue.end + delta
+            guard end > 0 else { return nil }
+            return SubtitleCue(start: max(cue.start + delta, 0), end: end, text: cue.text)
+        }
+    }
+
     /// Cues cut to `start..<end`, with empty cues filling the gaps, so each cue is
     /// cleared on time in players that hold a sample until the next one.
     /// Overlapping cues are split at every boundary and their texts joined, one per line.

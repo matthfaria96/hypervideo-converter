@@ -98,6 +98,7 @@ extension EBML {
         static let timestampScale: UInt32 = 0x2AD7B1
         static let duration: UInt32 = 0x4489
         static let title: UInt32 = 0x7BA9
+        static let name: UInt32 = 0x536E
         static let muxingApp: UInt32 = 0x4D80
         static let writingApp: UInt32 = 0x5741
         static let segmentUUID: UInt32 = 0x73A4

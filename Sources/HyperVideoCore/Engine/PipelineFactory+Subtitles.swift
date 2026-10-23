@@ -2,46 +2,46 @@
 
 extension PipelineFactory {
     func subtitlePumps() async throws -> [SamplePump] {
-        var pumps: [SamplePump] = []
-        for (index, source) in try await subtitleCandidates().enumerated() {
-            let pump: SamplePump?
-            switch source {
-            case .track(let track, _):
-                // `.first` keeps the first source track the writer accepts; candidates
-                // are tracks before files, so `pumps` holds only tracks here.
-                let full = settings.subtitles == .first && !pumps.isEmpty
-                pump = full ? nil : try await subtitlePump(for: track, index: index)
-            case .file(let file):
-                pump = try subtitlePump(for: file, index: index)
-            }
-            if let pump { pumps.append(pump) }
-        }
-        groupAlternates(pumps.map(\.input).filter { $0.mediaType == .subtitle }, defaultInput: nil)
-        return pumps
-    }
-
-    /// Source text tracks the container can hold (all of them unless the selection is
-    /// `.none`; `makePumps` applies `.first`), then every external file the user added.
-    func subtitleCandidates() async throws -> [SubtitleSource] {
-        // A burned-in subtitle is part of the picture, so it isn't also kept as a track.
-        let files = subtitleFiles.filter { settings.burnIn != .file($0.url) }.map(SubtitleSource.file)
-        guard settings.subtitles != .none else { return files }
         let tracks = try await MediaInspector.subtitleTracks(in: asset)
-            .filter { settings.burnIn != .track(id: Int($0.0.trackID)) }
-            .map { SubtitleSource.track($0.0, $0.1) }
-        return SubtitleTrackInfo.kept(tracks, kind: \.kind, selection: .all, container: settings.container) + files
+        var sources: [SubtitleSourceTrack] = []
+        for (track, kind) in tracks {
+            let (formats, language, code) = try await track.load(.formatDescriptions, .extendedLanguageTag, .languageCode)
+            let forced = await MediaInspector.isForcedOnly(track: track, format: formats.first)
+            sources.append(SubtitleSourceTrack(id: Int(track.trackID), kind: kind, language: language ?? code, forcedOnly: forced))
+        }
+        let plan = SubtitleTrackPlanner.plan(sources: sources, files: subtitleFiles, settings: settings)
+
+        var pumps: [SamplePump] = []
+        var defaultInput: AVAssetWriterInput?
+        var sourcePumps = 0
+        for entry in plan.entries {
+            if let limit = plan.trackLimit, sourcePumps >= limit { break }
+            guard let track = tracks.first(where: { Int($0.0.trackID) == entry.sourceTrackID })?.0,
+                  let pump = try await subtitlePump(for: track, index: pumps.count, name: entry.name) else { continue }
+            sourcePumps += 1
+            pumps.append(pump)
+            if entry.isDefault { defaultInput = pump.input }
+        }
+        for file in subtitleFiles where settings.burnIn != .file(file.url) {
+            guard let pump = try subtitlePump(for: file, index: pumps.count) else { continue }
+            pumps.append(pump)
+            if file.url == plan.defaultFileURL { defaultInput = pump.input }
+        }
+        groupAlternates(pumps.map(\.input).filter { $0.mediaType == .subtitle }, defaultInput: defaultInput)
+        return pumps
     }
 
     /// Copies a text subtitle or caption track unchanged. Returns nil when the writer
     /// can't store this format in the chosen container, so one exotic track doesn't
     /// fail the whole encode.
-    func subtitlePump(for track: AVAssetTrack, index: Int) async throws -> SamplePump? {
+    func subtitlePump(for track: AVAssetTrack, index: Int, name: String? = nil) async throws -> SamplePump? {
         let (formats, language, code) = try await track.load(.formatDescriptions, .extendedLanguageTag, .languageCode)
         let output = AVAssetReaderTrackOutput(track: track, outputSettings: nil)
         let input = AVAssetWriterInput(mediaType: track.mediaType, outputSettings: nil, sourceFormatHint: formats.first)
         input.extendedLanguageTag = language
         input.languageCode = code
         input.mediaDataLocation = .beforeMainMediaDataNotInterleaved
+        if let name, !name.isEmpty { input.metadata = TrackNames.items(name) }
         guard reader.canAdd(output), writer.canAdd(input) else { return nil }
         return try attach(output: output, input: input, label: "subtitle\(index)", reportsProgress: false)
     }
@@ -51,11 +51,11 @@ extension PipelineFactory {
     func subtitlePump(for file: SubtitleFile, index: Int) throws -> SamplePump? {
         let cues: [SubtitleCue]
         do {
-            cues = try SubtitleParser.cues(from: Data(contentsOf: file.url))
+            cues = SubtitleParser.shifted(try SubtitleParser.cues(from: Data(contentsOf: file.url)), byMs: file.offsetMs)
         } catch {
             throw TranscodeError.cannotConfigure("the subtitle file \(file.name) couldn't be read (\(error.localizedDescription))")
         }
-        guard let format = TimedText.format(mediaType: kCMMediaType_Subtitle) else {
+        guard let format = TimedText.format(mediaType: kCMMediaType_Subtitle, forced: file.isForced) else {
             throw TranscodeError.cannotConfigure("subtitle file \(file.name)")
         }
         let range = reader.timeRange
@@ -65,6 +65,7 @@ extension PipelineFactory {
         let input = AVAssetWriterInput(mediaType: .subtitle, outputSettings: nil, sourceFormatHint: format)
         input.extendedLanguageTag = file.language
         input.languageCode = file.language.flatMap { Locale(identifier: $0).language.languageCode?.identifier(.alpha3) }
+        if let title = file.title, !title.isEmpty { input.metadata = TrackNames.items(title) }
         input.mediaDataLocation = .beforeMainMediaDataNotInterleaved
         input.expectsMediaDataInRealTime = false
         guard writer.canAdd(input) else { return nil }

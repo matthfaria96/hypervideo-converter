@@ -1,15 +1,16 @@
 import CoreMedia
+import Foundation
 
 /// Builds 3GPP timed text (tx3g) samples, used for chapter title tracks.
 enum TimedText {
     /// A plain white-on-transparent tx3g description for `mediaType` (text or subtitle).
-    static func format(mediaType: CMMediaType) -> CMFormatDescription? {
+    static func format(mediaType: CMMediaType, forced: Bool = false) -> CMFormatDescription? {
         let white: [CFString: Any] = [
             kCMTextFormatDescriptionColor_Red: 255, kCMTextFormatDescriptionColor_Green: 255,
             kCMTextFormatDescriptionColor_Blue: 255, kCMTextFormatDescriptionColor_Alpha: 255
         ]
         let extensions: [CFString: Any] = [
-            kCMTextFormatDescriptionExtension_DisplayFlags: 0,
+            kCMTextFormatDescriptionExtension_DisplayFlags: forced ? NSNumber(value: UInt32(kCMTextDisplayFlag_allSubtitlesForced)) : 0,
             kCMTextFormatDescriptionExtension_HorizontalJustification: 1,
             kCMTextFormatDescriptionExtension_VerticalJustification: -1,
             kCMTextFormatDescriptionExtension_BackgroundColor: [

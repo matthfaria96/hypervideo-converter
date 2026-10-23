@@ -52,17 +52,22 @@ struct MatroskaRemuxer {
                                                         frameRate: fps, language: language)
                     sources.append(Source(track: video, entry: entry, isText: false))
                 }
-                for (index, track) in try await asset.loadTracks(withMediaType: .audio).enumerated() {
+                for track in try await asset.loadTracks(withMediaType: .audio) {
                     let (formats, language) = try await track.load(.formatDescriptions, .extendedLanguageTag)
                     guard let format = formats.first else { continue }
-                    let entry = try MatroskaTrack.audio(format: format, number: sources.count + 1,
-                                                        language: language, isDefault: index == 0)
+                    let entry = try await MatroskaTrack.audio(format: format, number: sources.count + 1,
+                                                        language: language, isDefault: try await track.load(.isEnabled),
+                                                        name: await TrackNames.name(of: track))
                     sources.append(Source(track: track, entry: entry, isText: false))
                 }
                 for track in try await asset.loadTracks(withMediaType: .subtitle) {
                     let (formats, language) = try await track.load(.formatDescriptions, .extendedLanguageTag)
                     guard formats.first.map(CMFormatDescriptionGetMediaSubType) == kCMTextFormatType_3GText else { continue }
-                    sources.append(Source(track: track, entry: .subtitle(number: sources.count + 1, language: language), isText: true))
+                    let entry = MatroskaTrack.subtitle(
+                        number: sources.count + 1, language: language, isDefault: try await track.load(.isEnabled),
+                        isForced: await MediaInspector.isForcedOnly(track: track, format: formats.first),
+                        name: await TrackNames.name(of: track))
+                    sources.append(Source(track: track, entry: entry, isText: true))
                 }
             } catch MatroskaTrack.UnsupportedFormat.codec(let name) {
                 throw TranscodeError.cannotConfigure("the \(name) codec in Matroska (MKV); choose H.264 or H.265 video and AAC audio")

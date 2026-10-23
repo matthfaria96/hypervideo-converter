@@ -29,6 +29,8 @@ struct MatroskaTrack: Equatable {
     var codecPrivate: Data?
     var language: String?
     var isDefault: Bool
+    var isForced = false
+    var name: String?
     var defaultDurationNs: UInt64?
     /// Decoder priming the timestamps include, such as AAC's leading samples.
     var codecDelayNs: UInt64 = 0
@@ -42,12 +44,13 @@ struct MatroskaTrack: Equatable {
             EBML.uint(EBML.ID.trackUID, uid),
             EBML.uint(EBML.ID.trackType, kind.rawValue),
             EBML.uint(EBML.ID.flagDefault, isDefault ? 1 : 0),
-            EBML.uint(EBML.ID.flagForced, 0),
+            EBML.uint(EBML.ID.flagForced, isForced ? 1 : 0),
             EBML.uint(EBML.ID.flagLacing, 0),
             EBML.string(EBML.ID.language, Self.legacyLanguage(language)),
             EBML.string(EBML.ID.codecID, codecID)
         ]
         if let language { children.append(EBML.string(EBML.ID.languageBCP47, language)) }
+        if let name, !name.isEmpty { children.append(EBML.string(EBML.ID.name, name)) }
         if let codecPrivate { children.append(EBML.element(EBML.ID.codecPrivate, codecPrivate)) }
         if codecDelayNs > 0 { children.append(EBML.uint(EBML.ID.codecDelay, codecDelayNs)) }
         if let defaultDurationNs { children.append(EBML.uint(EBML.ID.defaultDuration, defaultDurationNs)) }
@@ -123,7 +126,7 @@ extension MatroskaTrack {
     }
 
     /// Audio track for AAC, ALAC, AC-3, E-AC-3 or MP3 samples.
-    static func audio(format: CMFormatDescription, number: Int, language: String?, isDefault: Bool) throws -> MatroskaTrack {
+    static func audio(format: CMFormatDescription, number: Int, language: String?, isDefault: Bool, name: String? = nil) throws -> MatroskaTrack {
         let subtype = CMFormatDescriptionGetMediaSubType(format)
         guard let asbd = CMAudioFormatDescriptionGetStreamBasicDescription(format)?.pointee else {
             throw UnsupportedFormat.codec(FourCC.string(subtype))
@@ -148,13 +151,15 @@ extension MatroskaTrack {
         }
         let audio = Audio(sampleRate: asbd.mSampleRate, channels: Int(asbd.mChannelsPerFrame), bitDepth: bitDepth)
         return MatroskaTrack(number: number, uid: uid(for: number), kind: .audio, codecID: codecID, codecPrivate: codecPrivate,
-                             language: language, isDefault: isDefault, defaultDurationNs: nil, audio: audio)
+                             language: language, isDefault: isDefault, isForced: false, name: name, defaultDurationNs: nil, audio: audio)
     }
 
     /// Plain UTF-8 text subtitles (converted from 3GPP timed text).
-    static func subtitle(number: Int, language: String?) -> MatroskaTrack {
+    static func subtitle(
+        number: Int, language: String?, isDefault: Bool = false, isForced: Bool = false, name: String? = nil
+    ) -> MatroskaTrack {
         MatroskaTrack(number: number, uid: uid(for: number), kind: .subtitle, codecID: "S_TEXT/UTF8", codecPrivate: nil,
-                      language: language, isDefault: false, defaultDurationNs: nil)
+                      language: language, isDefault: isDefault, isForced: isForced, name: name, defaultDurationNs: nil)
     }
 
     /// Stable, non-zero UIDs that differ per file and per track.
