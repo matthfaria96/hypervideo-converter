@@ -1,6 +1,9 @@
 @preconcurrency import AVFoundation
 import Synchronization
 
+/// Rewrites a sample between reader and writer; nil drops it.
+typealias SampleTransform = (CMSampleBuffer) -> CMSampleBuffer?
+
 /// Thread-safe cancellation flag shared between the engine and its pumps.
 final class CancelFlag: Sendable {
     private let state = Mutex(false)
@@ -29,10 +32,11 @@ final class SamplePump: @unchecked Sendable {
     private let isDone = Mutex(false)
     private var lastReported = -1.0
 
-    init(output: AVAssetReaderOutput, input: AVAssetWriterInput, label: String, reportsProgress: Bool) {
+    init(output: AVAssetReaderOutput, input: AVAssetWriterInput, label: String, reportsProgress: Bool,
+         transform: SampleTransform? = nil) {
         self.input = input
         self.reportsProgress = reportsProgress
-        self.next = { output.copyNextSampleBuffer() }
+        self.next = Self.filtered({ output.copyNextSampleBuffer() }, transform)
         self.queue = DispatchQueue(label: "HyperVideo.pump.\(label)", qos: .userInitiated)
     }
 
@@ -46,11 +50,24 @@ final class SamplePump: @unchecked Sendable {
     }
 
     /// Pulls samples from an arbitrary source; lets tests inject a stalled reader.
-    init(next: @escaping () -> CMSampleBuffer?, input: AVAssetWriterInput, label: String) {
+    init(next: @escaping () -> CMSampleBuffer?, input: AVAssetWriterInput, label: String,
+         transform: SampleTransform? = nil) {
         self.input = input
         self.reportsProgress = false
-        self.next = next
+        self.next = Self.filtered(next, transform)
         self.queue = DispatchQueue(label: "HyperVideo.pump.\(label)", qos: .userInitiated)
+    }
+
+    /// Wraps `source` so each buffer passes through `transform`; dropped buffers are
+    /// skipped in a loop (no recursion), and a nil from `source` ends the stream.
+    static func filtered(_ source: @escaping () -> CMSampleBuffer?, _ transform: SampleTransform?) -> () -> CMSampleBuffer? {
+        guard let transform else { return source }
+        return {
+            while let buffer = source() {
+                if let result = transform(buffer) { return result }
+            }
+            return nil
+        }
     }
 
     /// True once a probe block enqueued on the pump queue has run within `timeout`,
