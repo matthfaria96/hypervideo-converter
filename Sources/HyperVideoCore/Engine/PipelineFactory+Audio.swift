@@ -24,7 +24,7 @@ extension PipelineFactory {
         let sourceFormat = formats.first.flatMap { CMAudioFormatDescriptionGetStreamBasicDescription($0)?.pointee }
         var encoding = job.encoding
         if encoding.codec == .autoPassthru {
-            let allowed = settings.audioOptions.allowedPassthru
+            let allowed = encoding.passthruOnly.map { Set([$0]) } ?? settings.audioOptions.allowedPassthru
             let copies = AutoPassthru.copies(formatID: sourceFormat?.mFormatID ?? 0, allowed: allowed, container: settings.container)
             if copies, writer.canAdd(AVAssetWriterInput(mediaType: .audio, outputSettings: nil, sourceFormatHint: formats.first)) {
                 encoding.codec = .passthrough

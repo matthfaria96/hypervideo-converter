@@ -105,10 +105,13 @@ public struct AudioEncoding: Codable, Hashable, Sendable {
     public var sampleRate: AudioSampleRate = .hz48000
     public var gainDb: Double = 0
     public var trackName: String?
+    /// With Auto Passthru, copy only this codec (HandBrake's `copy:<codec>`); nil allows the preset-wide set.
+    public var passthruOnly: PassthruCodec?
 
     public init(
         codec: AudioCodec, mixdown: AudioMixdown, bitrateKbps: Int,
-        sampleRate: AudioSampleRate = .hz48000, gainDb: Double = 0, trackName: String? = nil
+        sampleRate: AudioSampleRate = .hz48000, gainDb: Double = 0, trackName: String? = nil,
+        passthruOnly: PassthruCodec? = nil
     ) {
         self.codec = codec
         self.mixdown = mixdown
@@ -116,9 +119,12 @@ public struct AudioEncoding: Codable, Hashable, Sendable {
         self.sampleRate = sampleRate
         self.gainDb = gainDb
         self.trackName = trackName
+        self.passthruOnly = passthruOnly
     }
 
-    private enum CodingKeys: String, CodingKey { case codec, mixdown, bitrateKbps, sampleRate, gainDb, trackName }
+    private enum CodingKeys: String, CodingKey {
+        case codec, mixdown, bitrateKbps, sampleRate, gainDb, trackName, passthruOnly
+    }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -128,6 +134,7 @@ public struct AudioEncoding: Codable, Hashable, Sendable {
         sampleRate = try c.decodeIfPresent(AudioSampleRate.self, forKey: .sampleRate) ?? .hz48000
         gainDb = try c.decodeIfPresent(Double.self, forKey: .gainDb) ?? 0
         trackName = try c.decodeIfPresent(String.self, forKey: .trackName)
+        passthruOnly = try c.decodeIfPresent(PassthruCodec.self, forKey: .passthruOnly)
     }
 }
 
@@ -288,7 +295,8 @@ public struct EncodeSettings: Codable, Hashable, Sendable {
         guard audioCodec != .none, audioTracks != .none else { return [] }
         let main = AudioEncoding(
             codec: audioCodec, mixdown: audioMixdown, bitrateKbps: audioBitrateKbps,
-            sampleRate: audioOptions.sampleRate, gainDb: audioOptions.gainDb, trackName: audioOptions.trackName)
+            sampleRate: audioOptions.sampleRate, gainDb: audioOptions.gainDb, trackName: audioOptions.trackName,
+            passthruOnly: audioOptions.passthruOnly)
         guard let extraAudio, extraAudio.codec != .none else { return [main] }
         return [main, extraAudio]
     }

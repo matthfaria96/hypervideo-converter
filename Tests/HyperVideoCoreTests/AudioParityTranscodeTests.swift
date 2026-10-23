@@ -147,6 +147,19 @@ struct AudioParityTranscodeTests {
         #expect(try await formatIDs(of: lossless) == [kAudioFormatAppleLossless])
     }
 
+    @Test func passthruOnlyCopiesJustThatCodec() async throws {
+        let copied = try await convert([.init(sampleRate: 44_100)], container: .mp4) {
+            $0.audioCodec = .autoPassthru
+            $0.audioOptions.passthruOnly = .aac
+        }
+        #expect(try await MediaInspector.inspect(copied).audioTracks.first?.sampleRate == 44_100)
+        let fallback = try await convert([.init(sampleRate: 44_100)], container: .mp4) {
+            $0.audioCodec = .autoPassthru
+            $0.audioOptions.passthruOnly = .ac3
+        }
+        #expect(try await MediaInspector.inspect(fallback).audioTracks.first?.sampleRate == 48_000)
+    }
+
     @Test(arguments: [(6.0, 1.85, 2.15), (-6.0, 0.45, 0.55)])
     func gain(db: Double, low: Double, high: Double) async throws {
         let base = try await rms(of: convert([.init()]) { _ in })

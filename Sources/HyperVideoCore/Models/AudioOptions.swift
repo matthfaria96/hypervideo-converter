@@ -103,6 +103,8 @@ public struct AudioOptions: Codable, Hashable, Sendable {
     public var gainDb: Double = 0
     /// Name of the main version.
     public var trackName: String?
+    /// With Auto Passthru on the main version, copy only this codec; nil allows `allowedPassthru`.
+    public var passthruOnly: PassthruCodec?
     public var automaticNaming = false
     /// Empty means "use the selection behaviour".
     public var tracks: [AudioTrackSetting] = []
@@ -111,7 +113,7 @@ public struct AudioOptions: Codable, Hashable, Sendable {
 
     private enum CodingKeys: String, CodingKey {
         case languages, allowedPassthru, fallback, extraFirstTrackOnly, sampleRate
-        case gainDb, trackName, automaticNaming, tracks
+        case gainDb, trackName, automaticNaming, tracks, passthruOnly
     }
 
     public init(from decoder: Decoder) throws {
@@ -126,5 +128,6 @@ public struct AudioOptions: Codable, Hashable, Sendable {
         trackName = try c.decodeIfPresent(String.self, forKey: .trackName)
         automaticNaming = try c.decodeIfPresent(Bool.self, forKey: .automaticNaming) ?? d.automaticNaming
         tracks = try c.decodeIfPresent([AudioTrackSetting].self, forKey: .tracks) ?? d.tracks
+        passthruOnly = try c.decodeIfPresent(PassthruCodec.self, forKey: .passthruOnly)
     }
 }
