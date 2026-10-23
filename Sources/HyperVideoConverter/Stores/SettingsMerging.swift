@@ -29,7 +29,7 @@ extension EncodeSettings {
         copy.audioCodec = profile.audioCodec
         copy.audioBitrateKbps = profile.audioBitrateKbps
         if profile.audioCodec == .passthrough { copy.audioTracks = profile.audioTracks }
-        return copy.retuningAudioTracks().fixingCodecForContainer()
+        return copy.retuningAudioTracks().fixingCodecForContainer().normalizingEncoderOptions(after: self)
     }
 
     /// Whether the fields a quality profile decides still equal `profile`'s.
@@ -44,6 +44,7 @@ extension EncodeSettings {
     /// preset leaves at their defaults.
     func adopting(_ template: EncodeSettings) -> EncodeSettings {
         template.keepingPerVideo(from: self).keepingAdvanced(from: self, template: template).retuningAudioTracks()
+            .normalizingEncoderOptions(after: self)
     }
 
     /// The Audio tab's explicit tracks with the main audio encoder and bitrate, so a

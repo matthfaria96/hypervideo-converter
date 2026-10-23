@@ -104,4 +104,19 @@ struct VideoTabsLogicTests {
         #expect(parts?.red == 0 && parts?.green == 1 && parts?.blue == 0)
         #expect(PadColorHex.components("xyz") == nil)
     }
+
+    @Test func choosingACodecNormalizesProfileAndLevel() {
+        var s = EncodeSettings()
+        s.videoCodec = .h264
+        s.videoOptions.profile = .high
+        s.videoOptions.level = .l41
+        let hevc = s.choosing(codec: .hevc)
+        #expect(hevc.videoOptions.profile == VideoProfile.high.resolved(for: .hevc) && hevc.videoOptions.level == .auto)
+        let profiled = s.applyingProfile(QualityProfile.smallerFile.settings)
+        #expect(profiled.videoCodec == .hevc && profiled.videoOptions.level == .auto)
+        var template = EncodeSettings()
+        template.videoCodec = .hevc
+        #expect(s.adopting(template).videoOptions.level == .auto, "a kept H.264 level doesn't survive a codec change")
+        #expect(s.choosing(codec: .h264).videoOptions.level == .l41)
+    }
 }

@@ -15,7 +15,20 @@ extension EncodeSettings {
         var copy = self
         copy.videoCodec = codec
         if codec.isProRes { copy.container = .mov }
+        return copy.normalizingEncoderOptions()
+    }
+
+    /// Drops a video profile the codec doesn't offer, and the level outside H.264.
+    func normalizingEncoderOptions() -> EncodeSettings {
+        var copy = self
+        copy.videoOptions.profile = videoOptions.profile.resolved(for: videoCodec)
+        if videoCodec != .h264 { copy.videoOptions.level = .auto }
         return copy
+    }
+
+    /// Normalizes only when the codec differs from `previous`'s, like picking it would.
+    func normalizingEncoderOptions(after previous: EncodeSettings) -> EncodeSettings {
+        videoCodec == previous.videoCodec ? self : normalizingEncoderOptions()
     }
 
     /// Picking a format: a ProRes video that can't go there becomes HEVC.
