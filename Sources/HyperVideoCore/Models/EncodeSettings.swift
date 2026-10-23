@@ -39,21 +39,23 @@ public enum VideoCodec: String, Codable, CaseIterable, Identifiable, Sendable {
 }
 
 public enum AudioCodec: String, Codable, CaseIterable, Identifiable, Sendable {
-    case aac, alac, passthrough, none
+    case aac, heAAC, alac, passthrough, autoPassthru, none
 
     public var id: String { rawValue }
     public var displayName: String {
         switch self {
         case .aac: "AAC"
+        case .heAAC: "HE-AAC"
         case .alac: "Apple Lossless (ALAC)"
         case .passthrough: "Passthrough"
+        case .autoPassthru: "Auto Passthru"
         case .none: "No Audio"
         }
     }
 }
 
 public enum AudioMixdown: String, Codable, CaseIterable, Identifiable, Sendable {
-    case mono, stereo, surround51
+    case mono, stereo, surround51, surround71
 
     public var id: String { rawValue }
     public var channelCount: Int {
@@ -61,6 +63,7 @@ public enum AudioMixdown: String, Codable, CaseIterable, Identifiable, Sendable 
         case .mono: 1
         case .stereo: 2
         case .surround51: 6
+        case .surround71: 8
         }
     }
     public var displayName: String {
@@ -68,20 +71,28 @@ public enum AudioMixdown: String, Codable, CaseIterable, Identifiable, Sendable 
         case .mono: "Mono"
         case .stereo: "Stereo"
         case .surround51: "5.1 Surround"
+        case .surround71: "7.1 Surround"
         }
     }
 
     /// Picks the richest layout the source can actually feed.
     public func resolved(sourceChannels: Int) -> AudioMixdown {
         if channelCount <= sourceChannels { return self }
+        if self == .surround71 && sourceChannels >= 6 { return .surround51 }
         return sourceChannels >= 2 ? .stereo : .mono
     }
 }
 
 public enum AudioTrackSelection: String, Codable, CaseIterable, Identifiable, Sendable {
-    case first, all
+    case none, first, all
     public var id: String { rawValue }
-    public var displayName: String { self == .first ? "First Track" : "All Tracks" }
+    public var displayName: String {
+        switch self {
+        case .none: "None"
+        case .first: "First Track"
+        case .all: "All Tracks"
+        }
+    }
 }
 
 /// One way of encoding an audio track.
@@ -89,11 +100,32 @@ public struct AudioEncoding: Codable, Hashable, Sendable {
     public var codec: AudioCodec
     public var mixdown: AudioMixdown
     public var bitrateKbps: Int
+    public var sampleRate: AudioSampleRate = .hz48000
+    public var gainDb: Double = 0
+    public var trackName: String?
 
-    public init(codec: AudioCodec, mixdown: AudioMixdown, bitrateKbps: Int) {
+    public init(
+        codec: AudioCodec, mixdown: AudioMixdown, bitrateKbps: Int,
+        sampleRate: AudioSampleRate = .hz48000, gainDb: Double = 0, trackName: String? = nil
+    ) {
         self.codec = codec
         self.mixdown = mixdown
         self.bitrateKbps = bitrateKbps
+        self.sampleRate = sampleRate
+        self.gainDb = gainDb
+        self.trackName = trackName
+    }
+
+    private enum CodingKeys: String, CodingKey { case codec, mixdown, bitrateKbps, sampleRate, gainDb, trackName }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        codec = try c.decodeIfPresent(AudioCodec.self, forKey: .codec) ?? .aac
+        mixdown = try c.decodeIfPresent(AudioMixdown.self, forKey: .mixdown) ?? .stereo
+        bitrateKbps = try c.decodeIfPresent(Int.self, forKey: .bitrateKbps) ?? 160
+        sampleRate = try c.decodeIfPresent(AudioSampleRate.self, forKey: .sampleRate) ?? .hz48000
+        gainDb = try c.decodeIfPresent(Double.self, forKey: .gainDb) ?? 0
+        trackName = try c.decodeIfPresent(String.self, forKey: .trackName)
     }
 }
 

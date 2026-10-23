@@ -29,13 +29,21 @@ public struct SubtitleTrackInfo: Codable, Hashable, Identifiable, Sendable {
     /// Friendly format name, e.g. "Timed Text".
     public var format: String
     public var language: String?
+    /// The track's own title, when the source has one.
+    public var name: String?
+    /// Whether the track holds only forced lines; nil when unknown.
+    public var forcedOnly: Bool?
 
-    public init(id: Int, kind: Kind, format: String, language: String?) {
+    public init(id: Int, kind: Kind, format: String, language: String?, name: String? = nil, forcedOnly: Bool? = nil) {
         self.id = id
         self.kind = kind
         self.format = format
         self.language = language
+        self.name = name
+        self.forcedOnly = forcedOnly
     }
+
+    public var isForcedOnly: Bool { forcedOnly ?? false }
 
     /// The tracks an encode keeps: those the container can hold, narrowed by `selection`.
     public static func kept<Track>(
