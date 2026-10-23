@@ -1,113 +1,96 @@
+import AppKit
 import SwiftUI
 
-/// The app's dark palette (the window is always dark, like the design prototype).
+/// Design tokens. Colors are semantic and follow the system appearance, so the window
+/// looks native in light and dark mode and under Liquid Glass; the amber accent is the
+/// app's identity.
 enum Theme {
-    static let background = Color(hex: 0x171719)
-    static let sidebar = Color(hex: 0x1C1C1F)
-    static let inspector = Color(hex: 0x1E1E21)
-    static let panel = Color(hex: 0x222225)
-    static let panelRaised = Color(hex: 0x29292D)
-    static let control = Color(hex: 0x303034)
-    static let line = Color(hex: 0x3A3A40)
-    static let separator = Color(hex: 0x303034)
-    static let text = Color(hex: 0xF5F5F7)
-    static let muted = Color(hex: 0x9B9BA3)
-    static let faint = Color(hex: 0x8E8E96)
     static let accent = Color(hex: 0xFFB52E)
-    static let accentLight = Color(hex: 0xFFD071)
-    static let accentText = Color(hex: 0x201809)
-    static let accentWash = Color(hex: 0x3A3325)
-    static let selectedCard = Color(hex: 0x332B1D)
-    static let green = Color(hex: 0x65C98A)
-    static let red = Color(hex: 0xFF8585)
+    /// Status colors tuned for both appearances.
+    static let success = Color(light: 0x1F9D57, dark: 0x5FD48A)
+    static let danger = Color(light: 0xD63B3B, dark: 0xFF7F7F)
+    static let warning = Color(light: 0xB7791F, dark: 0xFFC14D)
+
+    static let background = Color(nsColor: .windowBackgroundColor)
+    static let separator = Color(nsColor: .separatorColor)
+}
+
+/// The 8 pt grid.
+enum Spacing {
+    static let xs: CGFloat = 4
+    static let s: CGFloat = 8
+    static let m: CGFloat = 12
+    static let l: CGFloat = 16
+    static let xl: CGFloat = 24
+    static let xxl: CGFloat = 32
+}
+
+enum Radius {
+    static let s: CGFloat = 6
+    static let m: CGFloat = 10
+    static let l: CGFloat = 14
+    static let xl: CGFloat = 20
 }
 
 extension Color {
     init(hex: UInt32) {
         self.init(red: Double(hex >> 16 & 0xFF) / 255, green: Double(hex >> 8 & 0xFF) / 255, blue: Double(hex & 0xFF) / 255)
     }
-}
 
-/// The amber call-to-action button.
-struct PrimaryButtonStyle: ButtonStyle {
-    @Environment(\.isEnabled) private var isEnabled
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.system(size: 13, weight: .bold))
-            .foregroundStyle(Theme.accentText)
-            .padding(.horizontal, 15)
-            .padding(.vertical, 9)
-            .background(configuration.isPressed ? Theme.accentLight : Theme.accent, in: .rect(cornerRadius: 8))
-            .opacity(isEnabled ? 1 : 0.45)
-            .scaleEffect(configuration.isPressed ? 0.985 : 1)
-            .contentShape(.rect)
+    /// One value per appearance.
+    init(light: UInt32, dark: UInt32) {
+        self.init(nsColor: NSColor(name: nil) { appearance in
+            let isDark = appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+            return NSColor(Color(hex: isDark ? dark : light))
+        })
     }
 }
 
-/// A quiet bordered button; `plain` drops the border, like the prototype's ghost buttons.
-struct SubtleButtonStyle: ButtonStyle {
-    var plain = false
-    @Environment(\.isEnabled) private var isEnabled
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.system(size: 12))
-            .foregroundStyle(plain ? Theme.muted : Theme.text)
-            .padding(.horizontal, 11)
-            .padding(.vertical, 6)
-            .background(background(configuration.isPressed), in: .rect(cornerRadius: 8))
-            .overlay {
-                if !plain { RoundedRectangle(cornerRadius: 8).strokeBorder(Theme.line) }
-            }
-            .opacity(isEnabled ? 1 : 0.45)
-            .contentShape(.rect)
-    }
-
-    private func background(_ pressed: Bool) -> Color {
-        if pressed { return Theme.line }
-        return plain ? .clear : Theme.control
-    }
+/// How much a card stands out from its background.
+enum CardProminence {
+    case standard, raised, selected
 }
 
-extension ButtonStyle where Self == PrimaryButtonStyle {
-    static var primary: PrimaryButtonStyle { PrimaryButtonStyle() }
-}
-
-extension ButtonStyle where Self == SubtleButtonStyle {
-    static var subtle: SubtleButtonStyle { SubtleButtonStyle() }
-    static var ghost: SubtleButtonStyle { SubtleButtonStyle(plain: true) }
-}
-
-/// A rounded panel with a hairline border.
+/// A rounded panel with a hairline border, filled with a system material-aware tint.
 struct CardBackground: ViewModifier {
-    var fill: Color = Theme.panel
-    var radius: CGFloat = 11
-    var stroke: Color = Theme.line
+    var prominence: CardProminence = .standard
+    var radius: CGFloat = Radius.m
 
     func body(content: Content) -> some View {
         content
             .background(fill, in: .rect(cornerRadius: radius))
-            .overlay { RoundedRectangle(cornerRadius: radius).strokeBorder(stroke) }
+            .overlay { RoundedRectangle(cornerRadius: radius).strokeBorder(stroke, lineWidth: prominence == .selected ? 1.5 : 1) }
+    }
+
+    private var fill: AnyShapeStyle {
+        switch prominence {
+        case .standard: AnyShapeStyle(.fill.quaternary)
+        case .raised: AnyShapeStyle(.fill.tertiary)
+        case .selected: AnyShapeStyle(Theme.accent.opacity(0.12))
+        }
+    }
+
+    private var stroke: AnyShapeStyle {
+        prominence == .selected ? AnyShapeStyle(Theme.accent.opacity(0.7)) : AnyShapeStyle(.separator.opacity(0.6))
     }
 }
 
 extension View {
-    func card(fill: Color = Theme.panel, radius: CGFloat = 11, stroke: Color = Theme.line) -> some View {
-        modifier(CardBackground(fill: fill, radius: radius, stroke: stroke))
+    func card(_ prominence: CardProminence = .standard, radius: CGFloat = Radius.m) -> some View {
+        modifier(CardBackground(prominence: prominence, radius: radius))
     }
 }
 
-/// Small uppercase section label ("LIBRARY", "WORKSPACE").
+/// Small uppercase section label.
 struct Eyebrow: View {
     let text: LocalizedStringKey
 
     var body: some View {
         Text(text)
             .textCase(.uppercase)
-            .font(.system(size: 10, weight: .bold))
-            .kerning(1)
-            .foregroundStyle(Theme.faint)
+            .font(.caption2.weight(.semibold))
+            .kerning(0.8)
+            .foregroundStyle(.secondary)
     }
 }
 

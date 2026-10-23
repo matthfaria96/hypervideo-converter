@@ -1,21 +1,32 @@
 import SwiftUI
 
-/// A titled panel used for every settings group.
+/// A titled card used for every settings group.
 struct SettingsSection<Content: View>: View {
     let title: LocalizedStringKey
     let symbol: String
     @ViewBuilder var content: Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: Spacing.m) {
             Label(title, systemImage: symbol)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(Theme.muted)
+                .font(.headline)
+                .symbolRenderingMode(.hierarchical)
+                .labelStyle(SectionLabelStyle())
             content
         }
-        .padding(18)
+        .padding(Spacing.l)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .card(fill: Theme.panel, radius: 12)
+        .card()
+    }
+}
+
+/// Section titles: a secondary symbol with the headline beside it.
+private struct SectionLabelStyle: LabelStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: Spacing.s) {
+            configuration.icon.foregroundStyle(.secondary).frame(width: 18)
+            configuration.title
+        }
     }
 }
 
@@ -27,55 +38,59 @@ struct InfoChip: View {
 
     var body: some View {
         Label(text, systemImage: symbol)
-            .font(.callout.weight(.medium))
+            .font(.caption.weight(.medium))
             .monospacedDigit()
-            .padding(.horizontal, 12)
-            .padding(.vertical, 7)
-            .background((tint ?? Theme.muted).opacity(tint == nil ? 0.18 : 0.3), in: .capsule)
+            .padding(.horizontal, Spacing.s + 2)
+            .padding(.vertical, Spacing.xs + 1)
+            .background(tint.map { AnyShapeStyle($0.opacity(0.22)) } ?? AnyShapeStyle(.fill.tertiary), in: .capsule)
     }
 }
 
-private struct SettingsLabelWidthKey: EnvironmentKey { static let defaultValue: CGFloat = 170 }
+private struct SettingsLabelWidthKey: EnvironmentKey { static let defaultValue: CGFloat = 160 }
 
 extension EnvironmentValues {
-    /// Width of the label column of `SettingRow` (narrower in the 460 pt panel).
+    /// Width of the label column of `SettingRow` (narrower in the inspector).
     var settingsLabelWidth: CGFloat {
         get { self[SettingsLabelWidthKey.self] }
         set { self[SettingsLabelWidthKey.self] = newValue }
     }
 }
 
-/// Label/control row aligned on a shared leading column.
+/// Label and control on one line, aligned on a shared label column; the help text
+/// runs under the whole row, so long hints never squeeze the label.
 struct SettingRow<Control: View>: View {
     let title: LocalizedStringKey
     var help: LocalizedStringKey?
     @ViewBuilder var control: Control
     @Environment(\.settingsLabelWidth) private var labelWidth
 
-    /// Side by side when the control fits next to the label column; otherwise the
-    /// label goes above the control, so a wide control never widens its panel.
     var body: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(alignment: .center, spacing: 16) {
-                label.frame(width: labelWidth, alignment: .leading)
-                control
-                Spacer(minLength: 0)
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            // Side by side when the control fits next to the label column; otherwise
+            // the label goes above the control, so a wide control never widens its panel.
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .firstTextBaseline, spacing: Spacing.l) {
+                    label.frame(width: labelWidth, alignment: .leading)
+                    control
+                    Spacer(minLength: 0)
+                }
+                VStack(alignment: .leading, spacing: Spacing.s) {
+                    label
+                    control
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            VStack(alignment: .leading, spacing: 6) {
-                label
-                control
+            if let help {
+                Text(help)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
     private var label: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(title)
-            if let help {
-                Text(help).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            }
-        }
+        Text(title).fixedSize(horizontal: false, vertical: true)
     }
 }
 
@@ -84,16 +99,18 @@ struct StatusBanner: View {
     let messages: [String]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: Spacing.xs + 2) {
             ForEach(messages, id: \.self) { message in
                 Label(message, systemImage: "exclamationmark.triangle.fill")
                     .symbolRenderingMode(.multicolor)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
         .font(.callout)
-        .padding(14)
+        .padding(Spacing.m)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .card(fill: Color.orange.opacity(0.14), radius: 10, stroke: Color.orange.opacity(0.35))
+        .background(Theme.warning.opacity(0.12), in: .rect(cornerRadius: Radius.m))
+        .overlay { RoundedRectangle(cornerRadius: Radius.m).strokeBorder(Theme.warning.opacity(0.35)) }
     }
 }
 

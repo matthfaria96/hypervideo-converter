@@ -59,6 +59,13 @@ ls "$APP/Contents/Resources"/pt-BR.lproj/Localizable.strings >/dev/null 2>&1 \
   || ls "$APP/Contents/Resources"/pt-br.lproj/Localizable.strings >/dev/null 2>&1 \
   || fail "the Portuguese translations were not copied into the app"
 
+# The compiled asset catalog (the app's accent color): NSAccentColorName looks it up
+# in the main bundle, so it moves next to the executable's resources too.
+CAR=("$BIN_DIR"/HyperVideoConverter_HyperVideoConverter.bundle/**/Assets.car(N))
+CAR="${CAR[1]:-}"
+[[ -n "$CAR" && -f "$CAR" ]] || fail "Assets.car was not built from Sources/HyperVideoConverter/Resources/Colors.xcassets"
+cp "$CAR" "$APP/Contents/Resources/Assets.car"
+
 if [[ ! -f "$WORK/AppIcon.icns" || Resources/AppIcon.png -nt "$WORK/AppIcon.icns" ]]; then
   ICONSET="$WORK/AppIcon.iconset"
   rm -rf "$ICONSET"; mkdir -p "$ICONSET"

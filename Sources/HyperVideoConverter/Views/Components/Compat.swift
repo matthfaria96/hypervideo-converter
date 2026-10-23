@@ -36,10 +36,27 @@ extension View {
         if #available(macOS 26, *) { buttonStyle(.glass) } else { buttonStyle(.bordered) }
     }
 
-    /// `.buttonStyle(.glassProminent)` on macOS 26+, `.borderedProminent` before that.
+    /// `.buttonStyle(.glassProminent)` on macOS 26+, `.borderedProminent` before that,
+    /// filled with the app's accent (prominent glass doesn't inherit the window tint).
     @ViewBuilder
     func compatGlassProminentButtonStyle() -> some View {
-        if #available(macOS 26, *) { buttonStyle(.glassProminent) } else { buttonStyle(.borderedProminent) }
+        if #available(macOS 26, *) {
+            buttonStyle(.glassProminent).tint(Theme.accent)
+        } else {
+            buttonStyle(.borderedProminent).tint(Theme.accent)
+        }
+    }
+
+    /// The bar at the bottom of the workspace: the window's bar material, which the
+    /// system renders as glass on macOS 26+.
+    func compatBarBackground() -> some View {
+        background(.bar)
+    }
+
+    /// Soft scroll-edge fading under toolbars on macOS 26+; nothing before that.
+    @ViewBuilder
+    func compatSoftScrollEdges() -> some View {
+        if #available(macOS 26, *) { scrollEdgeEffectStyle(.soft, for: .all) } else { self }
     }
 }
 
