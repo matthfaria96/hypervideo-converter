@@ -18,7 +18,7 @@ struct AudioBehaviorSection: View {
                 .fixedSize()
             }
             SettingRow(title: "Languages", help: "Empty keeps every language") {
-                TextField("eng, por", text: languages)
+                CommittingTextField(title: "eng, por", text: languages)
                     .textFieldStyle(.roundedBorder)
                     .frame(maxWidth: 220)
             }
