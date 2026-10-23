@@ -5,10 +5,10 @@ extension PipelineFactory {
     /// track that `main` references as its chapter list, which is how MP4 and
     /// QuickTime players find chapters.
     func chapterPump(attachedTo main: AVAssetWriterInput) async throws -> SamplePump? {
-        guard settings.keepMetadata else { return nil }
+        guard settings.chapterOptions.writesMarkers(keepMetadata: settings.keepMetadata) else { return nil }
         let range = reader.timeRange
         let chapters = Chapter.clipped(
-            try await MediaInspector.chapters(of: asset), start: range.start.seconds, end: range.end.seconds
+            Chapter.renamed(try await MediaInspector.chapters(of: asset), titles: settings.chapterOptions.titles), start: range.start.seconds, end: range.end.seconds
         )
         guard !chapters.isEmpty, let format = TimedText.format(mediaType: kCMMediaType_Text) else { return nil }
         let samples = chapters.compactMap { TimedText.sample($0.title, start: $0.start, duration: $0.duration, format: format) }

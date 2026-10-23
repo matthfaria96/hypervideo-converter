@@ -2,8 +2,8 @@
 
 /// The metadata items the output movie carries at the movie level.
 enum WriterMetadata {
-    private struct Row {
-        let keyPath: KeyPath<MetadataTags, String?>
+    private struct Row: Sendable {
+        let keyPath: any KeyPath<MetadataTags, String?> & Sendable
         let iTunes: AVMetadataIdentifier
         let quickTime: AVMetadataIdentifier
         let commonKey: AVMetadataKey?
