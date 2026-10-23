@@ -1,4 +1,5 @@
 import AudioToolbox
+import AVFoundation
 import Foundation
 import Testing
 @testable import HyperVideoCore
@@ -152,5 +153,100 @@ struct ParityModelTests {
         #expect(MetadataTags().isEmpty)
         #expect(MetadataTags(title: "  ").isEmpty)
         #expect(!MetadataTags(genre: "Drama").isEmpty)
+    }
+
+    // MARK: EncodeSettings wiring
+
+    private func fullSettings() -> EncodeSettings {
+        var s = EncodeSettings()
+        s.videoOptions.speed = .quality
+        s.videoOptions.frameRateMode = .variable
+        s.videoOptions.profile = .high
+        s.videoOptions.level = .l41
+        s.pictureOptions.cropMode = .automatic
+        s.pictureOptions.allowUpscaling = true
+        s.pictureOptions.anamorphic = .automatic
+        s.pictureOptions.padding = Padding(mode: .both, color: .custom, customHex: "112233")
+        s.audioOptions.languages = ["eng"]
+        s.audioOptions.gainDb = 3
+        s.audioOptions.trackName = "Main"
+        s.audioOptions.tracks = [AudioTrackSetting(sourceTrackID: 2,
+            encoding: AudioEncoding(codec: .heAAC, mixdown: .surround71, bitrateKbps: 256, sampleRate: .hz32000, gainDb: -2, trackName: "x"))]
+        s.subtitleOptions.tracks = [SubtitleTrackSetting(sourceTrackID: 4, isDefault: true, forcedOnly: true, name: "Forced")]
+        s.chapterOptions.markers = true
+        s.chapterOptions.titles = ["One", ""]
+        s.tags = MetadataTags(title: "T", actors: "A", director: "D", releaseDate: "2020", comment: "C",
+                              genre: "G", description: "Desc", plot: "P")
+        s.alignAVStart = true
+        return s
+    }
+
+    @Test func legacySettingsDecodeToDefaults() throws {
+        let data = try JSONEncoder().encode(EncodeSettings())
+        var object = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        for key in ["videoOptions", "pictureOptions", "audioOptions", "subtitleOptions", "chapterOptions", "tags", "alignAVStart"] {
+            object[key] = nil
+        }
+        let legacy = try JSONSerialization.data(withJSONObject: object)
+        #expect(try JSONDecoder().decode(EncodeSettings.self, from: legacy) == EncodeSettings())
+    }
+
+    @Test func legacyPrioritizeSpeedBridges() throws {
+        let fast = try decode(EncodeSettings.self, #"{"prioritizeSpeed":true}"#)
+        #expect(fast.videoOptions.speed == .speed)
+        #expect(fast.prioritizeSpeed)
+        let slow = try decode(EncodeSettings.self, #"{"prioritizeSpeed":false}"#)
+        #expect(slow.videoOptions.speed == .balanced)
+    }
+
+    @Test func prioritizeSpeedSetter() {
+        var s = EncodeSettings()
+        s.prioritizeSpeed = true
+        #expect(s.videoOptions.speed == .speed)
+        s.prioritizeSpeed = false
+        #expect(s.videoOptions.speed == .balanced)
+        s.videoOptions.speed = .quality
+        s.prioritizeSpeed = false
+        #expect(s.videoOptions.speed == .quality)
+    }
+
+    @Test func fullSettingsRoundTrip() throws {
+        let original = fullSettings()
+        let data = try JSONEncoder().encode(original)
+        #expect(try JSONDecoder().decode(EncodeSettings.self, from: data) == original)
+    }
+
+    @Test func validationNewRules() {
+        var s = EncodeSettings()
+        s.videoCodec = .h264
+        s.maxResolution = .uhd4320
+        #expect(s.validationIssues.contains("H.264 can't encode 8K (4320p); choose H.265 or a lower resolution."))
+        var t = EncodeSettings()
+        t.audioOptions.tracks = [AudioTrackSetting(sourceTrackID: 1, encoding: AudioEncoding(codec: .alac, mixdown: .stereo, bitrateKbps: 160))]
+        #expect(t.validationIssues.contains("Apple Lossless audio requires the QuickTime (MOV) or Matroska (MKV) container."))
+        var u = EncodeSettings()
+        u.videoCodec = .proRes422LT
+        #expect(u.videoCodec.isProRes && VideoCodec.proRes422Proxy.isProRes)
+        #expect(u.validationIssues.contains("Apple ProRes requires the QuickTime (MOV) container."))
+    }
+
+    @Test func noAudioTracksMeansNoEncodings() {
+        var s = EncodeSettings()
+        s.audioTracks = .none
+        #expect(s.audioEncodings.isEmpty)
+    }
+
+    @Test func frameRateAndResolutionLists() {
+        let expected: [Double] = [0, 5, 10, 12, 15, 23.976, 24, 25, 29.97, 30, 48, 50, 59.94, 60, 72, 75, 90, 100, 120]
+        #expect(FrameRate.allCases.map(\.rawValue) == expected)
+        #expect(MaxResolution.uhd4320.boundingBox(portrait: false) == CGSize(width: 7680, height: 4320))
+    }
+
+    @Test func aacWriterUnchanged() {
+        let e = AudioEncoding(codec: .aac, mixdown: .stereo, bitrateKbps: 160)
+        let d = OutputSettingsBuilder.audioWriter(encoding: e, channels: 2)
+        #expect(d[AVSampleRateKey] as? Int == 48_000)
+        #expect(d[AVEncoderBitRateKey] as? Int == 160_000)
+        #expect(d[AVFormatIDKey] as? UInt32 == kAudioFormatMPEG4AAC)
     }
 }
