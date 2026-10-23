@@ -109,6 +109,16 @@ struct OpenSourceLicensesView: View {
                             .padding(12)
                             .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 8))
                     }
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(verbatim: "Upscayl (upscayl-bin) · Real-ESRGAN")
+                            .font(.system(size: 13, weight: .semibold))
+                        Text(verbatim: "GNU Affero General Public License v3.0")
+                            .font(.system(size: 11.5))
+                            .foregroundStyle(.secondary)
+                        Text("AI Upscale runs Upscayl as a separate program. Its licence is in the app (Contents/Resources/Licenses) and its source code is at github.com/upscayl/upscayl-ncnn.")
+                            .font(.system(size: 11.5))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
                 .padding(20)
             }

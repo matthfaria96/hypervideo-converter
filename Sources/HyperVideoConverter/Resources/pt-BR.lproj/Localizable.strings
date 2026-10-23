@@ -698,3 +698,4 @@
 "The AI engine (Upscayl) wasn't found in the app." = "O motor de IA (Upscayl) não foi encontrado no app.";
 "This file has no video to upscale." = "Este arquivo não tem vídeo para ampliar.";
 "AI Upscale failed: %@" = "O AI Upscale falhou: %@";
+"AI Upscale runs Upscayl as a separate program. Its licence is in the app (Contents/Resources/Licenses) and its source code is at github.com/upscayl/upscayl-ncnn." = "O AI Upscale roda o Upscayl como um programa separado. A licença dele está no app (Contents/Resources/Licenses) e o código-fonte em github.com/upscayl/upscayl-ncnn.";
