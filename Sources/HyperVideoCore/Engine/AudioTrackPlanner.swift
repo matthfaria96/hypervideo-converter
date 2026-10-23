@@ -56,7 +56,7 @@ enum AutoPassthru {
 
     static func containerAccepts(_ codec: PassthruCodec, _ container: ContainerFormat) -> Bool {
         switch container {
-        case .mp4, .m4v: [.aac, .ac3, .eac3, .mp3].contains(codec)
+        case .mp4, .m4v, .m4a: [.aac, .ac3, .eac3, .mp3].contains(codec)
         case .mov: [.aac, .ac3, .eac3, .mp3, .mp2, .alac].contains(codec)
         case .mkv: [.aac, .ac3, .eac3, .mp3, .alac].contains(codec)
         }

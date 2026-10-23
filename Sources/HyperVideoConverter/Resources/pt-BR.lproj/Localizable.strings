@@ -748,3 +748,9 @@
 "Measured on a %@ clip" = "Medido num trecho de %@";
 "Make Again" = "Gerar de novo";
 "Result" = "Resultado";
+
+/* Audio only */
+"Audio only (M4A)" = "Só áudio (M4A)";
+"M4A — audio only" = "M4A — só áudio";
+"Audio only output needs an audio track to keep." = "A saída só de áudio precisa manter uma faixa de áudio.";
+"Apple's audio export isn't available for this file." = "A exportação de áudio da Apple não está disponível para este arquivo.";

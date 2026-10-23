@@ -1,7 +1,7 @@
 import Foundation
 
 public enum ContainerFormat: String, Codable, CaseIterable, Identifiable, Sendable {
-    case mp4, m4v, mov, mkv
+    case mp4, m4v, mov, mkv, m4a
 
     public var id: String { rawValue }
     public var fileExtension: String { rawValue }
@@ -11,8 +11,12 @@ public enum ContainerFormat: String, Codable, CaseIterable, Identifiable, Sendab
         case .m4v: "M4V"
         case .mov: "QuickTime (MOV)"
         case .mkv: "Matroska (MKV)"
+        case .m4a: "Audio only (M4A)"
         }
     }
+
+    /// M4A keeps just the sound: the picture, subtitles and chapters are left out.
+    public var isAudioOnly: Bool { self == .m4a }
 
     /// Whether the container can hold Apple Lossless audio.
     public var supportsALAC: Bool { self == .mov || self == .mkv }
@@ -269,6 +273,9 @@ public struct EncodeSettings: Codable, Hashable, Sendable {
             issues.append("Apple Lossless audio requires the QuickTime (MOV) or Matroska (MKV) container.")
         }
 
+        if container.isAudioOnly && audioCodec == .none && audioOptions.tracks.isEmpty {
+            issues.append("Audio only output needs an audio track to keep.")
+        }
         if videoCodec == .h264 && maxResolution == .uhd4320 {
             issues.append("H.264 can't encode 8K (4320p); choose H.265 or a lower resolution.")
         }

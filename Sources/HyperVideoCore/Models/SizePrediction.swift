@@ -27,6 +27,12 @@ public extension OutputEstimate {
     /// A size for any settings: exact or bitrate-based where possible, otherwise a
     /// bits-per-pixel rule of thumb × output resolution × frame rate × duration, plus audio.
     static func prediction(info: MediaInfo, settings: EncodeSettings) -> SizePrediction? {
+        if settings.container.isAudioOnly {
+            // Apple's M4A export: AAC at about 256 kbit/s.
+            let duration = settings.outputDuration(sourceDuration: info.duration)
+            guard duration > 0, !info.audioTracks.isEmpty else { return nil }
+            return SizePrediction(bytes: Int64(256_000.0 / 8 * duration), kind: .approximate)
+        }
         if let bytes = bytes(info: info, settings: settings) {
             return SizePrediction(bytes: bytes, kind: settings.videoCodec == .passthrough ? .exact : .upTo)
         }

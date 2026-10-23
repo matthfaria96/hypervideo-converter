@@ -107,7 +107,7 @@ private struct FormatPicker: View {
     let choose: @MainActor @Sendable (ContainerFormat) -> Void
 
     var body: some View {
-        MenuField(label: "Output Format", selection: settings.container, options: ContainerFormat.allCases,
+        MenuField(label: "Output Format", selection: settings.container, options: ContainerFormat.allCases.filter { !$0.isAudioOnly },
                   title: Self.title, choose: choose)
     }
 
@@ -117,6 +117,7 @@ private struct FormatPicker: View {
         case .mov: "MOV — Apple / editing"
         case .mkv: "MKV — multiple tracks"
         case .m4v: "M4V — Apple devices"
+        case .m4a: "M4A — audio only"
         }
     }
 }

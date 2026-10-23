@@ -83,6 +83,10 @@ public struct TranscodeEngine: Sendable {
         progress: @escaping @Sendable (Double) -> Void
     ) async throws -> TranscodeOutput {
         guard settings.isValid else { throw TranscodeError.invalidSettings(settings.validationIssues) }
+        if settings.container.isAudioOnly {
+            return try await audioOnlyTranscode(source: source, destination: destination, settings: settings,
+                                                workTag: workTag, progress: progress)
+        }
         if let upscale = settings.upscale {
             return try await upscaleTranscode(source: source, destination: destination, settings: settings,
                                               upscale: upscale, workTag: workTag, progress: progress)

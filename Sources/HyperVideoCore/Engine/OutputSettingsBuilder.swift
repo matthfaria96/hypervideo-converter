@@ -43,6 +43,7 @@ public enum OutputSettingsBuilder {
         case .mp4: .mp4
         case .m4v: .m4v
         case .mov, .mkv: .mov
+        case .m4a: .m4a
         }
     }
 
