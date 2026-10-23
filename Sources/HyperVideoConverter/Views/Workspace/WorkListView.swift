@@ -100,6 +100,8 @@ private struct SourceMenu: View {
         Divider()
         Button("Add to Queue", systemImage: "text.badge.plus") { model.enqueue([source.id]) }
             .disabled(source.info == nil)
+        Button("Preview Result…", systemImage: "rectangle.split.2x1") { model.ui.previewSourceID = source.id }
+            .disabled(source.info == nil)
         Button("Quick Look", systemImage: "eye") { model.ui.quickLookURL = source.url }
         Button("Show in Finder", systemImage: "folder") { SystemIntegration.reveal([source.url]) }
         Divider()

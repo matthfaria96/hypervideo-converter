@@ -32,6 +32,8 @@ final class UIState {
     var lastRunStartedAt: Date?
     /// Compress mode's target, in MB per video (stored by AppModel).
     var compressTargetMB: Double?
+    /// The video whose conversion preview is open.
+    var previewSourceID: UUID?
     /// A run finished since History was last opened (the footer's badge turns green).
     var hasUnseenResults = false
     /// Confirmations of destructive actions.

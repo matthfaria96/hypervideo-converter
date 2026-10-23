@@ -50,6 +50,9 @@ struct ContentView: View {
         } isTargeted: { model.ui.isDropTargeted = $0 }
         .sheet(item: $model.presentedPage) { PageSheet(page: $0) }
         .sheet(item: $model.pendingFolderImport) { FolderImportSheet(pending: $0) }
+        .sheet(isPresented: previewIsShown) {
+            if let id = model.ui.previewSourceID { PreviewSheet(sourceID: id) }
+        }
         .alert(Text(verbatim: model.alertTitle ?? String(localized: "Something went wrong")),
                isPresented: .constant(model.alertMessage != nil)) {
             Button("OK") { model.alertMessage = nil; model.alertTitle = nil }
@@ -58,6 +61,12 @@ struct ContentView: View {
         }
     }
 
+}
+
+extension ContentView {
+    var previewIsShown: Binding<Bool> {
+        Binding(get: { model.ui.previewSourceID != nil }, set: { if !$0 { model.ui.previewSourceID = nil } })
+    }
 }
 
 extension WorkMode {

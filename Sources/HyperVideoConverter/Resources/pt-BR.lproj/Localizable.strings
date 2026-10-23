@@ -737,3 +737,14 @@
 "To stay sharp at this size, %lld video(s) get a smaller resolution." = "Para continuar nítido nesse tamanho, %lld vídeo(s) terão uma resolução menor.";
 "The audio becomes AAC and the video HEVC, at the bitrate that fills the target." = "O áudio vira AAC e o vídeo HEVC, com a taxa de bits que preenche o tamanho-alvo.";
 "%lld MB" = "%lld MB";
+
+/* Conversion preview */
+"Preview" = "Prévia";
+"Preview Result…" = "Prévia do resultado…";
+"Preview the result on a short clip" = "Ver o resultado num trecho curto";
+"Upscaling a few frames…" = "Ampliando alguns quadros…";
+"Converting a 2-second clip…" = "Convertendo um trecho de 2 segundos…";
+"Couldn't make the preview" = "Não foi possível gerar a prévia";
+"Measured on a %@ clip" = "Medido num trecho de %@";
+"Make Again" = "Gerar de novo";
+"Result" = "Resultado";

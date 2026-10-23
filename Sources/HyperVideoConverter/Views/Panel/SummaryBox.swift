@@ -14,6 +14,7 @@ struct SummaryBox: View {
                 ProgressRow(progress: progress).motionTransition(.banner)
             }
             HStack(spacing: Spacing.s) {
+                previewButton
                 convertButton
                 if model.queue.runningCount > 0 || model.queue.isProcessing {
                     Button {
@@ -64,6 +65,21 @@ struct SummaryBox: View {
             .fixedSize()
             .help(model.destinationFolder.path)
         }
+    }
+
+    /// A short real conversion of the selected (or first) video, before committing to all.
+    private var previewButton: some View {
+        let target = model.selectedSource ?? model.sources.first { $0.info != nil }
+        return Button {
+            model.ui.previewSourceID = target?.id
+        } label: {
+            Image(systemName: "rectangle.split.2x1")
+        }
+        .compatGlassButtonStyle()
+        .controlSize(.large)
+        .disabled(target?.info == nil || model.queue.runningCount > 0)
+        .help("Preview the result on a short clip")
+        .accessibilityLabel(Text("Preview Result…"))
     }
 
     @ViewBuilder
