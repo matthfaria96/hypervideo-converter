@@ -100,13 +100,13 @@
 "Copied as text, with their language; players show them on request" = "Copiadas como texto, com o idioma; os players as mostram quando pedido";
 "Copies the audio tracks as they are whenever possible." = "Preserva as faixas de áudio sempre que possível.";
 "Copy streams without re-encoding" = "Copia os fluxos sem recodificar";
-"Couldn't export presets: %@" = "Não foi possível exportar os perfis: %@";
+"Couldn't export presets: %@" = "Não foi possível exportar as predefinições: %@";
 "Crisper edges; best kept light" = "Bordas mais nítidas; melhor usar leve";
 "Crop" = "Recorte";
 "Crop to 2.39:1" = "Recortar para 2.39:1";
 "Custom" = "Personalizado";
 "Default" = "Padrão";
-"Default preset" = "Perfil padrão";
+"Default preset" = "Predefinição padrão";
 "Deinterlace" = "Desentrelaçar";
 "Delete" = "Apagar";
 "Denoise" = "Reduzir ruído";
@@ -130,10 +130,10 @@
 "End" = "Fim";
 "Estimated from the bitrates. The real size can vary slightly." = "Estimado pelas taxas de bits. O tamanho real pode variar um pouco.";
 "Estimating…" = "Estimando…";
-"Every video found in the folder and its subfolders gets this preset. You can still change each one afterwards." = "Todos os vídeos da pasta e subpastas recebem este perfil. Você ainda pode mudar cada um depois.";
+"Every video found in the folder and its subfolders gets this preset. You can still change each one afterwards." = "Todos os vídeos da pasta e subpastas recebem esta predefinição. Você ainda pode mudar cada um depois.";
 "Expand Sidebar" = "Expandir barra lateral";
 "Expand sidebar" = "Expandir barra lateral";
-"Export My Presets…" = "Exportar meus perfis…";
+"Export My Presets…" = "Exportar minhas predefinições…";
 "Extra Version" = "Versão extra";
 "Falls back automatically if the source has fewer channels" = "Se o original tiver menos canais, ajusta automaticamente";
 "Faster encodes at slightly lower efficiency" = "Conversões mais rápidas, com eficiência um pouco menor";
@@ -163,10 +163,10 @@
 "High-bitrate H.264 for upload" = "H.264 com taxa alta para upload";
 "Highest-quality 4:2:2 intermediate" = "Intermediário 4:2:2 de máxima qualidade";
 "History" = "Histórico";
-"HyperVideo or HandBrake preset exports (.json)" = "Perfis exportados do HyperVideo ou HandBrake (.json)";
+"HyperVideo or HandBrake preset exports (.json)" = "Predefinições exportadas do HyperVideo ou HandBrake (.json)";
 "Import" = "Importar";
-"Import Presets…" = "Importar perfis…";
-"Imported %lld presets." = "%lld perfis importados.";
+"Import Presets…" = "Importar predefinições…";
+"Imported %lld presets." = "%lld predefinições importadas.";
 "Interlaced" = "Entrelaçado";
 "Keep Original" = "Manter original";
 "Keep metadata" = "Manter metadados";
@@ -196,7 +196,7 @@
 "Move Up" = "Mover para cima";
 "Move to Top" = "Mover para o topo";
 "Moves the index to the start for fast streaming" = "Move o índice para o início, para streaming rápido";
-"My Presets" = "Meus perfis";
+"My Presets" = "Minhas predefinições";
 "Name" = "Nome";
 "Near Lossless" = "Quase sem perdas";
 "Needs QuickTime (MOV)" = "Requer QuickTime (MOV)";
@@ -226,8 +226,8 @@
 "Play Selection" = "Reproduzir seleção";
 "Play a sound when the queue finishes" = "Tocar um som quando a fila terminar";
 "Preserves detail and sharpness" = "Preserva detalhes e nitidez";
-"Preset" = "Perfil";
-"Presets apply to the selected videos, or to every video in the list." = "Os perfis valem para os vídeos selecionados, ou para todos os vídeos da lista.";
+"Preset" = "Predefinição";
+"Presets apply to the selected videos, or to every video in the list." = "As predefinições valem para os vídeos selecionados, ou para todos os vídeos da lista.";
 "Preview" = "Pré-visualização";
 "Prioritize speed" = "Priorizar velocidade";
 "Prioritizes saving space" = "Prioriza economia de espaço";
@@ -249,7 +249,7 @@
 "Remove metadata" = "Remover metadados";
 "Remux (Passthrough)" = "Remux (cópia direta)";
 "Rename" = "Renomear";
-"Rename Preset" = "Renomear perfil";
+"Rename Preset" = "Renomear predefinição";
 "Rename…" = "Renomear…";
 "Reset" = "Redefinir";
 "Resolution" = "Resolução";
@@ -262,10 +262,10 @@
 "Same as Source" = "Igual ao original";
 "Save" = "Salvar";
 "Save Current Settings…" = "Salvar configurações atuais…";
-"Save Preset" = "Salvar perfil";
+"Save Preset" = "Salvar predefinição";
 "Save converted files to" = "Salvar arquivos convertidos em";
 "Save to" = "Salvar em";
-"Saves the output settings shown in the inspector as a reusable preset." = "Salva as configurações de saída mostradas no painel como um perfil reutilizável.";
+"Saves the output settings shown in the inspector as a reusable preset." = "Salva as configurações de saída mostradas no painel como uma predefinição reutilizável.";
 "Scan" = "Varredura";
 "Select None" = "Desmarcar todos";
 "Select one video in the list to edit its advanced settings." = "Selecione um vídeo na lista para editar as configurações avançadas.";
@@ -296,7 +296,7 @@
 "Subtitles" = "Legendas";
 "Summary" = "Resumo";
 "That file has no subtitles HyperVideo can read." = "Esse arquivo não tem legendas que o HyperVideo consiga ler.";
-"That file isn't a HyperVideo or HandBrake preset export." = "Esse arquivo não é uma exportação de perfis do HyperVideo ou HandBrake.";
+"That file isn't a HyperVideo or HandBrake preset export." = "Esse arquivo não é uma exportação de predefinições do HyperVideo ou HandBrake.";
 "The estimate depends on the original video, the codec and the settings you choose." = "A estimativa depende do vídeo original, codec e configurações escolhidas.";
 "This %@ source will be converted to SDR. Choose HEVC 10-bit or ProRes to keep HDR." = "Este vídeo %@ será convertido para SDR. Escolha HEVC 10 bits ou ProRes para manter o HDR.";
 "This codec has a fixed quality, so there's nothing to tune." = "Este codec tem qualidade fixa, não há o que ajustar.";
@@ -378,8 +378,8 @@
 "Convert %lld Videos" = "Converter %lld vídeos";
 "Convert 1 Video" = "Converter 1 vídeo";
 "Converting %lld of %lld · %lld%%" = "Convertendo %1$lld de %2$lld · %3$lld%%";
-"Couldn't export profiles" = "Não foi possível exportar os perfis";
-"Couldn't import profiles" = "Não foi possível importar os perfis";
+"Couldn't export profiles" = "Não foi possível exportar as predefinições";
+"Couldn't import profiles" = "Não foi possível importar as predefinições";
 "Deselect All" = "Desmarcar todos";
 "Discord Small" = "Discord leve";
 "Dismiss" = "Fechar";
@@ -389,7 +389,7 @@
 "Editing: all %lld videos" = "Editando: todos os %lld vídeos";
 "Editing: next videos added" = "Editando: próximos vídeos";
 "Editing: the video in the list" = "Editando: o vídeo da lista";
-"Every video found in the folder and its subfolders gets this profile. You can still change each one afterwards." = "Todos os vídeos da pasta e das subpastas recebem este perfil. Você ainda pode mudar cada um depois.";
+"Every video found in the folder and its subfolders gets this profile. You can still change each one afterwards." = "Todos os vídeos da pasta e das subpastas recebem esta predefinição. Você ainda pode mudar cada um depois.";
 "Fast 1080p30" = "Rápido 1080p30";
 "Fast 480p30" = "Rápido 480p30";
 "Fast 720p30" = "Rápido 720p30";
@@ -412,7 +412,7 @@
 "Import %lld Folders" = "Importar %lld pastas";
 "Import “%@”" = "Importar “%@”";
 "Lets the encoder pick the size that keeps the picture looking right" = "Deixa o codificador escolher o tamanho que mantém a imagem bonita";
-"Make this the default profile for new videos" = "Usar este perfil como padrão para novos vídeos";
+"Make this the default profile for new videos" = "Usar esta predefinição como padrão para novos vídeos";
 "Maximum Compression" = "Compressão máxima";
 "No videos found" = "Nenhum vídeo encontrado";
 "Only the selected videos change. Click ✕ to edit all of them." = "Só os vídeos selecionados mudam. Clique em ✕ para editar todos.";
@@ -423,8 +423,8 @@
 "Play the converted video" = "Reproduzir o vídeo convertido";
 "ProRes 422 HQ Production" = "ProRes 422 HQ para edição";
 "ProRes 422 Production" = "ProRes 422 para edição";
-"Profile" = "Perfil";
-"Profiles imported" = "Perfis importados";
+"Profile" = "Predefinição";
+"Profiles imported" = "Predefinições importadas";
 "Put this video back in the queue" = "Coloca este vídeo de volta na fila";
 "Queue finished" = "Fila concluída";
 "Queue finished with errors" = "Fila concluída com erros";
@@ -452,7 +452,7 @@
 "Subtitles not added" = "Legendas não adicionadas";
 "The file type, shown as the file's extension (.mp4, .mov…)." = "O tipo de arquivo, que aparece como extensão (.mp4, .mov…).";
 "The video is copied without re-encoding, so the size barely changes." = "O vídeo é copiado sem recodificar, então o tamanho quase não muda.";
-"This is the default profile for new videos" = "Este é o perfil padrão para novos vídeos";
+"This is the default profile for new videos" = "Esta é a predefinição padrão para novos vídeos";
 "This source is interlaced: removes the comb-like lines of TV and camcorder video" = "Este vídeo é entrelaçado: remove as linhas em forma de pente de vídeos de TV e filmadoras";
 "Try Again" = "Tentar novamente";
 "Unsupported format or damaged file" = "Formato não suportado ou arquivo danificado";
@@ -467,7 +467,7 @@
 "up to ~%@" = "até ~%@";
 "≈ 2.5 Mbit/s H.264 720p, fits upload limits" = "≈ 2,5 Mbit/s H.264 720p, cabe nos limites de envio";
 "≈ estimate" = "≈ estimativa";
-"Custom Profile" = "Perfil personalizado";
+"Custom Profile" = "Predefinição personalizada";
 
 /* About */
 "About" = "Sobre";
@@ -581,7 +581,7 @@
 "Resolution & Scaling" = "Resolução e escala";
 "Resolution limit" = "Limite de resolução";
 "Sample rate" = "Taxa de amostragem";
-"Save as Preset…" = "Salvar como perfil…";
+"Save as Preset…" = "Salvar como predefinição…";
 "Saved into MP4, MOV and MKV files." = "Gravadas em arquivos MP4, MOV e MKV.";
 "Select one video to see every setting: dimensions, filters, video, audio, subtitles, chapters and tags." = "Selecione um vídeo para ver todas as configurações: dimensões, filtros, vídeo, áudio, legendas, capítulos e tags.";
 "Selection Behavior" = "Comportamento de seleção";
@@ -617,9 +617,9 @@
 "Pixels" = "Pixels";
 "%lld tracks" = "%lld faixas";
 "Chapters not exported" = "Capítulos não exportados";
-"Only these tracks are kept, each with its own encoding. Quality profiles and presets set their encoder and bitrate." = "Só estas faixas são mantidas, cada uma com sua própria codificação. Perfis de qualidade e perfis salvos definem o codificador e a taxa de bits delas.";
+"Only these tracks are kept, each with its own encoding. Quality profiles and presets set their encoder and bitrate." = "Só estas faixas são mantidas, cada uma com sua própria codificação. As predefinições definem o codificador e a taxa de bits delas.";
 "Chapter %lld title" = "Título do capítulo %lld";
-"Saves this video's output settings as a reusable preset." = "Salva as configurações de saída deste vídeo como um perfil reutilizável.";
+"Saves this video's output settings as a reusable preset." = "Salva as configurações de saída deste vídeo como uma predefinição reutilizável.";
 "Unknown language" = "Idioma desconhecido";
 "YYYY-MM-DD" = "AAAA-MM-DD";
 
@@ -718,3 +718,10 @@
 "Never" = "Nunca";
 "After each video" = "A cada vídeo";
 "When conversions finish" = "Quando as conversões terminarem";
+
+/* Preset picker */
+"Mixed presets" = "Predefinições diferentes";
+"Save Current Settings as Preset…" = "Salvar configurações atuais como predefinição…";
+"Manage Presets…" = "Gerenciar predefinições…";
+"Choose a preset for these videos" = "Escolha uma predefinição para estes vídeos";
+"Saves these output settings as a reusable preset." = "Salva estas configurações de saída como uma predefinição reutilizável.";

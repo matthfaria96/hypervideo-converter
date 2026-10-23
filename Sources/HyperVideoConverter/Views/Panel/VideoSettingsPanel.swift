@@ -10,20 +10,12 @@ struct VideoSettingsPanel: View {
     private var tab: SettingsTab { model.ui.detailTab }
 
     var body: some View {
-        @Bindable var ui = model.ui
         VStack(spacing: 0) {
             header
             Divider()
             content
         }
         .environment(\.settingsLabelWidth, 132)
-        .alert("Save Preset", isPresented: $ui.isSavingPreset) {
-            TextField("Name", text: $ui.presetName)
-            Button("Save") { saveCurrent() }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("Saves this video's output settings as a reusable preset.")
-        }
     }
 
     private var header: some View {
@@ -33,15 +25,18 @@ struct VideoSettingsPanel: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(source.name).font(.headline)
                         .lineLimit(1).truncationMode(.middle)
-                    Text(verbatim: model.presetName(for: source))
-                        .font(.caption).foregroundStyle(.secondary)
+                    if let info = source.info {
+                        Text(verbatim: RowFacts.meta(url: source.url, info: info))
+                            .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                    }
                 }
                 Spacer()
-                actionsMenu
+                if model.sources.count > 1 { applyToAll }
                 RowRemoveButton(help: "Back to the settings for all videos", label: String(localized: "Close")) {
                     model.closePanel()
                 }
             }
+            PresetPicker()
             SettingsTabBar()
         }
         .padding(Spacing.l)
@@ -73,23 +68,16 @@ struct VideoSettingsPanel: View {
         }
     }
 
-    /// Save as preset, apply to every video and the ⌘E sheet, in one "…" menu.
-    private var actionsMenu: some View {
-        Menu {
-            Button("Save as Preset…", systemImage: "square.and.arrow.down") {
-                model.ui.presetName = ""
-                model.ui.isSavingPreset = true
-            }
-            if model.sources.count > 1 {
-                Button("Apply to All Videos", systemImage: "square.on.square") { confirmingApplyToAll = true }
-            }
+    /// Gives every other video this one's settings (each keeps its own trim, crop, tracks…).
+    private var applyToAll: some View {
+        Button {
+            confirmingApplyToAll = true
         } label: {
-            Image(systemName: "ellipsis.circle")
+            Image(systemName: "square.on.square")
         }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .fixedSize()
-        .help("More actions for this video")
+        .buttonStyle(.accessoryBar)
+        .help("Apply to All Videos")
+        .accessibilityLabel(Text("Apply to All Videos"))
         .confirmationDialog("Apply to all videos?", isPresented: $confirmingApplyToAll) {
             Button("Apply to All Videos") { model.applyToAll(from: source.id) }
             Button("Cancel", role: .cancel) {}
@@ -98,7 +86,4 @@ struct VideoSettingsPanel: View {
         }
     }
 
-    private func saveCurrent() {
-        model.saveAsPreset(name: model.ui.presetName, from: source.id)
-    }
 }

@@ -12,19 +12,11 @@ struct FavoritesView: View {
 
         PageScaffold(subtitle: "Presets apply to the selected videos, or to every video in the list.") {
             HStack(spacing: Spacing.s) {
-                Button("Save Current Settings…", systemImage: "plus") {
-                    ui.presetName = ""
-                    ui.isSavingPreset = true
-                }
-                Menu("More", systemImage: "ellipsis") {
-                    Button("Import Presets…", systemImage: "square.and.arrow.down") { PresetFiles.importPresets(model) }
-                        .help("HyperVideo or HandBrake preset exports (.json)")
-                    Button("Export My Presets…", systemImage: "square.and.arrow.up") { PresetFiles.exportPresets(model) }
-                        .disabled(model.presets.custom.isEmpty)
-                }
-                .menuStyle(.button)
-                .labelStyle(.iconOnly)
-                .fixedSize()
+                Button("Import…", systemImage: "square.and.arrow.down") { PresetFiles.importPresets(model) }
+                    .help("HyperVideo or HandBrake preset exports (.json)")
+                Button("Export…", systemImage: "square.and.arrow.up") { PresetFiles.exportPresets(model) }
+                    .disabled(model.presets.custom.isEmpty)
+                    .help("Export My Presets…")
             }
             .compatGlassButtonStyle()
         } content: {
@@ -50,13 +42,6 @@ struct FavoritesView: View {
         }
         .motion(value: model.presets.all.map(\.id))
         .motion(Motion.quick, value: defaultID)
-        .alert("Save Preset", isPresented: $ui.isSavingPreset) {
-            TextField("Name", text: $ui.presetName)
-            Button("Save") { saveCurrent() }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("Saves the output settings shown in the inspector as a reusable preset.")
-        }
         .alert("Rename Preset", isPresented: .constant(ui.renamingPreset != nil)) {
             TextField("Name", text: $ui.presetName)
             Button("Rename") {
@@ -97,11 +82,6 @@ struct FavoritesView: View {
         }
     }
 
-    private func saveCurrent() {
-        let preset = model.presets.save(name: model.ui.presetName, category: String(localized: "My Presets"),
-                                        settings: model.inspectorSettings)
-        model.inspectorTargetIDs.forEach { id in model.update(id) { $0.presetID = preset.id } }
-    }
 }
 
 private struct PresetRow: View {

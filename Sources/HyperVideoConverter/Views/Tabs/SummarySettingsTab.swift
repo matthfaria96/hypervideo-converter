@@ -1,11 +1,11 @@
 import HyperVideoCore
 import SwiftUI
 
-/// Inline Summary: output, quality profile, before → after, trim and chapter range.
+/// Inline Summary: output, before → after, trim and chapter range. Quality comes from
+/// the panel's Preset picker.
 struct SummarySettingsTab: View {
     let info: MediaInfo
-    /// The video shown; the profile cards and estimate act on it alone. nil when the tabs
-    /// edit every video, and the profile and estimate cover all of them.
+    /// The video shown; nil when the tabs edit every video.
     let sourceID: UUID?
     @Binding var settings: EncodeSettings
     var subtitleFiles: [SubtitleFile] = []
@@ -14,15 +14,6 @@ struct SummarySettingsTab: View {
     var body: some View {
         VStack(spacing: 16) {
             outputSection
-            SettingsSection(title: "Quality Profile", symbol: "dial.medium") {
-                if let sourceID {
-                    ProfileCards(selected: model.profile(of: sourceID)) { model.applyProfile($0, to: sourceID) }
-                    EstimateCard(estimate: model.sizeEstimate(for: sourceID))
-                } else {
-                    ProfileCards(selected: model.inspectorProfile) { model.applyProfile($0) }
-                    EstimateCard()
-                }
-            }
             BeforeAfterSection(info: info, settings: settings, subtitleFiles: subtitleFiles)
             TrimTab(info: info, settings: $settings)
             if info.chapters.count > 1 { rangeSection }

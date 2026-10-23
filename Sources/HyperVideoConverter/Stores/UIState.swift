@@ -20,7 +20,6 @@ final class UIState {
     var detailTab: SettingsTab = SettingsTab(rawValue: UserDefaults.standard.string(forKey: "InitialSettingsTab") ?? "") ?? .summary
     /// A lone video whose panel the user closed; selecting it again reopens the panel.
     var dismissedPanelSourceID: UUID?
-    var isSavingPreset = false
     var presetName = ""
     var renamingPreset: Preset?
     /// Thumbnails of videos that moved from the editing list into the queue.

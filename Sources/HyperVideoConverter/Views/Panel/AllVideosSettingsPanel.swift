@@ -43,6 +43,7 @@ struct AllVideosSettingsPanel: View {
                 Spacer()
             }
             ScopeChip()
+            PresetPicker()
             SettingsTabBar()
         }
         .padding(Spacing.l)
