@@ -115,4 +115,15 @@ enum OutputProbe {
         let slice = luma[(row * image.width)..<((row + 1) * image.width)]
         return Double(slice.reduce(0) { $0 + Int($1) }) / Double(image.width)
     }
+
+    /// Mean luma of one column of the frame at `time`.
+    static func columnLuma(_ url: URL, time: Double, columnFraction: Double) async throws -> Double {
+        let generator = AVAssetImageGenerator(asset: AVURLAsset(url: url))
+        generator.appliesPreferredTrackTransform = true
+        let image = try await generator.image(at: CMTime(seconds: time, preferredTimescale: 600)).image
+        guard let luma = CropDetector.luma(of: image) else { return 0 }
+        let column = min(image.width - 1, Int(Double(image.width) * columnFraction))
+        let total = (0..<image.height).reduce(0) { $0 + Int(luma[$1 * image.width + column]) }
+        return Double(total) / Double(image.height)
+    }
 }

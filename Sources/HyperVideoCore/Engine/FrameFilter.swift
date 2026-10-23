@@ -21,11 +21,20 @@ enum FrameFilter {
         if filters.grayscale { frame = grayscale(frame) }
 
         let output = CGRect(origin: .zero, size: plan.renderSize)
-        let picture = frame
+        let picture = toSourceSize(frame, extent: image.extent, sourceSize: sourceSize)
             .transformed(by: coreImageTransform(plan.transform, sourceHeight: sourceSize.height, renderHeight: plan.renderSize.height))
             .composited(over: CIImage(color: canvas).cropped(to: output))
             .cropped(to: output)
         return overlay.map { $0.composited(over: picture).cropped(to: output) } ?? picture
+    }
+
+    /// Decoded frames arrive at their storage size; the plan works in `sourceSize` (the track's
+    /// natural size, which is the display size for pixel-aspect-tagged video), so stretch to it.
+    static func toSourceSize(_ image: CIImage, extent: CGRect, sourceSize: CGSize) -> CIImage {
+        guard extent.width > 0, extent.height > 0, sourceSize.width > 0, sourceSize.height > 0,
+              extent.size != sourceSize else { return image }
+        let scale = CGAffineTransform(scaleX: sourceSize.width / extent.width, y: sourceSize.height / extent.height)
+        return image.transformed(by: CGAffineTransform(translationX: -extent.minX, y: -extent.minY).concatenating(scale))
     }
 
     /// `plan.transform` uses AVFoundation's top-left origin; Core Image's origin is
