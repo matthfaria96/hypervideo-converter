@@ -48,7 +48,9 @@ struct ParityMergingTests {
         template.tags.title = "Template Title"
         template.chapterOptions.titles = ["X"]
         let result = video.adopting(template)
-        #expect(result.audioOptions.tracks == video.audioOptions.tracks)
+        #expect(result.audioOptions.tracks.map(\.id) == video.audioOptions.tracks.map(\.id))
+        #expect(result.audioOptions.tracks == video.retuningAudioTracksTo(template).audioOptions.tracks,
+                "the list stays; its encoder and bitrate follow the preset")
         #expect(result.subtitleOptions.tracks == video.subtitleOptions.tracks)
         #expect(result.chapterOptions.titles == ["Intro", "End"] && result.tags.title == "My Movie")
         #expect(result.trim == video.trim && result.crop == video.crop)
@@ -92,6 +94,23 @@ struct ParityMergingTests {
         #expect(video.adopting(EncodeSettings()).videoOptions == video.videoOptions)
     }
 
+    @Test func profilesAndPresetsRetuneExplicitAudioTracks() {
+        var video = EncodeSettings()
+        let own = AudioEncoding(codec: .alac, mixdown: .mono, bitrateKbps: 96, trackName: "Mine")
+        video.audioOptions.tracks = [AudioTrackSetting(sourceTrackID: 1, encoding: own)]
+        let small = QualityProfile.smallerFile.settings
+        let profiled = video.applyingProfile(small)
+        let track = profiled.audioOptions.tracks.first?.encoding
+        #expect(track?.codec == small.audioCodec && track?.bitrateKbps == small.audioBitrateKbps)
+        #expect(track?.mixdown == .mono && track?.trackName == "Mine", "the track keeps its other choices")
+        #expect(profiled.matchesProfile(small))
+        var template = EncodeSettings()
+        template.audioCodec = .heAAC
+        template.audioBitrateKbps = 64
+        let adopted = video.adopting(template).audioOptions.tracks.first?.encoding
+        #expect(adopted?.codec == .heAAC && adopted?.bitrateKbps == 64)
+    }
+
     @Test func copyingAllKeepsPerVideoData() {
         let video = Self.perVideo()
         var template = Self.generic()
@@ -108,6 +127,13 @@ struct ParityMergingTests {
 }
 
 private extension EncodeSettings {
+    func retuningAudioTracksTo(_ template: EncodeSettings) -> EncodeSettings {
+        var s = self
+        s.audioCodec = template.audioCodec
+        s.audioBitrateKbps = template.audioBitrateKbps
+        return s.retuningAudioTracks()
+    }
+
     /// Test helper: a per-video settings value that also carries the template's generic choices.
     func mergedGeneric(from template: EncodeSettings) -> EncodeSettings {
         var s = template

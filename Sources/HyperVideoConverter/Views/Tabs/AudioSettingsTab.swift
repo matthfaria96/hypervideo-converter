@@ -46,6 +46,10 @@ struct AudioSettingsTab: View {
         SettingsSection(title: "Tracks", symbol: "list.number") {
             if settings.audioOptions.tracks.isEmpty {
                 Text("Tracks follow the selection behavior above.").foregroundStyle(.secondary)
+            } else {
+                Text("Only these tracks are kept, each with its own encoding. Quality profiles and presets set their encoder and bitrate.")
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             ForEach(Array(settings.audioOptions.tracks.enumerated()), id: \.element.id) { index, track in
                 AudioTrackCard(setting: trackBinding(track), number: index + 1, sources: info.audioTracks) {
