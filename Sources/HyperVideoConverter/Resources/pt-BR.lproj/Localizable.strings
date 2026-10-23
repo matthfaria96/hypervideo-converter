@@ -699,3 +699,13 @@
 "This file has no video to upscale." = "Este arquivo não tem vídeo para ampliar.";
 "AI Upscale failed: %@" = "O AI Upscale falhou: %@";
 "AI Upscale runs Upscayl as a separate program. Its licence is in the app (Contents/Resources/Licenses) and its source code is at github.com/upscayl/upscayl-ncnn." = "O AI Upscale roda o Upscayl como um programa separado. A licença dele está no app (Contents/Resources/Licenses) e o código-fonte em github.com/upscayl/upscayl-ncnn.";
+
+/* Status tags */
+"Converting" = "Convertendo";
+"Failed" = "Falhou";
+"New" = "Novo";
+"Same size" = "Mesmo tamanho";
+"Compared with the original file" = "Comparado com o arquivo original";
+"New results from the last run" = "Resultados novos da última conversão";
+"Finished conversions" = "Conversões concluídas";
+"Completed" = "Concluído";

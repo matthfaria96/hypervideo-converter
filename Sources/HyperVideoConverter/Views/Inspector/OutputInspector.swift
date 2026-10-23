@@ -16,13 +16,13 @@ struct OutputInspector: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.l) {
                     group {
-                        FieldLabel(title: "Output Format")
+                        FieldLabel(title: "Output Format", symbol: "shippingbox")
                         FormatPicker(settings: settings) { container in model.editTargets { $0 = $0.choosing(container: container) } }
                             .help("The file type, shown as the file's extension (.mp4, .mov…).")
                     }
 
                     group {
-                        FieldLabel(title: "Quality Profile")
+                        FieldLabel(title: "Quality Profile", symbol: "dial.medium")
                         ProfileCards(selected: model.inspectorProfile) { model.applyProfile($0) }
                         if let personalized = model.inspectorPersonalizedProfile {
                             PersonalizedNote(profile: personalized) { model.applyProfile(personalized) }
@@ -80,9 +80,17 @@ struct OutputInspector: View {
 struct FieldLabel: View {
     let title: LocalizedStringKey
     var detail: LocalizedStringKey?
+    var symbol: String?
 
     var body: some View {
-        HStack {
+        HStack(spacing: Spacing.s) {
+            if let symbol {
+                Image(systemName: symbol)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .symbolRenderingMode(.hierarchical)
+                    .frame(width: 18)
+            }
             Text(title).font(.headline)
             Spacer()
             if let detail { Text(detail).font(.footnote).foregroundStyle(.secondary) }

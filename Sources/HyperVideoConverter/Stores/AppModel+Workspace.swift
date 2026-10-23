@@ -130,6 +130,7 @@ extension AppModel {
     /// Queues every ready video, takes it off the editing list and starts the queue.
     func convertAll() {
         ui.batchStartedAt = ui.batchStartedAt ?? Date()
+        ui.lastRunStartedAt = ui.batchStartedAt
         enqueue(sources.map(\.id))
         if queue.pendingCount > 0 { queue.start() }
     }

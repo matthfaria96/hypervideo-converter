@@ -40,7 +40,11 @@ extension AppModel {
     /// The page sheet over the workspace, nil when none is open.
     var presentedPage: AppSection? {
         get { section == .conversion ? nil : section }
-        set { section = newValue ?? .conversion }
+        set {
+            section = newValue ?? .conversion
+            // Opening History shows the new results, so the footer badge calms down.
+            if newValue == .history { ui.hasUnseenResults = false }
+        }
     }
 
     /// The conversion list's selection. Queued jobs share the list but can't be

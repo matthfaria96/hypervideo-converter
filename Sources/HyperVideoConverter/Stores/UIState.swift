@@ -33,6 +33,10 @@ final class UIState {
     var hero: HeroPicture?
     /// When the user last pressed Convert; the finished-run banner counts from here.
     var batchStartedAt: Date?
+    /// When the last run started; History marks its results "New" even after the banner is dismissed.
+    var lastRunStartedAt: Date?
+    /// A run finished since History was last opened (the footer's badge turns green).
+    var hasUnseenResults = false
     /// Confirmations of destructive actions.
     var confirmingClearList = false
     var confirmingClearHistory = false

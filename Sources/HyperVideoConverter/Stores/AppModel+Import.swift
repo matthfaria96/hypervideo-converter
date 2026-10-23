@@ -132,6 +132,23 @@ extension AppModel {
         ui.thumbnails[job.source] = image
     }
 
+    /// A History row's cover: the converted file's picture, or the source's when the
+    /// output is gone (failed, cancelled or deleted).
+    func loadHistoryThumbnail(for job: EncodeJob) async {
+        let key = job.destination
+        guard ui.thumbnails[key] == nil else { return }
+        let duration = job.mediaDuration ?? 10
+        var image = await Self.thumbnail(for: job.destination, duration: duration, size: Self.thumbnailSize)
+        if image == nil { image = await Self.thumbnail(for: job.source, duration: duration, size: Self.thumbnailSize) }
+        if let image { ui.thumbnails[key] = image }
+    }
+
+    /// Whether a finished job belongs to the run that just ended (shown as "New").
+    func isFromLastRun(_ job: EncodeJob) -> Bool {
+        guard let start = ui.lastRunStartedAt ?? ui.batchStartedAt else { return false }
+        return job.createdAt >= start
+    }
+
     /// Forgets queue thumbnails of videos that are no longer in the queue or on the list.
     func releaseThumbnails(of removed: [EncodeJob]) {
         let inUse = Set(queue.jobs.map(\.source) + sources.map(\.url))

@@ -38,6 +38,7 @@ struct WorkListView: View {
                     .onMove { model.queue.move(fromOffsets: $0, toOffset: $1) }
                 } header: {
                     HStack(spacing: Spacing.xs) {
+                        Image(systemName: "list.bullet.rectangle").foregroundStyle(.secondary)
                         Text("Queue")
                         Text(verbatim: "(\(model.activeJobs.count))").foregroundStyle(.secondary)
                             .contentTransition(.numericText())
@@ -68,17 +69,19 @@ struct WorkListView: View {
     private var listHeader: some View {
         @Bindable var ui = model.ui
         return HStack(spacing: Spacing.s) {
+            Image(systemName: "film.stack").foregroundStyle(.secondary)
             Text("Video List")
             Text(verbatim: "(\(model.sources.count))")
                 .foregroundStyle(.secondary)
                 .contentTransition(.numericText())
             Spacer()
             if !model.sources.isEmpty {
-                Button(model.allSourcesSelected ? "Deselect All" : "Select All") { model.toggleSelectAll() }
+                Button(model.allSourcesSelected ? "Deselect All" : "Select All",
+                       systemImage: model.allSourcesSelected ? "checkmark.circle.fill" : "checkmark.circle") { model.toggleSelectAll() }
                     .keyboardShortcut("a")
                     .help("Select every video to edit them together (⌘A)")
             }
-            Button("Clear List") { ui.confirmingClearList = true }
+            Button("Clear List", systemImage: "trash") { ui.confirmingClearList = true }
                 .disabled(!model.canClearList)
                 .help("Removes the videos from the list; the original files stay on your Mac")
         }

@@ -28,6 +28,10 @@ struct StatusFooter: View {
         .padding(.horizontal, Spacing.l)
         .padding(.vertical, Spacing.xs + 2)
         .motion(Motion.snappy, value: summary)
+        .motion(Motion.snappy, value: hasNewResults)
+        .onChange(of: model.historyJobs.count) { old, new in
+            if new > old { model.ui.hasUnseenResults = true }
+        }
     }
 
     private func pageButton(_ page: AppSection) -> some View {
@@ -36,13 +40,17 @@ struct StatusFooter: View {
         } label: {
             HStack(spacing: Spacing.xs) {
                 Image(systemName: page.symbol)
+                    // Bounces whenever a conversion lands in History.
+                    .symbolEffect(.bounce, value: page == .history ? model.historyJobs.count : 0)
                 Text(page.title)
                 if page == .history && !model.historyJobs.isEmpty {
                     Text(model.historyJobs.count, format: .number)
                         .font(.caption2.weight(.semibold))
+                        .foregroundStyle(hasNewResults ? .white : .secondary)
                         .padding(.horizontal, 5)
-                        .background(.fill.tertiary, in: .capsule)
+                        .background(hasNewResults ? AnyShapeStyle(Theme.success) : AnyShapeStyle(.fill.tertiary), in: .capsule)
                         .contentTransition(.numericText())
+                        .help(hasNewResults ? Text("New results from the last run") : Text("Finished conversions"))
                 }
             }
         }
@@ -51,6 +59,9 @@ struct StatusFooter: View {
         .disabled(page == .analyze && model.sources.isEmpty)
         .help(page.title)
     }
+
+    /// Results of the last run are waiting in History (until History is opened).
+    private var hasNewResults: Bool { model.ui.hasUnseenResults }
 
     /// "3 videos · 1.2 GB · 1 selected"
     private var summary: String {

@@ -30,19 +30,29 @@ struct SourceRowView: View {
     @ViewBuilder
     private var meta: some View {
         if let error = source.errorMessage {
-            Text("Unsupported format or damaged file")
-                .font(.caption).foregroundStyle(Theme.danger).lineLimit(1)
+            StatusTag(text: String(localized: "Unsupported format or damaged file"),
+                      symbol: "exclamationmark.triangle.fill", tone: .danger)
                 .help(error)
         } else if let info = source.info {
             HStack(spacing: Spacing.xs) {
-                ForEach(RowFacts.tags(url: source.url, info: info), id: \.self) { MetaTag(text: $0) }
+                ForEach(Array(RowFacts.tags(url: source.url, info: info).enumerated()), id: \.offset) { index, text in
+                    // The container gets its own colour; codec and size stay neutral.
+                    if index == 0 {
+                        StatusTag(text: text, tone: ContainerTag.tone(for: text))
+                    } else {
+                        MetaTag(text: text)
+                    }
+                }
+                if info.dynamicRange != .sdr {
+                    StatusTag(text: info.dynamicRange.rawValue, symbol: "sun.max.fill", tone: .warning)
+                }
                 if !source.settings.isValid {
-                    MetaTag(text: String(localized: "Check settings"), tint: Theme.warning)
+                    StatusTag(text: String(localized: "Check settings"), symbol: "exclamationmark.circle", tone: .warning)
                 }
             }
             .lineLimit(1)
         } else {
-            Text("Analyzing…").font(.caption).foregroundStyle(.secondary)
+            StatusTag(text: String(localized: "Analyzing…"), tone: .accent, isLive: true)
         }
     }
 
@@ -95,11 +105,16 @@ struct JobRowView: View {
                     .font(.body.weight(.medium))
                     .lineLimit(1)
                     .truncationMode(.middle)
-                Text(verbatim: "\(model.presetName(for: job)) → \(job.destination.lastPathComponent)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
+                HStack(spacing: Spacing.xs) {
+                    JobKindLook(settings: job.settings, presetID: job.presetID).tag
+                    JobStatusLook(job.state).tag
+                    Text(verbatim: "→ \(job.destination.lastPathComponent)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .help(model.presetName(for: job))
+                }
                 if job.state.isRunning {
                     JobProgressBar(progress: model.queue.progress(for: job.id))
                         .motionTransition(.opacity)
@@ -121,7 +136,7 @@ struct JobRowView: View {
             if job.state.isRunning {
                 JobProgressStatus(job: job, progress: model.queue.progress(for: job.id))
             } else {
-                Text("Waiting").font(.callout).foregroundStyle(.secondary)
+                Text(verbatim: model.presetName(for: job)).font(.caption).foregroundStyle(.secondary).lineLimit(1)
             }
         }
         .monospacedDigit()

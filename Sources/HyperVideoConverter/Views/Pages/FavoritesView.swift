@@ -30,7 +30,13 @@ struct FavoritesView: View {
         } content: {
             ForEach(model.presets.grouped, id: \.category) { group in
                 VStack(alignment: .leading, spacing: Spacing.s) {
-                    Eyebrow(text: LocalizedStringKey(group.presets.first?.displayCategory ?? group.category))
+                    Label {
+                        Eyebrow(text: LocalizedStringKey(group.presets.first?.displayCategory ?? group.category))
+                    } icon: {
+                        Image(systemName: Self.symbol(forCategory: group.category))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                     ListCard {
                         ForEach(group.presets) { preset in
                             PresetRow(preset: preset, isDefault: preset.id == model.defaultPreset.id)
@@ -75,6 +81,19 @@ struct FavoritesView: View {
                 model.ui.renamingPreset = preset
             }
             Button("Delete", systemImage: "trash", role: .destructive) { model.presets.delete(preset.id) }
+        }
+    }
+
+    /// Each group of presets gets the symbol of what it's for.
+    static func symbol(forCategory category: String) -> String {
+        switch category {
+        case "Quality Profiles": "dial.medium"
+        case "General": "film"
+        case "4K & HDR": "sun.max"
+        case "Devices": "iphone"
+        case "Web": "globe"
+        case "Production": "camera.aperture"
+        default: "person.crop.circle"
         }
     }
 

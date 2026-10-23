@@ -66,12 +66,12 @@ struct VideoFields: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.l) {
-            FieldLabel(title: "Video Codec")
+            FieldLabel(title: "Video Codec", symbol: "film")
             MenuField(label: "Video Codec", selection: settings.videoCodec, options: VideoCodec.allCases,
                       title: Self.title) { codec in edit { $0 = $0.choosing(codec: codec) } }
                 .help("H.264 plays everywhere. HEVC (H.265) makes smaller files with the same look on recent devices.")
 
-            FieldLabel(title: "Resolution", detail: "Optional")
+            FieldLabel(title: "Resolution", detail: "Optional", symbol: "aspectratio")
             MenuField(label: "Resolution", selection: settings.maxResolution, options: MaxResolution.allCases,
                       title: Self.title) { value in edit { $0.maxResolution = value } }
                 .disabled(settings.videoCodec == .passthrough)

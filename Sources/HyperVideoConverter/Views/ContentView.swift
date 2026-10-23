@@ -68,6 +68,14 @@ extension WorkMode {
         }
     }
 
+    var shortTitle: LocalizedStringKey {
+        switch self {
+        case .convert: "Convert"
+        case .compress: "Compress"
+        case .upscale: "AI Upscale"
+        }
+    }
+
     var symbol: String {
         switch self {
         case .convert: "arrow.triangle.2.circlepath"
@@ -122,9 +130,11 @@ private struct WindowToolbar: ToolbarContent {
     var body: some ToolbarContent {
         ToolbarItem(placement: .navigation) {
             Picker("Mode", selection: modeSelection) {
-                Text("Convert").tag(WorkMode.convert)
-                Text("Compress").tag(WorkMode.compress)
-                Text("AI Upscale").tag(WorkMode.upscale)
+                ForEach([WorkMode.convert, .compress, .upscale], id: \.self) { mode in
+                    Label(mode.shortTitle, systemImage: mode.symbol)
+                        .labelStyle(.titleAndIcon)
+                        .tag(mode)
+                }
             }
             .pickerStyle(.segmented)
             .labelsHidden()
