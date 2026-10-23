@@ -165,6 +165,7 @@ public struct TranscodeEngine: Sendable {
             }
             if userCancelled { throw CancellationError() }
             if stalled.isSet { throw TranscodeError.stalled }
+            if let failure = pumps.lazy.compactMap(\.failure).first { throw failure }
             if let writerError { throw TranscodeError.writerFailed(writerError) }
             throw TranscodeError.readerFailed(readerError ?? "unknown error")
         }

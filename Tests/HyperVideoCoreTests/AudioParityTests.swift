@@ -149,10 +149,23 @@ struct AudioParityTests {
         #expect(zip(out, samples).allSatisfy { abs($0 - $1 * 0.5) < 1e-6 })
     }
 
-    static func makeBuffer(_ samples: [Float], frames: Int) throws -> CMSampleBuffer {
+    @Test func gainRejectsOtherPCMLayouts() throws {
+        let frames = 1024
+        let samples = [Float](repeating: 0.25, count: frames * 2)
+        let integer = try Self.makeBuffer(samples, frames: frames, flags: kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked)
+        #expect(AudioGain.apply(integer, factor: 0.5) == nil)
+        let short = try Self.makeBuffer(samples, frames: frames * 2)
+        #expect(AudioGain.apply(short, factor: 0.5) == nil)
+        let transform = try #require(AudioGain.transform(gainDb: 6))
+        #expect(throws: TranscodeError.self) { try transform(integer) }
+    }
+
+    static func makeBuffer(
+        _ samples: [Float], frames: Int, flags: AudioFormatFlags = kAudioFormatFlagIsFloat | kAudioFormatFlagIsPacked
+    ) throws -> CMSampleBuffer {
         var asbd = AudioStreamBasicDescription(
             mSampleRate: 48_000, mFormatID: kAudioFormatLinearPCM,
-            mFormatFlags: kAudioFormatFlagIsFloat | kAudioFormatFlagIsPacked,
+            mFormatFlags: flags,
             mBytesPerPacket: 8, mFramesPerPacket: 1, mBytesPerFrame: 8,
             mChannelsPerFrame: 2, mBitsPerChannel: 32, mReserved: 0)
         var format: CMAudioFormatDescription?
