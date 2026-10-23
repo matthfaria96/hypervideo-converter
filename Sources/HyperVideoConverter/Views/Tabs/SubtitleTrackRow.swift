@@ -37,22 +37,25 @@ struct SubtitleTrackRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             header
-            HStack(spacing: 16) {
+            HStack(spacing: 14) {
                 Toggle("Include", isOn: edit(\.include)).toggleStyle(.checkbox)
                 RadioToggle(isOn: setting.isDefault, title: "Default", help: "Default track") {
                     update { $0.isDefault.toggle() }
                 }
-                Toggle("Forced only", isOn: edit(\.forcedOnly))
-                    .toggleStyle(.checkbox)
-                    .help("Keeps the track only if it holds forced subtitles")
                 if canBurn {
                     RadioToggle(isOn: isBurned, title: "Burn", help: "Draws this track into the picture") {
                         settings.burnIn = isBurned ? nil : .track(id: track.id)
                     }
                 }
+            }
+            .controlSize(.small)
+            HStack(spacing: 12) {
+                Toggle("Forced only", isOn: edit(\.forcedOnly))
+                    .toggleStyle(.checkbox)
+                    .help("Keeps the track only if it holds forced subtitles")
+                    .fixedSize()
                 TextField("Name", text: nameBinding, prompt: Text(verbatim: track.name ?? ""))
                     .textFieldStyle(.roundedBorder)
-                    .frame(maxWidth: 180)
             }
             .controlSize(.small)
         }

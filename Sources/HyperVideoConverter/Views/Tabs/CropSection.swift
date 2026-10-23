@@ -90,7 +90,7 @@ struct CropSection: View {
 
     private func cropField(_ title: LocalizedStringKey, _ edge: WritableKeyPath<Crop, Int>) -> some View {
         HStack {
-            Text(title).frame(width: 56, alignment: .leading)
+            Text(title).frame(width: 70, alignment: .leading).lineLimit(1).minimumScaleFactor(0.8)
             TextField(title, value: $settings.crop[dynamicMember: edge], format: .number)
                 .textFieldStyle(.roundedBorder)
                 .frame(width: 70)

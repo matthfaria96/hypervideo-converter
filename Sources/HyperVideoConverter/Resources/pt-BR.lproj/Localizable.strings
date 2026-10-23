@@ -28,7 +28,7 @@
 "Adjusted to what HyperVideo supports:" = "Ajustado ao que o HyperVideo suporta:";
 "Advanced" = "Avançado";
 "Advanced Settings…" = "Configurações avançadas…";
-"All Tracks" = "Todas as faixas";
+"All Tracks" = "Todas";
 "Also notify for each conversion" = "Notificar também a cada conversão";
 "Always" = "Sempre";
 "Analyze Video" = "Analisar vídeo";
@@ -144,7 +144,7 @@
 "File type" = "Extensão do arquivo";
 "Filters" = "Filtros";
 "Finished, failed and cancelled conversions." = "Conversões concluídas, com falha e canceladas.";
-"First Track" = "Primeira faixa";
+"First Track" = "Primeira";
 "Flip" = "Espelhar";
 "Flip horizontally" = "Espelhar horizontalmente";
 "Folder" = "Pasta";
