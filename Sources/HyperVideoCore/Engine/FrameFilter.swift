@@ -13,8 +13,8 @@ enum FrameFilter {
         var frame = image
         // Field lines run horizontally in the stored frame, so deinterlace before any rotation or scaling.
         if deinterlace { frame = blendFields(frame) }
-        if filters.denoise != .off { frame = denoise(frame, amount: filters.denoise.amount) }
-        if filters.sharpen != .off { frame = sharpen(frame, amount: filters.sharpen.amount) }
+        if filters.denoise != .off { frame = denoise(frame, filters: filters) }
+        if filters.sharpen != .off { frame = sharpen(frame, filters: filters) }
         if filters.grayscale { frame = grayscale(frame) }
 
         let output = CGRect(origin: .zero, size: plan.renderSize)
@@ -40,22 +40,6 @@ enum FrameFilter {
         filter.inputImage = image.clampedToExtent()
         filter.weights = CIVector(values: [0, 0.25, 0, 0, 0.5, 0, 0, 0.25, 0], count: 9)
         filter.bias = 0
-        return (filter.outputImage ?? image).cropped(to: image.extent)
-    }
-
-    static func denoise(_ image: CIImage, amount: Double) -> CIImage {
-        let filter = CIFilter.noiseReduction()
-        filter.inputImage = image.clampedToExtent()
-        filter.noiseLevel = Float(0.01 + 0.03 * amount)
-        filter.sharpness = 0.4
-        return (filter.outputImage ?? image).cropped(to: image.extent)
-    }
-
-    static func sharpen(_ image: CIImage, amount: Double) -> CIImage {
-        let filter = CIFilter.sharpenLuminance()
-        filter.inputImage = image.clampedToExtent()
-        filter.sharpness = Float(0.2 + 0.6 * amount)
-        filter.radius = 1.5
         return (filter.outputImage ?? image).cropped(to: image.extent)
     }
 
