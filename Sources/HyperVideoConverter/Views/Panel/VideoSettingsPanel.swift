@@ -69,14 +69,7 @@ struct VideoSettingsPanel: View {
     private var footer: some View {
         HStack {
             if model.sources.count > 1 {
-                Button("Apply to All Videos", systemImage: "square.on.square") { model.ui.confirmingApplyToAll = true }
-                    .help("Give every video in the list these settings (each keeps its own trim, crop and burned-in subtitle)")
-                    .confirmationDialog("Apply to all videos?", isPresented: Bindable(model.ui).confirmingApplyToAll) {
-                        Button("Apply to All Videos") { model.applyToAll(from: source.id) }
-                        Button("Cancel", role: .cancel) {}
-                    } message: {
-                        Text(verbatim: model.applyToAllMessage(from: source.id))
-                    }
+                ApplyToAllButton(sourceID: source.id)
             }
             Spacer()
             Button("Save as Preset…", systemImage: "square.and.arrow.down") {
