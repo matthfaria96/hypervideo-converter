@@ -18,7 +18,12 @@ extension HandBrakePresets {
         let tenBit = name.contains("10bit") || name.contains("12bit")
         if name.contains("264") { return .h264 }
         if name.contains("265") || name.contains("hevc") { return tenBit ? .hevc10 : .hevc }
-        if name.contains("prores") { return .proRes422 }
+        if name.contains("prores") {
+            if name.contains("lt") { return .proRes422LT }
+            if name.contains("proxy") { return .proRes422Proxy }
+            if name.contains("hq") { return .proRes422HQ }
+            return name.contains("4444") ? .proRes4444 : .proRes422
+        }
         notes.append("The \(name) encoder isn't available, so it uses HEVC\(tenBit ? " 10-bit" : "").")
         return tenBit ? .hevc10 : .hevc
     }
@@ -38,10 +43,9 @@ extension HandBrakePresets {
         return .quality((min(max(quality, 0.2), 1) * 100).rounded() / 100)
     }
 
-    /// "pfr" is a peak, which HyperVideo honours by keeping the source rate rather
-    /// than duplicating frames to reach it.
-    static func frameRate(_ value: String?, mode: String?) -> FrameRate {
-        guard mode == "cfr", let fps = value.flatMap(Double.init) else { return .source }
+    /// Nearest supported rate for a HandBrake rate string; "auto" or junk keeps the source rate.
+    static func nearestFrameRate(_ value: String?) -> FrameRate {
+        guard let fps = value.flatMap(Double.init), fps > 0 else { return .source }
         return FrameRate.allCases.filter { $0 != .source }.min { abs($0.rawValue - fps) < abs($1.rawValue - fps) } ?? .source
     }
 
@@ -63,12 +67,66 @@ extension HandBrakePresets {
         return (Rotation(rawValue: parts["angle"] ?? 0) ?? .none, parts["hflip"] == 1)
     }
 
-    static func strength(filter: String?, preset: String?) -> FilterStrength {
-        guard let filter, filter != "off" else { return .off }
-        switch preset {
-        case "ultralight", "light": return .light
-        case "strong", "stronger", "verystrong": return .strong
-        default: return .medium
+    /// A preset level; unknown names ("custom") become Medium.
+    static func level(_ preset: String?) -> FilterStrength {
+        guard let preset, let level = FilterStrength(rawValue: preset), level != .off else { return .medium }
+        return level
+    }
+}
+
+extension HandBrakePresets {
+    static func applyVideo(_ p: Fields, to s: inout EncodeSettings, notes: inout [String]) {
+        s.container = container(p.string("FileFormat"), notes: &notes)
+        s.videoCodec = videoCodec(p.string("VideoEncoder"), notes: &notes)
+        s.rateControl = rateControl(p, codec: p.string("VideoEncoder"))
+        let (rate, mode) = framerate(p)
+        s.frameRate = rate
+        s.videoOptions.frameRateMode = mode
+        s.videoOptions.speed = encoderSpeed(p.string("VideoPreset"))
+        s.videoOptions.profile = profile(p.string("VideoProfile"), notes: &notes).resolved(for: s.videoCodec)
+        s.videoOptions.level = videoLevel(p.string("VideoLevel"), codec: s.videoCodec, notes: &notes)
+        if p.bool("VideoMultiPass") == true, p.int("VideoQualityType") != 2 {
+            notes.append("Multi-pass encoding isn't available, so it encodes in one pass.")
         }
+        if let tune = p.string("VideoTune"), !tune.isEmpty, tune != "none" {
+            notes.append("Encoder tunes aren't available on VideoToolbox.")
+        }
+    }
+
+    static func framerate(_ p: Fields) -> (FrameRate, FrameRateMode) {
+        let rate = nearestFrameRate(p.string("VideoFramerate"))
+        switch p.string("VideoFramerateMode") {
+        case "pfr": return (rate, .peak)
+        case "vfr": return (.source, .variable)
+        default: return (rate, .constant)
+        }
+    }
+
+    static func encoderSpeed(_ preset: String?) -> EncoderSpeed {
+        switch preset {
+        case "ultrafast", "superfast", "veryfast", "faster", "fast", "speed": .speed
+        case "slow", "slower", "veryslow", "placebo", "quality", "preservation": .quality
+        default: .balanced
+        }
+    }
+
+    static func profile(_ value: String?, notes: inout [String]) -> VideoProfile {
+        guard let value, !value.isEmpty, value != "auto" else { return .auto }
+        if let known = VideoProfile(rawValue: value) { return known }
+        notes.append("The \(value) profile isn't available, so it uses Auto.")
+        return .auto
+    }
+
+    static func videoLevel(_ value: String?, codec: VideoCodec, notes: inout [String]) -> VideoLevel {
+        guard let value, !value.isEmpty, value != "auto" else { return .auto }
+        guard let known = VideoLevel(rawValue: value) else {
+            notes.append("Level \(value) isn't available, so it uses Auto.")
+            return .auto
+        }
+        guard codec == .h264 else {
+            notes.append("HEVC levels aren't available, so it uses Auto.")
+            return .auto
+        }
+        return known
     }
 }
