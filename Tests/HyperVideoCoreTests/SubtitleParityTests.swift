@@ -1,4 +1,4 @@
-import CoreMedia
+@preconcurrency import AVFoundation
 import Foundation
 import Testing
 @testable import HyperVideoCore
@@ -50,6 +50,33 @@ struct SubtitleParityTests {
         #expect(result.entries.map(\.sourceTrackID) == [2, 3])
         #expect(result.entries.map(\.isDefault) == [true, false])
         #expect(result.entries.first?.name == "Português")
+    }
+
+    @Test func closedCaptionIsNeverDefault() {
+        let result = plan(container: .mov) {
+            $0.subtitleOptions.tracks = [
+                SubtitleTrackSetting(sourceTrackID: 3, isDefault: true),
+                SubtitleTrackSetting(sourceTrackID: 1)
+            ]
+        }
+        #expect(result.entries.map(\.sourceTrackID) == [1, 3])
+        #expect(result.entries.allSatisfy { !$0.isDefault })
+    }
+
+    @Test func groupIgnoresDefaultOutsideInputs() async throws {
+        let dir = try TranscodeIntegrationTests.tempDir()
+        let source = try await ParityClip.make(in: dir, ParityClip.Spec(frameTimes: [0]))
+        let url = dir.appendingPathComponent("group.mov")
+        let writer = try AVAssetWriter(outputURL: url, fileType: .mov)
+        let format = try #require(TimedText.format(mediaType: kCMMediaType_Subtitle))
+        let inputs = (0..<2).map { _ in AVAssetWriterInput(mediaType: .subtitle, outputSettings: nil, sourceFormatHint: format) }
+        let caption = AVAssetWriterInput(mediaType: .closedCaption, outputSettings: nil)
+        (inputs + [caption]).forEach { if writer.canAdd($0) { writer.add($0) } }
+        let asset = AVURLAsset(url: source)
+        let reader = try AVAssetReader(asset: asset)
+        let factory = PipelineFactory(asset: asset, reader: reader, writer: writer, settings: EncodeSettings(), subtitleFiles: [])
+        factory.groupAlternates(inputs, defaultInput: caption)
+        #expect(inputs.allSatisfy { !$0.marksOutputTrackAsEnabled })
     }
 
     @Test func forcedOnlyFiltersNonForcedSources() {

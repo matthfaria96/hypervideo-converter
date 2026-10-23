@@ -27,7 +27,8 @@ extension PipelineFactory {
             pumps.append(pump)
             if file.url == plan.defaultFileURL { defaultInput = pump.input }
         }
-        groupAlternates(pumps.map(\.input).filter { $0.mediaType == .subtitle }, defaultInput: defaultInput)
+        let grouped = pumps.map(\.input).filter { $0.mediaType == .subtitle }
+        groupAlternates(grouped, defaultInput: defaultInput.flatMap { input in grouped.contains { $0 === input } ? input : nil })
         return pumps
     }
 

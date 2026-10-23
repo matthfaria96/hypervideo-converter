@@ -34,7 +34,9 @@ struct PipelineFactory {
     /// Puts tracks of one kind in an alternate group so players offer them as choices
     /// and play only the default (the first audio track; no subtitles until picked),
     /// rather than mixing every enabled audio track together.
-    func groupAlternates(_ inputs: [AVAssetWriterInput], defaultInput: AVAssetWriterInput?) {
+    /// A default that isn't one of `inputs` is ignored: the group initialiser raises on it.
+    func groupAlternates(_ inputs: [AVAssetWriterInput], defaultInput proposed: AVAssetWriterInput?) {
+        let defaultInput = proposed.flatMap { input in inputs.contains { $0 === input } ? input : nil }
         guard inputs.count > 1 || (defaultInput == nil && !inputs.isEmpty) else { return }
         for input in inputs where input !== defaultInput { input.marksOutputTrackAsEnabled = false }
         let group = AVAssetWriterInputGroup(inputs: inputs, defaultInput: defaultInput)
