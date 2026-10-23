@@ -23,8 +23,6 @@ final class UIState {
     var isSavingPreset = false
     var presetName = ""
     var renamingPreset: Preset?
-    /// The video whose Advanced settings sheet is open.
-    var advancedSourceID: UUID?
     /// Thumbnails of videos that moved from the editing list into the queue.
     var thumbnails: [URL: NSImage] = [:]
     /// The large picture of the Analyze header: the video last shown there.

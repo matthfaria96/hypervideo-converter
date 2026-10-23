@@ -36,7 +36,6 @@ private struct GeneralPreferences: View {
     @AppStorage(PreferenceKey.outputSuffix) private var suffix = ""
     @AppStorage(PreferenceKey.notifyOnCompletion) private var notify = true
     @AppStorage(PreferenceKey.notifyEachJob) private var notifyEachJob = false
-    @AppStorage(PreferenceKey.bounceDockOnCompletion) private var bounceDock = false
     @AppStorage(PreferenceKey.playSoundOnCompletion) private var playSound = false
     @AppStorage(PreferenceKey.revealOnCompletion) private var reveal = false
 
@@ -62,11 +61,12 @@ private struct GeneralPreferences: View {
                     SettingIcon(title: "Default preset", symbol: "star.fill", tint: Theme.accent)
                 }
             }
-            Section("When the queue finishes") {
-                Toggle(isOn: $notify) { SettingIcon(title: "Notify when the queue finishes", symbol: "bell.badge.fill", tint: .red) }
-                Toggle(isOn: $notifyEachJob) { SettingIcon(title: "Also notify for each conversion", symbol: "bell.fill", tint: .orange) }
-                    .disabled(!notify)
-                Toggle(isOn: $bounceDock) { SettingIcon(title: "Bounce the Dock icon when the queue finishes", symbol: "dock.rectangle", tint: .purple) }
+            Section("When conversions finish") {
+                Picker(selection: alert) {
+                    ForEach(CompletionAlert.allCases) { Text($0.title).tag($0) }
+                } label: {
+                    SettingIcon(title: "Notify", symbol: "bell.badge.fill", tint: .red)
+                }
                 Toggle(isOn: $playSound) { SettingIcon(title: "Play a sound when the queue finishes", symbol: "speaker.wave.2.fill", tint: .pink) }
                 Toggle(isOn: $reveal) { SettingIcon(title: "Show finished files in Finder", symbol: "magnifyingglass", tint: .teal) }
             }
@@ -74,6 +74,33 @@ private struct GeneralPreferences: View {
         .formStyle(.grouped)
         .scrollDisabled(true)
         .fixedSize(horizontal: false, vertical: true)
+    }
+
+    /// One choice over the two stored switches.
+    private var alert: Binding<CompletionAlert> {
+        Binding(get: { CompletionAlert(notify: notify, eachJob: notifyEachJob) },
+                set: { notify = $0.notify; notifyEachJob = $0.eachJob })
+    }
+}
+
+/// When a notification is posted: never, once the queue is done, or for every video too.
+enum CompletionAlert: String, CaseIterable, Identifiable {
+    case never, queue, eachVideo
+    var id: String { rawValue }
+
+    init(notify: Bool, eachJob: Bool) {
+        self = !notify ? .never : eachJob ? .eachVideo : .queue
+    }
+
+    var notify: Bool { self != .never }
+    var eachJob: Bool { self == .eachVideo }
+
+    var title: LocalizedStringKey {
+        switch self {
+        case .never: "Never"
+        case .queue: "When the queue finishes"
+        case .eachVideo: "After each video"
+        }
     }
 }
 

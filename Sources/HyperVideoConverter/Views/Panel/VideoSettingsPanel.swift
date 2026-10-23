@@ -83,10 +83,6 @@ struct VideoSettingsPanel: View {
             if model.sources.count > 1 {
                 Button("Apply to All Videos", systemImage: "square.on.square") { confirmingApplyToAll = true }
             }
-            Divider()
-            Button("Open in Large Window", systemImage: "arrow.up.left.and.arrow.down.right") {
-                model.ui.advancedSourceID = source.id
-            }
         } label: {
             Image(systemName: "ellipsis.circle")
         }

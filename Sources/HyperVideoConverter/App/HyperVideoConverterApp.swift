@@ -142,41 +142,19 @@ struct AppCommands: Commands {
             }
             .keyboardShortcut("o")
         }
-        CommandMenu("Encode") {
+        // One action converts: it queues every ready video and starts. Adding to the queue
+        // without starting stays on a video's right-click menu.
+        CommandMenu("Conversion") {
             Button(model.mode.title) { model.convertAll() }
                 .keyboardShortcut(.return, modifiers: .command)
                 .disabled(model.readySourceCount == 0 && model.queue.pendingCount == 0)
-
-            Button("Add Selected to Queue") { model.enqueue(Array(model.selectedIDs)) }
-                .keyboardShortcut("b")
-                .disabled(model.selectedIDs.isEmpty)
-
-            Button("Add All to Queue") { model.enqueueAll() }
-                .keyboardShortcut("b", modifiers: [.command, .option])
-                .disabled(model.sources.isEmpty)
-
-            Divider()
-
-            Button("Start Queue") { model.queue.start() }
-                .keyboardShortcut("r")
-                .disabled(model.queue.pendingCount == 0)
             Button("Pause Queue") { model.queue.pause() }
                 .keyboardShortcut("p", modifiers: [.command, .option])
                 .disabled(!model.queue.isProcessing)
             Button("Cancel All") { model.queue.cancelAll() }
                 .keyboardShortcut(".", modifiers: .command)
                 .disabled(model.queue.runningCount == 0 && model.queue.pendingCount == 0)
-
             Divider()
-
-            Button("Advanced Settings…") { model.ui.advancedSourceID = model.selectedSource?.id }
-                .keyboardShortcut("e")
-                .disabled(model.selectedSource?.info == nil)
-            Button(model.allSourcesSelected ? "Deselect All" : "Select All Videos") { model.toggleSelectAll() }
-                .keyboardShortcut("a", modifiers: [.command, .shift])
-                .disabled(model.sources.isEmpty)
-            Button("Deselect All") { model.selectedIDs = [] }
-                .keyboardShortcut("d")
             Button("Remove Selected Videos") { model.removeSelectedSources() }
                 .keyboardShortcut(.delete, modifiers: .command)
                 .disabled(model.selectedIDs.isEmpty)
@@ -192,18 +170,20 @@ struct AppCommands: Commands {
             Divider()
             Button("History") { model.presentedPage = .history }
                 .keyboardShortcut("y")
-            Button("Favorites") { model.presentedPage = .favorites }
+            Button("Presets") { model.presentedPage = .favorites }
                 .keyboardShortcut("p", modifiers: [.command, .shift])
+            // Like the Finder's Get Info: facts about the selected video.
             Button("Analyze Video") { model.presentedPage = .analyze }
                 .keyboardShortcut("i")
+                .disabled(model.sources.isEmpty)
             Divider()
             ForEach(Array(SettingsTab.allCases.enumerated()), id: \.element) { index, tab in
                 Button { model.ui.detailTab = tab } label: { Text(tab.title) }
                     .keyboardShortcut(SettingsTab.shortcutDigit(at: index).map {
                         KeyboardShortcut(KeyEquivalent($0), modifiers: [.command, .option])
                     })
-                    // The tabs are on screen in Convert (one video or all of them) and in the ⌘E sheet.
-                    .disabled(model.mode != .convert && model.ui.advancedSourceID == nil)
+                    // The tabs are on screen in Convert (one video or all of them).
+                    .disabled(model.mode != .convert)
             }
         }
     }

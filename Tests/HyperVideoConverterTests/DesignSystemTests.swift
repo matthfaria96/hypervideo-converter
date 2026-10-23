@@ -31,7 +31,8 @@ struct PageNavigationTests {
         #expect(model.section == .history)
         model.presentedPage = nil
         #expect(model.section == .conversion)
-        #expect(AppSection.pages == [.history, .favorites, .analyze])
+        // Analyze is an action on one video (right-click, ⌘I), not a footer page.
+        #expect(AppSection.pages == [.history, .favorites])
     }
 
     @Test func changingModeClosesAnOpenPage() throws {
@@ -59,9 +60,9 @@ struct LaunchStateTests {
     @Test func settingsNeedNoVideoOthersNeedAnAnalysedOne() throws {
         let model = try TestEnvironment().makeModel()
         #expect(LaunchState.isReady(.settings, model: model))
-        #expect(!LaunchState.isReady(.advanced, model: model))
+        #expect(!LaunchState.isReady(.converting, model: model))
         model.setSources([WorkspaceTests.source("a.mov")])
-        #expect(LaunchState.isReady(.advanced, model: model) && LaunchState.isReady(.converting, model: model))
+        #expect(LaunchState.isReady(.converting, model: model))
     }
 
     @Test func parsesTheLaunchArgument() {

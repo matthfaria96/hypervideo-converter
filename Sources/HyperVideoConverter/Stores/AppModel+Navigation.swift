@@ -4,13 +4,13 @@ import SwiftUI
 /// The pages other than the workspace. The window always shows the workspace; these
 /// open over it as sheets from the status footer (like HyperImage's sibling layout).
 extension AppSection {
-    static let pages: [AppSection] = [.history, .favorites, .analyze]
+    static let pages: [AppSection] = [.history, .favorites]
 
     var title: LocalizedStringKey {
         switch self {
         case .conversion: "Convert Videos"
         case .history: "History"
-        case .favorites: "Favorites"
+        case .favorites: "Presets"
         case .analyze: "Analyze Video"
         }
     }
@@ -19,7 +19,7 @@ extension AppSection {
         switch self {
         case .conversion: "rectangle.stack"
         case .history: "clock.arrow.circlepath"
-        case .favorites: "star"
+        case .favorites: "square.stack"
         case .analyze: "magnifyingglass"
         }
     }

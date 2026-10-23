@@ -1,10 +1,10 @@
 import SwiftUI
 
-/// Launch argument `-LaunchState advanced|converting|settings` puts the window in that
+/// Launch argument `-LaunchState converting|settings` puts the window in that
 /// state once the opened videos are analysed, like `-InitialSettingsTab` and
 /// `-InitialSection` (used for screenshots).
 enum LaunchState: String {
-    case advanced, converting, settings
+    case converting, settings
 
     static var requested: LaunchState? {
         UserDefaults.standard.string(forKey: "LaunchState").flatMap(LaunchState.init(rawValue:))
@@ -37,7 +37,6 @@ struct LaunchStateModifier: ViewModifier {
 
     private func apply(_ state: LaunchState) {
         switch state {
-        case .advanced: model.ui.advancedSourceID = model.sources.first?.id
         case .converting: model.convertAll()
         case .settings: openSettings()
         }

@@ -66,27 +66,17 @@ struct WorkListView: View {
         .quickLookPreview(Bindable(model.ui).quickLookURL)
     }
 
+    /// Title and count only: selecting is the Mac's ⌘A on the list, clearing lives in
+    /// the toolbar's "…" menu.
     private var listHeader: some View {
-        @Bindable var ui = model.ui
-        return HStack(spacing: Spacing.s) {
+        HStack(spacing: Spacing.s) {
             Image(systemName: "film.stack").foregroundStyle(.secondary)
             Text("Video List")
             Text(verbatim: "(\(model.sources.count))")
                 .foregroundStyle(.secondary)
                 .contentTransition(.numericText())
             Spacer()
-            if !model.sources.isEmpty {
-                Button(model.allSourcesSelected ? "Deselect All" : "Select All",
-                       systemImage: model.allSourcesSelected ? "checkmark.circle.fill" : "checkmark.circle") { model.toggleSelectAll() }
-                    .keyboardShortcut("a")
-                    .help("Select every video to edit them together (⌘A)")
-            }
-            Button("Clear List", systemImage: "trash") { ui.confirmingClearList = true }
-                .disabled(!model.canClearList)
-                .help("Removes the videos from the list; the original files stay on your Mac")
         }
-        .buttonStyle(.accessoryBar)
-        .controlSize(.small)
         .textCase(nil)
     }
 }
@@ -96,9 +86,7 @@ private struct SourceMenu: View {
     let source: SourceItem
 
     var body: some View {
-        Button("Advanced Settings…", systemImage: "slider.horizontal.3") { model.ui.advancedSourceID = source.id }
-            .disabled(source.info == nil)
-        Button("Analyze Video", systemImage: "magnifyingglass") {
+        Button("Analyze Video", systemImage: "info.circle") {
             model.selectedIDs = [source.id]
             model.presentedPage = .analyze
         }

@@ -713,3 +713,8 @@
 /* All-videos settings panel */
 "Track lists, chapter names, crop and trim stay per video. Select one video to change them." = "Faixas, nomes de capítulos, recorte e corte valem por vídeo. Selecione um vídeo para mudá-los.";
 "Subtitle files belong to one video. Select it in the list to add an SRT or WebVTT file." = "Arquivos de legenda pertencem a um vídeo. Selecione-o na lista para adicionar um SRT ou WebVTT.";
+"Presets" = "Predefinições";
+"Notify" = "Avisar";
+"Never" = "Nunca";
+"After each video" = "A cada vídeo";
+"When conversions finish" = "Quando as conversões terminarem";

@@ -50,7 +50,6 @@ struct ContentView: View {
         } isTargeted: { model.ui.isDropTargeted = $0 }
         .sheet(item: $model.presentedPage) { PageSheet(page: $0) }
         .sheet(item: $model.pendingFolderImport) { FolderImportSheet(pending: $0) }
-        .sheet(isPresented: advancedIsShown) { AdvancedSettingsSheet() }
         .alert(Text(verbatim: model.alertTitle ?? String(localized: "Something went wrong")),
                isPresented: .constant(model.alertMessage != nil)) {
             Button("OK") { model.alertMessage = nil; model.alertTitle = nil }
@@ -59,9 +58,6 @@ struct ContentView: View {
         }
     }
 
-    private var advancedIsShown: Binding<Bool> {
-        Binding(get: { model.ui.advancedSourceID != nil }, set: { if !$0 { model.ui.advancedSourceID = nil } })
-    }
 }
 
 extension WorkMode {
@@ -160,19 +156,12 @@ private struct WindowToolbar: ToolbarContent {
     }
 }
 
-/// "…" menu: selection and list actions.
+/// "…" menu: list actions.
 private struct ListActionsMenu: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
         Menu("List Actions", systemImage: "ellipsis") {
-            Button(model.allSourcesSelected ? "Deselect All" : "Select All") { model.toggleSelectAll() }
-                .disabled(model.sources.isEmpty)
-            Button("Advanced Settings…", systemImage: "slider.horizontal.3") {
-                model.ui.advancedSourceID = model.selectedSource?.id
-            }
-            .disabled(model.selectedSource?.info == nil)
-            Divider()
             Button("Clear List", systemImage: "trash", role: .destructive) { model.ui.confirmingClearList = true }
                 .disabled(!model.canClearList)
         }
