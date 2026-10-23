@@ -154,6 +154,7 @@ struct UXLogicTests {
         #expect(model.clearListMessage.contains("2 videos"))
         #expect(model.clearListMessage.contains("original files"))
         #expect(model.applyToAllMessage(from: model.sources[0].id).contains("1 other video"))
+        #expect(model.applyToAllMessage(from: model.sources[0].id).contains("track lists, chapter names and title"))
         #expect(model.clearHistoryMessage.contains("0 items"))
     }
 

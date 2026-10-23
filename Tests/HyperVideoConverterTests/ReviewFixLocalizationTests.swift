@@ -13,7 +13,9 @@ struct ReviewFixLocalizationTests {
 
     @Test(arguments: [
         "%lld tracks",
-        "Chapters not exported"
+        "Chapters not exported",
+        "Give every video in the list these settings (each keeps its own trim, crop, burned-in subtitle, track lists, chapter names and title)",
+        "Gives %@ these settings. Each keeps its own trim, crop, burned-in subtitle, track lists, chapter names and title."
     ])
     func isTranslated(key: String) throws {
         let value = try #require(try table()[key], "missing \(key)")

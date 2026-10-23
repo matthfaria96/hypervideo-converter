@@ -9,7 +9,7 @@ struct ApplyToAllButton: View {
 
     var body: some View {
         Button("Apply to All Videos", systemImage: "square.on.square") { isConfirming = true }
-            .help("Give every video in the list these settings (each keeps its own trim, crop and burned-in subtitle)")
+            .help("Give every video in the list these settings (each keeps its own trim, crop, burned-in subtitle, track lists, chapter names and title)")
             .confirmationDialog("Apply to all videos?", isPresented: $isConfirming) {
                 Button("Apply to All Videos") { model.applyToAll(from: sourceID) }
                 Button("Cancel", role: .cancel) {}
