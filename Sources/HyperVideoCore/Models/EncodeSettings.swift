@@ -241,6 +241,8 @@ public struct EncodeSettings: Codable, Hashable, Sendable {
     public var keepMetadata = true
     public var chapterOptions = ChapterOptions()
     public var tags = MetadataTags()
+    /// Set for AI Upscale jobs: the video is upscaled with Real-ESRGAN instead of the normal encode.
+    public var upscale: UpscaleSettings?
 
     public init() {}
 

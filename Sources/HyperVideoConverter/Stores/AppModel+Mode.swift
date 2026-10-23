@@ -22,8 +22,11 @@ extension AppModel {
     func setMode(_ newMode: WorkMode) {
         section = .conversion
         guard newMode != mode else { return }
+        let old = mode
         mode = newMode
-        newMode == .compress ? enterCompress() : leaveCompress()
+        // Only Compress rewrites the videos' settings; Convert and AI Upscale share them.
+        if old == .compress { leaveCompress() }
+        if newMode == .compress { enterCompress() }
     }
 
     private func enterCompress() {
@@ -128,6 +131,7 @@ extension AppModel {
 
     /// Why Convert is disabled, nil when it can run.
     var convertBlockedReason: String? {
+        if mode == .upscale && !Self.upscaleAvailable { return String(localized: "The AI engine isn't included in this build") }
         if readySourceCount > 0 || queue.runningCount > 0 { return nil }
         if queue.pendingCount > 0 { return nil }
         if sources.isEmpty { return String(localized: "Add videos to start") }
@@ -139,6 +143,9 @@ extension AppModel {
         let count = readySourceCount
         if count == 0 && queue.pendingCount > 0 { return String(localized: "Start Queue") }
         switch (mode, count) {
+        case (.upscale, 1): return String(localized: "Upscale 1 Video")
+        case (.upscale, let n) where n > 1: return String(localized: "Upscale \(n) Videos")
+        case (.upscale, _): return String(localized: "Upscale Videos")
         case (.compress, 1): return String(localized: "Compress 1 Video")
         case (.compress, let n) where n > 1: return String(localized: "Compress \(n) Videos")
         case (.compress, _): return String(localized: "Compress Videos")

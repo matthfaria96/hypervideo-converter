@@ -28,7 +28,7 @@ struct ContentView: View {
             }
         }
         .motion(value: model.ui.isInspectorShown)
-        .navigationTitle(Text(model.mode == .compress ? "Compress Videos" : "Convert Videos"))
+        .navigationTitle(Text(model.mode.title))
         .toolbar(removing: .title)
         .toolbar { WindowToolbar() }
         .modifier(LaunchStateModifier())
@@ -57,6 +57,24 @@ struct ContentView: View {
     }
 }
 
+extension WorkMode {
+    var title: LocalizedStringKey {
+        switch self {
+        case .convert: "Convert Videos"
+        case .compress: "Compress Videos"
+        case .upscale: "AI Upscale"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .convert: "arrow.triangle.2.circlepath"
+        case .compress: "arrow.down.right.and.arrow.up.left"
+        case .upscale: "sparkles"
+        }
+    }
+}
+
 extension AppSection: Identifiable {
     var id: Self { self }
 }
@@ -68,7 +86,10 @@ private struct SettingsColumn: View {
 
     var body: some View {
         ZStack {
-            if let source = model.panelSource {
+            if model.mode == .upscale {
+                UpscalePanel()
+                    .motionTransition(.content)
+            } else if let source = model.panelSource {
                 VideoSettingsPanel(source: source)
                     .id(source.id)
                     .motionTransition(.content)
@@ -78,6 +99,7 @@ private struct SettingsColumn: View {
             }
         }
         .motion(value: model.panelSource?.id)
+        .motion(value: model.mode)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             SummaryBox()
                 .padding(Spacing.m + 2)
@@ -100,10 +122,11 @@ private struct WindowToolbar: ToolbarContent {
             Picker("Mode", selection: modeSelection) {
                 Text("Convert").tag(WorkMode.convert)
                 Text("Compress").tag(WorkMode.compress)
+                Text("AI Upscale").tag(WorkMode.upscale)
             }
             .pickerStyle(.segmented)
             .labelsHidden()
-            .help("⌘1 Convert · ⌘2 Compress")
+            .help("⌘1 Convert · ⌘2 Compress · ⌘3 AI Upscale")
         }
         ToolbarItem(placement: .primaryAction) {
             Button("Choose Videos…", systemImage: "plus") { model.isImporting = true }

@@ -143,7 +143,7 @@ struct AppCommands: Commands {
             .keyboardShortcut("o")
         }
         CommandMenu("Encode") {
-            Button(model.mode == .compress ? "Compress Videos" : "Convert Videos") { model.convertAll() }
+            Button(model.mode.title) { model.convertAll() }
                 .keyboardShortcut(.return, modifiers: .command)
                 .disabled(model.readySourceCount == 0 && model.queue.pendingCount == 0)
 
@@ -182,11 +182,13 @@ struct AppCommands: Commands {
                 .disabled(model.selectedIDs.isEmpty)
         }
         CommandGroup(after: .sidebar) {
-            // ⌘1/⌘2 pick the mode like HyperImage (⌘3 stays free for AI Upscale).
+            // ⌘1/⌘2/⌘3 pick the mode, like HyperImage.
             Button("Convert") { model.setMode(.convert) }
                 .keyboardShortcut("1")
             Button("Compress") { model.setMode(.compress) }
                 .keyboardShortcut("2")
+            Button("AI Upscale") { model.setMode(.upscale) }
+                .keyboardShortcut("3")
             Divider()
             Button("History") { model.presentedPage = .history }
                 .keyboardShortcut("y")

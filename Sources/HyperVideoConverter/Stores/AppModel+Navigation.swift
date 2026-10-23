@@ -27,7 +27,7 @@ extension AppSection {
     /// Launch argument values (`-InitialSection history`), "compress" included.
     init?(launchName: String) {
         switch launchName {
-        case "conversion", "compress": self = .conversion
+        case "conversion", "compress", "upscale": self = .conversion
         case "history": self = .history
         case "favorites": self = .favorites
         case "analyze": self = .analyze

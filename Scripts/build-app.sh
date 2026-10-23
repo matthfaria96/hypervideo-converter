@@ -86,7 +86,15 @@ if [[ ! -f "$WORK/AppIcon.icns" || Resources/AppIcon.png -nt "$WORK/AppIcon.icns
 fi
 cp "$WORK/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
 
+# AI Upscale backend (Upscayl, AGPL-3.0): a separate executable plus its models and licence.
+[[ -x Vendor/Upscayl/upscayl-bin ]] || zsh Scripts/fetch-upscayl.sh
+cp Vendor/Upscayl/upscayl-bin "$APP/Contents/MacOS/upscayl-bin"
+mkdir -p "$APP/Contents/Resources/Upscayl" "$APP/Contents/Resources/Licenses"
+cp -R Vendor/Upscayl/models "$APP/Contents/Resources/Upscayl/models"
+cp Vendor/Upscayl/LICENSE-AGPL-3.0.txt "$APP/Contents/Resources/Licenses/upscayl-LICENSE-AGPL-3.0.txt"
+
 if [[ -n "$SIGN_IDENTITY" ]]; then
+  codesign --force --options runtime --timestamp --sign "$SIGN_IDENTITY" "$APP/Contents/MacOS/upscayl-bin"
   codesign --force --deep --options runtime --timestamp --sign "$SIGN_IDENTITY" "$APP"
 else
   codesign --force --deep --sign - "$APP"

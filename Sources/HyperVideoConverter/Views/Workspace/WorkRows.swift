@@ -52,7 +52,10 @@ struct SourceRowView: View {
             VStack(alignment: .trailing, spacing: Spacing.xs) {
                 Text(Format.bytes(info.fileBytes)).font(.callout).monospacedDigit()
                 Group {
-                    if let estimate = OutputEstimate.prediction(info: info, settings: source.settings) {
+                    if model.mode == .upscale, let plan = model.upscalePlan(for: source) {
+                        Text(verbatim: "→ \(Format.size(plan.outputSize)) · ≈ \(Format.bytes(plan.predictedBytes))")
+                            .help(Text("Resolution and size after AI Upscale"))
+                    } else if let estimate = OutputEstimate.prediction(info: info, settings: source.settings) {
                         Text(verbatim: String(localized: "\(SizeEstimate.label(bytes: estimate.bytes, kind: estimate.kind)) output"))
                             .help(model.presetName(for: source))
                     } else {
@@ -66,6 +69,8 @@ struct SourceRowView: View {
             }
             .fixedSize()
             .motion(Motion.snappy, value: source.settings)
+            .motion(Motion.snappy, value: model.upscaleSettings)
+            .motion(Motion.snappy, value: model.mode)
         }
     }
 }

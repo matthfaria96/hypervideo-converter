@@ -34,9 +34,10 @@ enum AppSection: Hashable, CaseIterable {
     case conversion, history, favorites, analyze
 }
 
-/// The workspace's two flavours: Compress also resets the targets to a compact MP4.
+/// The workspace's flavours: Compress also resets the targets to a compact MP4;
+/// AI Upscale enlarges the videos with Real-ESRGAN, leaving their settings alone.
 enum WorkMode: Hashable {
-    case convert, compress
+    case convert, compress, upscale
 }
 
 @Observable
@@ -67,6 +68,11 @@ final class AppModel {
     /// Set when an import includes folders, until a preset is chosen for them.
     var pendingFolderImport: FolderImport?
 
+    /// The AI Upscale panel's choices, shared by every video and kept between launches.
+    var upscaleSettings: UpscaleSettings {
+        didSet { defaults.set(try? JSONEncoder().encode(upscaleSettings), forKey: PreferenceKey.upscaleSettings) }
+    }
+
     var destinationFolder: URL {
         didSet { defaults.set(destinationFolder.path, forKey: PreferenceKey.destinationPath) }
     }
@@ -78,6 +84,8 @@ final class AppModel {
         queue = QueueStore(directory: directory, defaults: defaults, notifier: notifier, saveDelay: saveDelay,
                            resolvesInBackground: resolvesInBackground)
         self.defaults = defaults
+        upscaleSettings = defaults.data(forKey: PreferenceKey.upscaleSettings)
+            .flatMap { try? JSONDecoder().decode(UpscaleSettings.self, from: $0) } ?? UpscaleSettings()
         let saved = defaults.string(forKey: PreferenceKey.destinationPath)
         destinationFolder = saved.map { URL(fileURLWithPath: $0) }
             ?? FileManager.default.urls(for: .moviesDirectory, in: .userDomainMask).first
@@ -86,7 +94,7 @@ final class AppModel {
         // Launch argument `-InitialSection history` opens on that page (used for screenshots).
         if let name = defaults.string(forKey: "InitialSection"), let page = AppSection(launchName: name) {
             section = page
-            mode = name == "compress" ? .compress : .convert
+            mode = name == "compress" ? .compress : name == "upscale" ? .upscale : .convert
         }
     }
 
@@ -246,16 +254,19 @@ final class AppModel {
                 skipped.append(item.name)
                 continue
             }
+            let settings = jobSettings(for: item)
             let destination = OutputNaming.destination(
-                for: item.url, in: destinationFolder, container: item.settings.container, suffix: suffix, taken: taken
+                for: item.url, in: destinationFolder, container: settings.container, suffix: suffix, taken: taken
             )
             taken.insert(destination)
             queued.append(item.id)
+            let upscaling = settings.upscale != nil
             jobs.append(EncodeJob(
-                source: item.url, destination: destination, settings: item.settings, presetName: presetName(for: item),
+                source: item.url, destination: destination, settings: settings,
+                presetName: upscaling ? upscaleJobName : presetName(for: item),
                 mediaDuration: item.settings.outputDuration(sourceDuration: info.duration),
                 frameRate: item.settings.outputFrameRate(sourceFrameRate: info.frameRate),
-                subtitleFiles: item.subtitleFiles, presetID: item.presetID
+                subtitleFiles: item.subtitleFiles, presetID: upscaling ? nil : item.presetID
             ))
         }
         if !skipped.isEmpty {

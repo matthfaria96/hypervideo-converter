@@ -78,7 +78,7 @@ struct SummaryBox: View {
                 if working && ready == 0 {
                     Text("Processing…")
                 } else {
-                    Image(systemName: model.mode == .compress ? "arrow.down.right.and.arrow.up.left" : "arrow.triangle.2.circlepath")
+                    Image(systemName: model.mode.symbol)
                     Text(verbatim: model.convertButtonTitle).contentTransition(.numericText())
                 }
             }

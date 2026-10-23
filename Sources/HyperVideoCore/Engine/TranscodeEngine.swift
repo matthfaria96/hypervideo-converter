@@ -46,13 +46,17 @@ public struct TranscodeEngine: Sendable {
     let stallTimeout: Duration
     /// Free bytes on the volume holding a folder; nil when unknown (the check is skipped).
     let availableCapacity: @Sendable (URL) -> Int64?
+    /// Upscayl for AI Upscale jobs; nil when the app was built without it.
+    let upscaleBackend: UpscaleBackend?
 
     public init(
         stallTimeout: Duration = .seconds(60),
-        availableCapacity: @escaping @Sendable (URL) -> Int64? = DiskSpace.availableCapacity(at:)
+        availableCapacity: @escaping @Sendable (URL) -> Int64? = DiskSpace.availableCapacity(at:),
+        upscaleBackend: UpscaleBackend? = .bundled()
     ) {
         self.stallTimeout = stallTimeout
         self.availableCapacity = availableCapacity
+        self.upscaleBackend = upscaleBackend
     }
 
     /// Encodes `source` to `destination`, returning the output size in bytes.
@@ -79,6 +83,10 @@ public struct TranscodeEngine: Sendable {
         progress: @escaping @Sendable (Double) -> Void
     ) async throws -> TranscodeOutput {
         guard settings.isValid else { throw TranscodeError.invalidSettings(settings.validationIssues) }
+        if let upscale = settings.upscale {
+            return try await upscaleTranscode(source: source, destination: destination, settings: settings,
+                                              upscale: upscale, workTag: workTag, progress: progress)
+        }
 
         let asset = AVURLAsset(url: source)
         let range = try Self.timeRange(settings.trim, duration: try await Self.readableDuration(of: asset))

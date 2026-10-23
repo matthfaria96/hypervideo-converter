@@ -138,9 +138,10 @@ enum Format {
         (url.path as NSString).abbreviatingWithTildeInPath
     }
 
-    /// Encode speed relative to playback, e.g. "3.2×".
+    /// Encode speed relative to playback, e.g. "3.2×", or "0.03×" for slow work like AI Upscale.
     static func speed(_ multiple: Double) -> String {
-        "\(multiple.formatted(.number.precision(.fractionLength(multiple < 10 ? 1 : 0))))×"
+        let digits = multiple < 0.1 ? 2 : multiple < 10 ? 1 : 0
+        return "\(multiple.formatted(.number.precision(.fractionLength(digits))))×"
     }
 
     static func size(_ size: CGSize) -> String { "\(Int(size.width)) × \(Int(size.height))" }

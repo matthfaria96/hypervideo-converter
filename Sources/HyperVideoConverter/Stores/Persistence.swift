@@ -51,4 +51,5 @@ enum PreferenceKey {
     static let destinationPath = "destinationPath"
     static let defaultPresetID = "defaultPresetID"
     static let autoStartQueue = "autoStartQueue"
+    static let upscaleSettings = "upscaleSettings"
 }

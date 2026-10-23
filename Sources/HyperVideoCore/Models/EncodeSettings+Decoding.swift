@@ -8,7 +8,7 @@ extension EncodeSettings {
         case allowBFrames, keyframeIntervalSeconds, filters
         case audioCodec, audioMixdown, audioBitrateKbps, audioTracks, extraAudio, subtitles, burnIn
         case trim, optimizeForWeb, keepMetadata
-        case videoOptions, pictureOptions, audioOptions, subtitleOptions, chapterOptions, tags, alignAVStart
+        case videoOptions, pictureOptions, audioOptions, subtitleOptions, chapterOptions, tags, alignAVStart, upscale
     }
 
     private enum LegacyKeys: String, CodingKey { case prioritizeSpeed }
@@ -66,5 +66,6 @@ extension EncodeSettings {
         chapterOptions = try c.decodeIfPresent(ChapterOptions.self, forKey: .chapterOptions) ?? d.chapterOptions
         tags = try c.decodeIfPresent(MetadataTags.self, forKey: .tags) ?? d.tags
         alignAVStart = try c.decodeIfPresent(Bool.self, forKey: .alignAVStart) ?? d.alignAVStart
+        upscale = try? c.decodeIfPresent(UpscaleSettings.self, forKey: .upscale)
     }
 }

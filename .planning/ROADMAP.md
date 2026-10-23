@@ -95,12 +95,12 @@ Plans:
 ### Phase 03.1.2.1: AI video upscale (INSERTED)
 
 **Goal:** An "AI Upscale" mode (⌘3) like HyperImage's: Apple VideoToolbox super resolution on macOS 26+, Real-ESRGAN (Upscayl) as the max-quality option. See 03.1.2.1-RESEARCH.md.
-**Requirements**: TBD (from research)
+**Requirements**: done inline — see 03.1.2.1-SUMMARY.md
 **Depends on:** Phase 03.1.2
 **Plans:** 0 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 03.1.2.1 to break down)
+- [x] Executed inline — see 03.1.2.1-SUMMARY.md
 
 ### Phase 4: Release
 **Goal**: New version available to users on the site.
