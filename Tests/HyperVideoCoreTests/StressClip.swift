@@ -54,22 +54,7 @@ enum StressClip {
             ])
         }
         let audios = spec.audio.map { audio in
-            var settings: [String: Any] = [
-                AVFormatIDKey: kAudioFormatMPEG4AAC, AVSampleRateKey: audio.sampleRate,
-                AVNumberOfChannelsKey: audio.channels,
-                AVChannelLayoutKey: layoutData(audio)
-            ]
-            if audio.lpcm {
-                settings[AVFormatIDKey] = kAudioFormatLinearPCM
-                settings[AVLinearPCMBitDepthKey] = 32
-                settings[AVLinearPCMIsFloatKey] = true
-                settings[AVLinearPCMIsBigEndianKey] = false
-                settings[AVLinearPCMIsNonInterleaved] = false
-            }
-            let input = AVAssetWriterInput(mediaType: .audio, outputSettings: settings)
-            input.extendedLanguageTag = audio.language
-            input.languageCode = audio.languageCode
-            input.expectsMediaDataInRealTime = false
+            let input = audioInput(audio)
             writer.add(input)
             return input
         }
@@ -117,6 +102,26 @@ enum StressClip {
         for row in 0..<CVPixelBufferGetHeight(buffer) {
             memset(base + row * rowBytes, Int32((frame * 5 + row) % 255), rowBytes)
         }
+    }
+
+    private static func audioInput(_ audio: Audio) -> AVAssetWriterInput {
+        var settings: [String: Any] = [
+            AVFormatIDKey: kAudioFormatMPEG4AAC, AVSampleRateKey: audio.sampleRate,
+            AVNumberOfChannelsKey: audio.channels,
+            AVChannelLayoutKey: layoutData(audio)
+        ]
+        if audio.lpcm {
+            settings[AVFormatIDKey] = kAudioFormatLinearPCM
+            settings[AVLinearPCMBitDepthKey] = 32
+            settings[AVLinearPCMIsFloatKey] = true
+            settings[AVLinearPCMIsBigEndianKey] = false
+            settings[AVLinearPCMIsNonInterleaved] = false
+        }
+        let input = AVAssetWriterInput(mediaType: .audio, outputSettings: settings)
+        input.extendedLanguageTag = audio.language
+        input.languageCode = audio.languageCode
+        input.expectsMediaDataInRealTime = false
+        return input
     }
 
     private static func layoutData(_ audio: Audio) -> Data {
