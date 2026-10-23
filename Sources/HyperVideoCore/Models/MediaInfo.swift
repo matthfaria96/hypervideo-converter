@@ -9,8 +9,14 @@ public struct AudioTrackInfo: Codable, Hashable, Identifiable, Sendable {
     public var language: String?
     /// Estimated data rate in bits per second, when the container reports one.
     public var bitrate: Double?
+    /// The track's own title, when the source has one.
+    public var name: String?
 
-    public init(id: Int, codec: String, channels: Int, sampleRate: Double, language: String?, bitrate: Double? = nil) {
+    public init(
+        id: Int, codec: String, channels: Int, sampleRate: Double, language: String?,
+        bitrate: Double? = nil, name: String? = nil
+    ) {
+        self.name = name
         self.id = id
         self.codec = codec
         self.channels = channels

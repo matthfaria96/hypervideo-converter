@@ -6,11 +6,39 @@ public struct SubtitleFile: Codable, Hashable, Identifiable, Sendable {
     public var language: String?
     /// Finds the file after relaunches or moves; nil in queues saved before it existed.
     public var bookmark: Data?
+    /// Shifts every cue by this many milliseconds.
+    public var offsetMs: Int = 0
+    /// Track title written to the output.
+    public var title: String?
+    public var isDefault = false
+    public var isForced = false
 
-    public init(url: URL, language: String?, bookmark: Data? = nil) {
+    public init(
+        url: URL, language: String?, bookmark: Data? = nil,
+        offsetMs: Int = 0, title: String? = nil, isDefault: Bool = false, isForced: Bool = false
+    ) {
         self.url = url
         self.language = language
         self.bookmark = bookmark
+        self.offsetMs = offsetMs
+        self.title = title
+        self.isDefault = isDefault
+        self.isForced = isForced
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case url, language, bookmark, offsetMs, title, isDefault, isForced
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        url = try c.decode(URL.self, forKey: .url)
+        language = try c.decodeIfPresent(String.self, forKey: .language)
+        bookmark = try c.decodeIfPresent(Data.self, forKey: .bookmark)
+        offsetMs = try c.decodeIfPresent(Int.self, forKey: .offsetMs) ?? 0
+        title = try c.decodeIfPresent(String.self, forKey: .title)
+        isDefault = try c.decodeIfPresent(Bool.self, forKey: .isDefault) ?? false
+        isForced = try c.decodeIfPresent(Bool.self, forKey: .isForced) ?? false
     }
 
     public var id: URL { url }

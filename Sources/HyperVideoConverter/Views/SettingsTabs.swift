@@ -118,6 +118,8 @@ struct SummaryTab: View {
         switch settings.audioCodec {
         case .none: String(localized: "None")
         case .passthrough: String(localized: "Passthrough")
+        case .autoPassthru: String(localized: "Auto Passthru")
+        case .heAAC: "HE-AAC \(Self.local(settings.audioMixdown.displayName)) · \(settings.audioBitrateKbps) kbit/s"
         case .alac: "ALAC \(Self.local(settings.audioMixdown.displayName))"
         case .aac: "AAC \(Self.local(settings.audioMixdown.displayName)) · \(settings.audioBitrateKbps) kbit/s"
         }

@@ -48,6 +48,8 @@ public extension OutputEstimate {
         case .proRes422: return 2.4
         case .proRes422HQ: return 3.6
         case .proRes4444: return 5.4
+        case .proRes422LT: return 1.7
+        case .proRes422Proxy: return 0.75
         case .passthrough: return 0
         }
     }
@@ -74,7 +76,12 @@ public extension OutputEstimate {
 
     /// When a passthrough track doesn't report its rate: 160 kbit/s per kept track.
     private static func fallbackAudioBitsPerSecond(info: MediaInfo, settings: EncodeSettings) -> Double {
-        let tracks = settings.audioTracks == .all ? info.audioTracks.count : min(info.audioTracks.count, 1)
+        let tracks: Int
+        switch settings.audioTracks {
+        case .none: tracks = 0
+        case .first: tracks = min(info.audioTracks.count, 1)
+        case .all: tracks = info.audioTracks.count
+        }
         return Double(settings.audioEncodings.count * tracks) * 160_000
     }
 }

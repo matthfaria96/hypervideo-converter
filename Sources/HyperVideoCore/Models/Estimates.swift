@@ -70,7 +70,12 @@ public enum OutputEstimate {
     /// Combined audio bitrate of every kept track in every encoding, nil when it
     /// can't be predicted.
     static func audioBitsPerSecond(info: MediaInfo, settings: EncodeSettings) -> Double? {
-        let tracks = settings.audioTracks == .all ? info.audioTracks : Array(info.audioTracks.prefix(1))
+        let tracks: [AudioTrackInfo]
+        switch settings.audioTracks {
+        case .none: tracks = []
+        case .first: tracks = Array(info.audioTracks.prefix(1))
+        case .all: tracks = info.audioTracks
+        }
         var total = 0.0
         for encoding in settings.audioEncodings {
             guard let rate = bitsPerSecond(of: encoding, tracks: tracks) else { return nil }
@@ -83,9 +88,9 @@ public enum OutputEstimate {
         switch encoding.codec {
         case .none:
             return 0
-        case .aac:
+        case .aac, .heAAC:
             return Double(encoding.bitrateKbps * 1_000 * tracks.count)
-        case .passthrough:
+        case .passthrough, .autoPassthru:
             let rates = tracks.map(\.bitrate)
             return rates.contains(nil) ? nil : rates.compactMap { $0 }.reduce(0, +)
         case .alac:
