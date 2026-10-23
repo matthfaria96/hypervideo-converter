@@ -58,6 +58,20 @@ public enum PassthruCodec: String, Codable, CaseIterable, Identifiable, Sendable
         text.utf8.reduce(UInt32(0)) { ($0 << 8) | UInt32($1) }
     }
 
+    /// The passthrough family of a codec name as `MediaInspector` reports it (`FourCC.string`).
+    public static func from(codecName: String) -> PassthruCodec? {
+        switch codecName {
+        case "AAC": .aac
+        case "AC-3": .ac3
+        case "E-AC-3": .eac3
+        case "MP3": .mp3
+        case "ALAC": .alac
+        case "FLAC": .flac
+        case "Opus": .opus
+        default: nil
+        }
+    }
+
     /// The passthrough family of a Core Audio format ID, nil for uncompressed or unknown audio.
     public static func from(formatID: UInt32) -> PassthruCodec? {
         switch formatID {

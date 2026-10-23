@@ -71,7 +71,9 @@ public enum OutputEstimate {
     static func audioBitsPerSecond(info: MediaInfo, settings: EncodeSettings) -> Double? {
         var total = 0.0
         for (track, encoding) in audioJobs(info: info, settings: settings) {
-            guard let rate = bitsPerSecond(of: encoding, track: track) else { return nil }
+            guard let rate = bitsPerSecond(of: resolved(encoding, track: track, settings: settings), track: track) else {
+                return nil
+            }
             total += rate
         }
         return total
@@ -84,6 +86,18 @@ public enum OutputEstimate {
         return AudioTrackPlanner.plan(sources: sources, settings: settings).compactMap { job in
             info.audioTracks.first { $0.id == job.sourceTrackID }.map { ($0, job.encoding) }
         }
+    }
+
+    /// Auto Passthru becomes a copy only when the engine would copy this track's codec,
+    /// otherwise the fallback encoder; other encodings are unchanged.
+    static func resolved(_ encoding: AudioEncoding, track: AudioTrackInfo, settings: EncodeSettings) -> AudioEncoding {
+        guard encoding.codec == .autoPassthru else { return encoding }
+        let allowed = encoding.passthruOnly.map { Set([$0]) } ?? settings.audioOptions.allowedPassthru
+        if let codec = PassthruCodec.from(codecName: track.codec), allowed.contains(codec),
+           AutoPassthru.containerAccepts(codec, settings.container) {
+            return encoding
+        }
+        return AutoPassthru.fallbackEncoding(for: encoding, fallback: settings.audioOptions.fallback, container: settings.container)
     }
 
     private static func bitsPerSecond(of encoding: AudioEncoding, track: AudioTrackInfo) -> Double? {

@@ -85,6 +85,21 @@ struct OutputEstimateTests {
         #expect(try #require(OutputEstimate.bytes(info: info, settings: settings)) == 52_000_000)
     }
 
+    @Test func autoPassthruEstimatesTheFallbackWhenItWontCopy() throws {
+        var settings = EncodeSettings()
+        settings.rateControl = .averageBitrate(4_000)
+        settings.audioCodec = .autoPassthru
+        settings.audioBitrateKbps = 96
+        // The AAC source track is allowed, so it's copied at its own 192 kbit/s.
+        #expect(try #require(OutputEstimate.bytes(info: info, settings: settings)) == 52_400_000)
+        // AAC isn't allowed: the fallback AAC encoder at 96 kbit/s is used instead.
+        settings.audioOptions.allowedPassthru = [.ac3]
+        #expect(try #require(OutputEstimate.bytes(info: info, settings: settings)) == 51_200_000)
+        settings.audioOptions.allowedPassthru = [.aac]
+        settings.audioOptions.passthruOnly = .ac3
+        #expect(try #require(OutputEstimate.bytes(info: info, settings: settings)) == 51_200_000)
+    }
+
     @Test func passthroughAudioUsesSourceBitrate() throws {
         var settings = EncodeSettings()
         settings.rateControl = .averageBitrate(4_000)
