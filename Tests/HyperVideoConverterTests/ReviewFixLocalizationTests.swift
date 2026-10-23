@@ -16,7 +16,8 @@ struct ReviewFixLocalizationTests {
         "Chapters not exported",
         "Give every video in the list these settings (each keeps its own trim, crop, burned-in subtitle, track lists, chapter names and title)",
         "Gives %@ these settings. Each keeps its own trim, crop, burned-in subtitle, track lists, chapter names and title.",
-        "Only these tracks are kept, each with its own encoding. Quality profiles and presets set their encoder and bitrate."
+        "Only these tracks are kept, each with its own encoding. Quality profiles and presets set their encoder and bitrate.",
+        "Chapter %lld title"
     ])
     func isTranslated(key: String) throws {
         let value = try #require(try table()[key], "missing \(key)")

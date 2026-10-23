@@ -48,9 +48,11 @@ struct ChaptersSettingsTab: View {
                     Text("\(index + 1)").monospacedDigit().foregroundStyle(Theme.muted)
                     Text(Format.duration(chapter.start)).monospacedDigit()
                     Text(Format.duration(chapter.duration)).monospacedDigit().foregroundStyle(Theme.muted)
-                    CommittingTextField(title: "Title", text: titleBinding(index)).textFieldStyle(.roundedBorder)
+                    CommittingTextField(title: "Title", text: titleBinding(index))
+                        .textFieldStyle(.roundedBorder)
+                        .accessibilityLabel(Text("Chapter \(index + 1) title"))
                 }
-                .accessibilityElement(children: .combine)
+                .accessibilityElement(children: .contain)
             }
         }
     }

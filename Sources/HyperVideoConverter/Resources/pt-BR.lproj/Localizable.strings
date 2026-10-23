@@ -618,3 +618,4 @@
 "%lld tracks" = "%lld faixas";
 "Chapters not exported" = "Capítulos não exportados";
 "Only these tracks are kept, each with its own encoding. Quality profiles and presets set their encoder and bitrate." = "Só estas faixas são mantidas, cada uma com sua própria codificação. Perfis de qualidade e perfis salvos definem o codificador e a taxa de bits delas.";
+"Chapter %lld title" = "Título do capítulo %lld";
