@@ -28,6 +28,8 @@ struct AdvancedSettingsSheet: View {
         }
         .frame(minWidth: 1000, idealWidth: 1100, minHeight: 640, idealHeight: 760)
         .environment(\.settingsLabelWidth, 170)
+        // AppKit focuses the first text field of a new sheet; start with nothing focused.
+        .onAppear { DispatchQueue.main.async { NSApp.keyWindow?.makeFirstResponder(nil) } }
     }
 
     private func settings(_ source: SourceItem, info: MediaInfo) -> some View {

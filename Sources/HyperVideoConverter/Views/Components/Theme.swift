@@ -6,6 +6,8 @@ import SwiftUI
 /// app's identity.
 enum Theme {
     static let accent = Color(hex: 0xFFB52E)
+    /// The accent for text and small badges: darker on light backgrounds so it stays readable.
+    static let accentText = Color(light: 0xA86400, dark: 0xFFC14D)
     /// Status colors tuned for both appearances.
     static let success = Color(light: 0x1F9D57, dark: 0x5FD48A)
     static let danger = Color(light: 0xD63B3B, dark: 0xFF7F7F)

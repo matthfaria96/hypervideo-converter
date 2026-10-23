@@ -15,11 +15,13 @@ struct FinishedBanner: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(verbatim: count == 1 ? String(localized: "1 video ready") : String(localized: "\(count) videos ready"))
                     .font(.body.weight(.semibold))
-                Text(verbatim: String(localized: "Saved in \(Format.path(folder))"))
+                // The folder's name reads at a glance; the full path is in the tooltip.
+                Text(verbatim: String(localized: "Saved in \(folder.lastPathComponent)"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
-                    .truncationMode(.head)
+                    .truncationMode(.middle)
+                    .help(Format.path(folder))
             }
             Spacer(minLength: Spacing.s)
             Button("Open Folder", systemImage: "folder") { NSWorkspace.shared.open(folder) }

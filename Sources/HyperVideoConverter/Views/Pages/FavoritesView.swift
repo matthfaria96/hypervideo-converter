@@ -103,7 +103,7 @@ private struct PresetRow: View {
                 HStack(spacing: Spacing.xs + 2) {
                     Text(verbatim: preset.displayName).font(.body.weight(.medium))
                     if isDefault {
-                        Text("Default").font(.caption2.weight(.semibold)).foregroundStyle(Theme.accent)
+                        Text("Default").font(.caption2.weight(.semibold)).foregroundStyle(Theme.accentText)
                             .padding(.horizontal, 6).padding(.vertical, 2)
                             .background(Theme.accent.opacity(0.14), in: .capsule)
                             .motionTransition(.pop)

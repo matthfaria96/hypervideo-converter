@@ -10,34 +10,50 @@ struct WorkListView: View {
 
     var body: some View {
         @Bindable var model = model
+        @Bindable var ui = model.ui
         List(selection: $model.listSelection) {
-            Section {
-                ForEach(model.sources) { source in
-                    SourceRowView(source: source, isSelected: model.selectedIDs.contains(source.id))
-                        .tag(source.id)
-                        .contextMenu { SourceMenu(source: source) }
-                        .motionTransition(.row)
+            if model.showsVideoListHeader {
+                Section {
+                    ForEach(model.sources) { source in
+                        SourceRowView(source: source, isSelected: model.selectedIDs.contains(source.id))
+                            .tag(source.id)
+                            .contextMenu { SourceMenu(source: source) }
+                            .motionTransition(.row)
+                    }
+                    .onMove { model.moveSources(fromOffsets: $0, toOffset: $1) }
+                } header: {
+                    listHeader
                 }
-                .onMove { model.moveSources(fromOffsets: $0, toOffset: $1) }
-            } header: {
-                listHeader
             }
 
             if !model.activeJobs.isEmpty {
                 Section {
                     ForEach(model.activeJobs) { job in
                         JobRowView(job: job)
+                            .task(id: job.source) { await model.loadQueueThumbnail(for: job) }
                             .selectionDisabled()
                             .contextMenu { JobMenu(job: job) }
                             .motionTransition(.row)
                     }
                     .onMove { model.queue.move(fromOffsets: $0, toOffset: $1) }
                 } header: {
-                    Text("Queue")
+                    HStack(spacing: Spacing.xs) {
+                        Text("Queue")
+                        Text(verbatim: "(\(model.activeJobs.count))").foregroundStyle(.secondary)
+                            .contentTransition(.numericText())
+                    }
                 }
             }
         }
         .listStyle(.inset)
+        // On the list, not the header: the toolbar's Clear List works when only the queue shows.
+        .confirmationDialog("Clear the video list?", isPresented: $ui.confirmingClearList) {
+            Button("Clear List", role: .destructive) { model.clearWorkspace() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text(verbatim: model.clearListMessage)
+        }
+        .motion(value: model.showsVideoListHeader)
         .motion(value: model.sources.map(\.id))
         .motion(value: model.activeJobs.map(\.id))
         .onDeleteCommand { if !model.selectedIDs.isEmpty { model.removeSelectedSources() } }
@@ -65,12 +81,6 @@ struct WorkListView: View {
             Button("Clear List") { ui.confirmingClearList = true }
                 .disabled(!model.canClearList)
                 .help("Removes the videos from the list; the original files stay on your Mac")
-                .confirmationDialog("Clear the video list?", isPresented: $ui.confirmingClearList) {
-                    Button("Clear List", role: .destructive) { model.clearWorkspace() }
-                    Button("Cancel", role: .cancel) {}
-                } message: {
-                    Text(verbatim: model.clearListMessage)
-                }
         }
         .buttonStyle(.accessoryBar)
         .controlSize(.small)

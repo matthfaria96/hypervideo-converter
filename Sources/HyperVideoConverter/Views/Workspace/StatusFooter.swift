@@ -11,7 +11,7 @@ struct StatusFooter: View {
                 .contentTransition(.numericText())
             if model.queue.runningCount > 0 {
                 Text(verbatim: "·")
-                Text(verbatim: model.statusText).foregroundStyle(Theme.accent)
+                Text(verbatim: model.statusText).foregroundStyle(Theme.accentText)
             }
             Spacer(minLength: Spacing.s)
             Image(systemName: "lock.shield")

@@ -124,6 +124,14 @@ extension AppModel {
         ui.hero = HeroPicture(url: source.url, image: image)
     }
 
+    /// Gives a queued job its picture when it has none (jobs restored after a relaunch).
+    func loadQueueThumbnail(for job: EncodeJob) async {
+        guard ui.thumbnails[job.source] == nil,
+              let image = await Self.thumbnail(for: job.source, duration: job.mediaDuration ?? 10, size: Self.thumbnailSize)
+        else { return }
+        ui.thumbnails[job.source] = image
+    }
+
     /// Forgets queue thumbnails of videos that are no longer in the queue or on the list.
     func releaseThumbnails(of removed: [EncodeJob]) {
         let inUse = Set(queue.jobs.map(\.source) + sources.map(\.url))

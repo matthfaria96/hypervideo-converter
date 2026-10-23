@@ -50,6 +50,10 @@ extension AppModel {
         set { selectedIDs = newValue.intersection(sources.map(\.id)) }
     }
 
+    /// "Video List (n)" with its buttons only when there are videos to set up; a queue
+    /// alone shows just its own section.
+    var showsVideoListHeader: Bool { !sources.isEmpty }
+
     /// Drag reordering from a native list.
     func moveSources(fromOffsets offsets: IndexSet, toOffset destination: Int) {
         var reordered = sources

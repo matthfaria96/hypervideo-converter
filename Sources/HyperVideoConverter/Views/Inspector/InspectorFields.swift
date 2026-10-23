@@ -34,7 +34,7 @@ struct ProfileCards: View {
                         if profile == .balanced {
                             Text("Recommended")
                                 .font(.caption2.weight(.semibold))
-                                .foregroundStyle(Theme.accent)
+                                .foregroundStyle(Theme.accentText)
                                 .padding(.horizontal, 6).padding(.vertical, 2)
                                 .background(Theme.accent.opacity(0.14), in: .capsule)
                         }

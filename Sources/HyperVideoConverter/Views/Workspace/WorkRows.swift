@@ -150,7 +150,7 @@ private struct JobProgressStatus: View {
     var body: some View {
         Text(progress.fraction, format: .percent.precision(.fractionLength(0)))
             .font(.callout.weight(.semibold))
-            .foregroundStyle(Theme.accent)
+            .foregroundStyle(Theme.accentText)
             .contentTransition(.numericText())
             .motion(Motion.snappy, value: progress.fraction)
         Text(verbatim: rate)

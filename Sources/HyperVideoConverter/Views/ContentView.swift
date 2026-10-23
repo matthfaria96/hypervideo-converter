@@ -32,6 +32,8 @@ struct ContentView: View {
         .toolbar(removing: .title)
         .toolbar { WindowToolbar() }
         .modifier(LaunchStateModifier())
+        // AppKit focuses the first text field at launch; start with nothing focused.
+        .onAppear { DispatchQueue.main.async { NSApp.keyWindow?.makeFirstResponder(nil) } }
         .fileImporter(isPresented: $model.isImporting, allowedContentTypes: [.audiovisualContent, .folder],
                       allowsMultipleSelection: true) { result in
             if case .success(let urls) = result { Task { await model.addSources(urls) } }
