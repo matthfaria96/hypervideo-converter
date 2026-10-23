@@ -22,6 +22,13 @@
 - [ ] **CMP-02**: Liquid Glass and other 26+ APIs go through availability-guarded compat helpers with a fallback look
 - [ ] **CMP-03**: Built binary has no unguarded macOS 26/27-only symbols; app launches and converts a video in the macOS 15 VM
 
+### HandBrake parity (HBP)
+- [ ] **HBP-01**: Inventory of HandBrake.app settings vs the app (REA, UI strings, presets) in .planning/phases/03.1-*/HANDBRAKE-PARITY.md
+- [ ] **HBP-02**: All per-video settings visible inline in the new layout, organized like HandBrake's tabs, in the new dark theme
+- [ ] **HBP-03**: Missing feasible video/dimension/filter settings implemented (e.g. framerate mode, encoder preset/profile/level, anamorphic/padding, extra filters supported by Core Image)
+- [ ] **HBP-04**: Missing feasible audio/subtitle/chapter/tag settings implemented (per-track audio list with encoder/mixdown/samplerate/bitrate/gain, subtitle forced/default flags, editable chapter names, metadata tags)
+- [ ] **HBP-05**: HandBrake preset import maps the newly supported keys
+
 ### Release (REL)
 - [ ] **REL-01**: README and site say macOS 15+; version bumped
 - [ ] **REL-02**: DMG built with Scripts/build-app.sh, GitHub release published, witchmymac apps.js link updated
@@ -33,4 +40,5 @@
 | QUE-01..03 | 2 |
 | UI-01..02 | 2 |
 | CMP-01..03 | 3 |
+| HBP-01..05 | 03.1 |
 | REL-01..02 | 4 |

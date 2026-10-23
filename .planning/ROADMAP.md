@@ -47,9 +47,24 @@
 **Plans**: TBD
 **UI hint**: yes
 
+### Phase 03.1: HandBrake parity in the new layout (INSERTED)
+
+**Goal:** Every HandBrake setting the app had or can support is back, reachable directly in the redesigned dark three-column window (not hidden behind a sheet), keeping the new visual style.
+**Requirements**: HBP-01, HBP-02, HBP-03, HBP-04, HBP-05
+**Depends on:** Phase 3
+**Success Criteria**:
+1. HANDBRAKE-PARITY.md inventories HandBrake.app's settings (REA + UI strings + bundled presets) against EncodeSettings and the UI, each marked present / hidden / missing / not feasible on AVFoundation
+2. Selecting a video shows its full HandBrake-style tabs (Summary, Dimensions, Filters, Video, Audio, Subtitles, Chapters, Tags) inline in the workspace/inspector in the new theme; Advanced sheet is no longer the only path
+3. Every feasible missing setting is implemented end-to-end (model, engine, preset import mapping, EN + pt-BR UI) with tests
+4. Build and all tests green; screenshots of each tab captured
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 03.1 to break down)
+
 ### Phase 4: Release
 **Goal**: New version available to users on the site.
-**Depends on**: Phase 3
+**Depends on**: Phase 03.1
 **Requirements**: REL-01, REL-02
 **Success Criteria**:
 1. README/site state macOS 15+
