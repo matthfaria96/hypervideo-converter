@@ -12,7 +12,7 @@ struct DimensionsSettingsTab: View {
     var body: some View {
         VStack(spacing: 12) {
             if settings.videoCodec == .passthrough {
-                StatusBanner(messages: ["Passthrough copies the video as is. Choose an encoder in Video to change its size."])
+                StatusBanner(messages: [String(localized: "Passthrough copies the video as is. Choose an encoder in Video to change its size.")])
             }
             CropSection(info: info, settings: $settings, detectedCrop: $detectedCrop)
             resolutionSection

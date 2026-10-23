@@ -79,6 +79,7 @@ struct SettingRow<Control: View>: View {
     }
 }
 
+/// Warnings shown verbatim: pass already-localized text (`String(localized:)`).
 struct StatusBanner: View {
     let messages: [String]
 

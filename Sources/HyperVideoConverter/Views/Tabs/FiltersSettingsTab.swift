@@ -10,7 +10,7 @@ struct FiltersSettingsTab: View {
     var body: some View {
         VStack(spacing: 12) {
             if settings.videoCodec == .passthrough {
-                StatusBanner(messages: ["Filters need the video to be re-encoded. Choose an encoder in Video."])
+                StatusBanner(messages: [String(localized: "Filters need the video to be re-encoded. Choose an encoder in Video.")])
             }
             SettingsSection(title: "Filters", symbol: "camera.filters") {
                 deinterlaceRows
