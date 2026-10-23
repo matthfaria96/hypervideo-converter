@@ -116,7 +116,4 @@ struct NativeListTests {
         #expect(model.sources.map(\.id) == ids)
     }
 
-    @Test func settingsPanelStartsVisible() {
-        #expect(UIState().isInspectorShown)
-    }
 }

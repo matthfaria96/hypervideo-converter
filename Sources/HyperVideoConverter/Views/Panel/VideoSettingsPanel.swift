@@ -56,7 +56,7 @@ struct VideoSettingsPanel: View {
                         StatusBanner(messages: source.settings.validationIssues.map { String(localized: String.LocalizationValue($0)) })
                             .motionTransition(.pop)
                     }
-                    SettingsTabContent(source: source, info: info)
+                    SettingsTabContent(source: source, info: info, settings: model.settingsBinding(for: source.id))
                         .id(tab)
                         .motionTransition(.content)
                 }

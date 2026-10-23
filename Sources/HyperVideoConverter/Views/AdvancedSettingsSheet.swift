@@ -42,7 +42,7 @@ struct AdvancedSettingsSheet: View {
                     if !source.settings.validationIssues.isEmpty {
                         StatusBanner(messages: source.settings.validationIssues.map { String(localized: String.LocalizationValue($0)) })
                     }
-                    SettingsTabContent(source: source, info: info)
+                    SettingsTabContent(source: source, info: info, settings: model.settingsBinding(for: source.id))
                         .id(tab)
                         .motionTransition(.content)
                 }

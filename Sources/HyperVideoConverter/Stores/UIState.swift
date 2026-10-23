@@ -23,8 +23,6 @@ final class UIState {
     var isSavingPreset = false
     var presetName = ""
     var renamingPreset: Preset?
-    /// The right column (output settings or one video's settings).
-    var isInspectorShown = true
     /// The video whose Advanced settings sheet is open.
     var advancedSourceID: UUID?
     /// Thumbnails of videos that moved from the editing list into the queue.

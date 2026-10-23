@@ -202,13 +202,9 @@ struct AppCommands: Commands {
                     .keyboardShortcut(SettingsTab.shortcutDigit(at: index).map {
                         KeyboardShortcut(KeyEquivalent($0), modifiers: [.command, .option])
                     })
-                    .disabled(model.panelSource == nil && model.ui.advancedSourceID == nil)
+                    // The tabs are on screen in Convert (one video or all of them) and in the ⌘E sheet.
+                    .disabled(model.mode != .convert && model.ui.advancedSourceID == nil)
             }
-            Divider()
-            Button(model.ui.isInspectorShown ? "Hide Output Settings" : "Show Output Settings") {
-                model.ui.isInspectorShown.toggle()
-            }
-            .keyboardShortcut("i", modifiers: [.command, .option])
         }
     }
 }

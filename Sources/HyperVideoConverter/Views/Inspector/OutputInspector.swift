@@ -50,22 +50,13 @@ struct OutputInspector: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: Spacing.m) {
             HStack(alignment: .firstTextBaseline) {
-                Text("Output Settings").font(.title3.weight(.semibold))
+                Label("Output Settings", systemImage: "slider.horizontal.3")
+                    .font(.title3.weight(.semibold))
                 Spacer()
-                if !model.sources.isEmpty {
-                    Button { model.showFirstVideoSettings() } label: {
-                        Label("All Settings", systemImage: "slider.horizontal.3")
-                    }
-                    .compatGlassButtonStyle()
-                    .controlSize(.small)
-                    .help("Select one video to see every setting: dimensions, filters, video, audio, subtitles, chapters and tags.")
-                    .motionTransition(.pop)
-                }
             }
             ScopeChip()
         }
         .padding(Spacing.l)
-        .motion(value: model.sources.isEmpty)
     }
 
     /// One card per group of fields.

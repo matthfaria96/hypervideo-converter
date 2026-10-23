@@ -6,7 +6,8 @@ struct SubtitlesSettingsTab: View {
     @Environment(AppModel.self) private var model
     let info: MediaInfo
     @Binding var settings: EncodeSettings
-    let sourceID: UUID
+    /// nil when the tabs edit every video: subtitle files belong to one video.
+    let sourceID: UUID?
     let files: [SubtitleFile]
 
     private var languages: Binding<String> {
@@ -83,11 +84,19 @@ struct SubtitlesSettingsTab: View {
 
     private var filesSection: some View {
         SettingsSection(title: "External Files", symbol: "doc.text") {
-            ForEach(files) { file in
-                SubtitleFileRow(file: file, sourceID: sourceID, settings: $settings)
+            if let sourceID {
+                ForEach(files) { file in
+                    SubtitleFileRow(file: file, sourceID: sourceID, settings: $settings)
+                }
+                Button("Add Subtitle File…", systemImage: "plus") { model.chooseSubtitleFiles(for: sourceID) }
+                    .compatGlassButtonStyle()
+            } else {
+                Label("Subtitle files belong to one video. Select it in the list to add an SRT or WebVTT file.",
+                      systemImage: "hand.point.left")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            Button("Add Subtitle File…", systemImage: "plus") { model.chooseSubtitleFiles(for: sourceID) }
-                .compatGlassButtonStyle()
         }
     }
 }

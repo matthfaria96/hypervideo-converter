@@ -17,17 +17,13 @@ struct ContentView: View {
         HStack(spacing: 0) {
             WorkspaceView()
                 .frame(minWidth: 440, maxWidth: .infinity, maxHeight: .infinity)
-            if model.ui.isInspectorShown {
-                Divider()
-                // Clipped as a last line of defence: a control wider than the column must
-                // never spill over the list.
-                SettingsColumn()
-                    .frame(width: 400)
-                    .clipped()
-                    .transition(.move(edge: .trailing).combined(with: .opacity))
-            }
+            Divider()
+            // Always there: the settings are half of the job. Clipped as a last line of
+            // defence, so a control wider than the column never spills over the list.
+            SettingsColumn()
+                .frame(width: 400)
+                .clipped()
         }
-        .motion(value: model.ui.isInspectorShown)
         .navigationTitle(Text(model.mode.title))
         .toolbar(removing: .title)
         .toolbar { WindowToolbar() }
@@ -89,23 +85,27 @@ extension AppSection: Identifiable {
     var id: Self { self }
 }
 
-/// The right column: one video's full settings, or the output settings for every video,
-/// with the Convert box floating in glass at the bottom.
+/// The right column: in Convert the eight HandBrake tabs (one video, or every target),
+/// in Compress the everyday choices, in AI Upscale its panel — with the Convert box
+/// floating in glass at the bottom.
 private struct SettingsColumn: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
         ZStack {
-            if model.mode == .upscale {
-                UpscalePanel()
-                    .motionTransition(.content)
-            } else if let source = model.panelSource {
-                VideoSettingsPanel(source: source)
-                    .id(source.id)
-                    .motionTransition(.content)
-            } else {
-                OutputInspector()
-                    .motionTransition(.content)
+            switch model.settingsPanelKind {
+            case .upscale:
+                UpscalePanel().motionTransition(.content)
+            case .simple:
+                OutputInspector().motionTransition(.content)
+            case .allVideos:
+                AllVideosSettingsPanel().motionTransition(.content)
+            case .oneVideo:
+                if let source = model.panelSource {
+                    VideoSettingsPanel(source: source)
+                        .id(source.id)
+                        .motionTransition(.content)
+                }
             }
         }
         .motion(value: model.panelSource?.id)
@@ -122,7 +122,7 @@ private struct SettingsColumn: View {
     }
 }
 
-/// Mode switch leading (Finder style), then add, list actions and the panel toggle.
+/// Mode switch leading (Finder style), then add and list actions.
 /// Separate items, not a group: grouped items overflow into "»" on macOS 26.
 private struct WindowToolbar: ToolbarContent {
     @Environment(AppModel.self) private var model
@@ -145,10 +145,6 @@ private struct WindowToolbar: ToolbarContent {
                 .help("Choose Videos… (⌘O)")
         }
         ToolbarItem(placement: .primaryAction) { ListActionsMenu() }
-        ToolbarItem(placement: .primaryAction) {
-            Button("Output Settings", systemImage: "sidebar.trailing") { model.ui.isInspectorShown.toggle() }
-                .help(model.ui.isInspectorShown ? "Hide the output settings (⌥⌘I)" : "Show the output settings (⌥⌘I)")
-        }
     }
 
     private var modeSelection: Binding<WorkMode> {
