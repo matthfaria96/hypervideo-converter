@@ -30,7 +30,7 @@ struct AudioBehaviorSection: View {
                             .controlSize(.small)
                     }
                 }
-                .frame(maxWidth: 300)
+                .frame(maxWidth: 260)
             }
             SettingRow(title: "Passthru fallback") {
                 Picker("Passthru fallback", selection: $settings.audioOptions.fallback) {

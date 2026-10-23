@@ -11,7 +11,9 @@ struct OutputInspector: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 Text("Output Settings").font(.system(size: 14, weight: .bold)).padding(.bottom, 8)
-                ScopeChip().padding(.bottom, 18)
+                ScopeChip().padding(.bottom, 12)
+                // The way into every HandBrake setting stays in view, above the quick fields.
+                AllSettingsHintCard().padding(.bottom, 18)
 
                 FieldLabel(title: "Output Format")
                 FormatPicker(settings: settings) { container in model.editTargets { $0 = $0.choosing(container: container) } }
@@ -36,7 +38,6 @@ struct OutputInspector: View {
                     StatusBanner(messages: settings.validationIssues.map { String(localized: String.LocalizationValue($0)) })
                         .padding(.top, 12)
                 }
-                AllSettingsHintCard().padding(.top, 18)
             }
             .padding(.horizontal, 18)
             .padding(.vertical, 22)

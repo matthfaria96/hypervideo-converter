@@ -18,7 +18,7 @@ struct TagsSettingsTab: View {
                 TextEditor(text: text(\.plot))
                     .scrollContentBackground(.hidden)
                     .padding(4)
-                    .frame(width: 260)
+                    .frame(maxWidth: .infinity)
                     .frame(minHeight: 72)
                     .background(Theme.control, in: .rect(cornerRadius: 6))
             }
@@ -41,7 +41,7 @@ struct TagsSettingsTab: View {
         SettingRow(title: title) {
             TextField(title, text: text(keyPath), prompt: Text(verbatim: prompt))
                 .textFieldStyle(.roundedBorder)
-                .frame(width: 260)
+                .frame(maxWidth: .infinity)
         }
     }
 }

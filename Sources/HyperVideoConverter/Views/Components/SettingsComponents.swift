@@ -52,17 +52,29 @@ struct SettingRow<Control: View>: View {
     @ViewBuilder var control: Control
     @Environment(\.settingsLabelWidth) private var labelWidth
 
+    /// Side by side when the control fits next to the label column; otherwise the
+    /// label goes above the control, so a wide control never widens its panel.
     var body: some View {
-        HStack(alignment: .center, spacing: 16) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                if let help {
-                    Text(help).font(.caption).foregroundStyle(.secondary)
-                }
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .center, spacing: 16) {
+                label.frame(width: labelWidth, alignment: .leading)
+                control
+                Spacer(minLength: 0)
             }
-            .frame(width: labelWidth, alignment: .leading)
-            control
-            Spacer(minLength: 0)
+            VStack(alignment: .leading, spacing: 6) {
+                label
+                control
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private var label: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+            if let help {
+                Text(help).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 }

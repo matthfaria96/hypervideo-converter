@@ -89,13 +89,14 @@ struct CropSection: View {
     }
 
     private func cropField(_ title: LocalizedStringKey, _ edge: WritableKeyPath<Crop, Int>) -> some View {
-        HStack {
-            Text(title).frame(width: 70, alignment: .leading).lineLimit(1).minimumScaleFactor(0.8)
-            TextField(title, value: $settings.crop[dynamicMember: edge], format: .number)
+        // Fits two per row in the 460 pt panel; the unit sits in the field's prompt.
+        HStack(spacing: 6) {
+            Text(title).frame(width: 64, alignment: .leading).lineLimit(1).minimumScaleFactor(0.8)
+            TextField(title, value: $settings.crop[dynamicMember: edge], format: .number, prompt: Text(verbatim: "px"))
                 .textFieldStyle(.roundedBorder)
-                .frame(width: 70)
+                .frame(width: 54)
+                .help("Pixels")
             Stepper(title, value: $settings.crop[dynamicMember: edge], in: 0...4_000, step: 2).labelsHidden()
-            Text("px").foregroundStyle(.secondary)
         }
     }
 
