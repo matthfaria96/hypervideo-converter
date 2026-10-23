@@ -55,15 +55,29 @@ private struct WindowOpener: ViewModifier {
 
 /// Lets Finder "Open With" and Dock drops reach the model.
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    @MainActor var model: AppModel?
+    @MainActor var model: AppModel? {
+        didSet { flushPendingURLs() }
+    }
+    /// Files opened before the window appeared and handed over the model (cold launch).
+    @MainActor private var pendingURLs: [URL] = []
     @MainActor var openMainWindow: (() -> Void)?
     @MainActor private lazy var sessionEnd = SessionEndMonitor()
     @MainActor private lazy var quitCoordinator = QuitCoordinator(isSessionEnding: { [unowned self] in sessionEnd.isSessionEnding })
 
     func application(_ application: NSApplication, open urls: [URL]) {
         // Activate inside the event, while the system still counts it as the user's request.
-        MainActor.assumeIsolated { showMainWindow() }
-        Task { @MainActor in await model?.addSources(urls) }
+        MainActor.assumeIsolated {
+            showMainWindow()
+            pendingURLs += urls
+            flushPendingURLs()
+        }
+    }
+
+    @MainActor private func flushPendingURLs() {
+        guard let model, !pendingURLs.isEmpty else { return }
+        let urls = pendingURLs
+        pendingURLs = []
+        Task { await model.addSources(urls) }
     }
 
     /// Brings the window forward (SwiftUI no longer does it for opened files, see the scene).
@@ -71,11 +85,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Opened files are the user's request, so take the focus even from another app.
         NSApp.activate(ignoringOtherApps: true)
         guard let window = NSApp.windows.first(where: { $0.canBecomeMain }) else {
-            openMainWindow?()
+            if let openMainWindow {
+                openMainWindow()
+            } else {
+                // Cold launch from "Open With": the open event matches no scene (see
+                // handlesExternalEvents), so SwiftUI never presents the window. Ask it the
+                // way a Dock click does once launching has settled.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { Self.reopenIfNoWindow() }
+            }
             return
         }
         if window.isMiniaturized { window.deminiaturize(nil) }
         window.makeKeyAndOrderFront(nil)
+    }
+
+    /// Sends this app the Apple Event a Dock click sends; SwiftUI answers it by
+    /// presenting the main window.
+    @MainActor private static func reopenIfNoWindow() {
+        guard !NSApp.windows.contains(where: { $0.canBecomeMain }) else { return }
+        let event = NSAppleEventDescriptor(eventClass: AEEventClass(kCoreEventClass),
+                                           eventID: AEEventID(kAEReopenApplication),
+                                           targetDescriptor: .currentProcess(),
+                                           returnID: AEReturnID(kAutoGenerateReturnID),
+                                           transactionID: AETransactionID(kAnyTransactionID))
+        do {
+            try event.sendEvent(options: [.noReply], timeout: 1)
+        } catch {
+            appLog.error("Could not reopen the main window: \(error.localizedDescription, privacy: .public)")
+        }
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
