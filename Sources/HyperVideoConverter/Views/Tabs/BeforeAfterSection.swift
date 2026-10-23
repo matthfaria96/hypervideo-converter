@@ -73,28 +73,31 @@ struct BeforeAfterSection: View {
     }
 
     private var keptSubtitles: Int {
-        let tracks = SubtitleTrackInfo.kept(
-            info.subtitleTracks.map(\.kind), kind: { $0 }, selection: settings.subtitles, container: settings.container
-        )
         let added = SubtitleTrackInfo.Kind.subtitle.isSupported(in: settings.container) ? subtitleFiles.count : 0
-        return tracks.count + added
+        return settings.keptSubtitleTrackCount(info: info) + added
     }
 
     private var audioOutput: String {
-        guard let extra = settings.extraAudio, settings.audioCodec != .none else { return mainAudioOutput }
-        return mainAudioOutput + " + " + (extra.codec == .aac ? "AAC \(Self.local(extra.mixdown.displayName))" : Self.local(extra.codec.displayName))
+        // An explicit track list (Audio tab) replaces the main encoding and the extra version.
+        if let tracks = settings.explicitAudioEncodings(info: info) {
+            guard let only = tracks.first else { return String(localized: "None") }
+            return tracks.count > 1 ? String(localized: "\(tracks.count) tracks") : Self.describe(only)
+        }
+        let main = Self.describe(AudioEncoding(codec: settings.audioCodec, mixdown: settings.audioMixdown,
+                                               bitrateKbps: settings.audioBitrateKbps))
+        guard let extra = settings.extraAudio, settings.audioCodec != .none else { return main }
+        return main + " + " + (extra.codec == .aac ? "AAC \(Self.local(extra.mixdown.displayName))" : Self.local(extra.codec.displayName))
     }
 
-    private var mainAudioOutput: String {
-        let tracks = settings.audioOptions.tracks
-        if tracks.count > 1 { return String(localized: "\(tracks.count) tracks") }
-        switch settings.audioCodec {
+    private static func describe(_ encoding: AudioEncoding) -> String {
+        let mixdown = local(encoding.mixdown.displayName)
+        switch encoding.codec {
         case .none: return String(localized: "None")
         case .passthrough: return String(localized: "Passthrough")
         case .autoPassthru: return String(localized: "Auto Passthru")
-        case .heAAC: return "HE-AAC \(Self.local(settings.audioMixdown.displayName)) · \(settings.audioBitrateKbps) kbit/s"
-        case .alac: return "ALAC \(Self.local(settings.audioMixdown.displayName))"
-        case .aac: return "AAC \(Self.local(settings.audioMixdown.displayName)) · \(settings.audioBitrateKbps) kbit/s"
+        case .heAAC: return "HE-AAC \(mixdown) · \(encoding.bitrateKbps) kbit/s"
+        case .alac: return "ALAC \(mixdown)"
+        case .aac: return "AAC \(mixdown) · \(encoding.bitrateKbps) kbit/s"
         }
     }
 
