@@ -15,6 +15,22 @@ public enum OutputSettingsBuilder {
             matrix: AVVideoYCbCrMatrix_ITU_R_709_2
         )
 
+        public static let bt601NTSC = ColorSpace(
+            primaries: AVVideoColorPrimaries_SMPTE_C,
+            transfer: AVVideoTransferFunction_ITU_R_709_2,
+            matrix: AVVideoYCbCrMatrix_ITU_R_601_4
+        )
+        public static let bt601PAL = ColorSpace(
+            primaries: AVVideoColorPrimaries_EBU_3213,
+            transfer: AVVideoTransferFunction_ITU_R_709_2,
+            matrix: AVVideoYCbCrMatrix_ITU_R_601_4
+        )
+        public static let bt2020 = ColorSpace(
+            primaries: AVVideoColorPrimaries_ITU_R_2020,
+            transfer: AVVideoTransferFunction_ITU_R_709_2,
+            matrix: AVVideoYCbCrMatrix_ITU_R_2020
+        )
+
         public var isHDR: Bool {
             transfer == AVVideoTransferFunction_SMPTE_ST_2084_PQ || transfer == AVVideoTransferFunction_ITU_R_2100_HLG
         }
@@ -35,16 +51,27 @@ public enum OutputSettingsBuilder {
     }
 
     /// HDR survives only on a 10-bit path; everything else is tone-tagged as Rec. 709.
-    public static func outputColorSpace(for codec: VideoCodec, source: ColorSpace?) -> ColorSpace {
-        guard let source, codec.isTenBit else { return .rec709 }
-        return source
+    /// A chosen colorspace target overrides the source's own tags.
+    public static func outputColorSpace(
+        for codec: VideoCodec, source: ColorSpace?, target: ColorspaceTarget = .off
+    ) -> ColorSpace {
+        switch target {
+        case .bt709: return .rec709
+        case .bt601ntsc: return .bt601NTSC
+        case .bt601pal: return .bt601PAL
+        case .bt2020: return .bt2020
+        case .off:
+            guard let source, codec.isTenBit else { return .rec709 }
+            return source
+        }
     }
 
     public static func video(
         settings: EncodeSettings,
         renderSize: CGSize,
         sourceFrameRate: Double?,
-        color: ColorSpace
+        color: ColorSpace,
+        pixelAspect: CGSize? = nil
     ) -> [String: Any] {
         var output: [String: Any] = [
             AVVideoCodecKey: codecType(settings.videoCodec),
@@ -56,6 +83,12 @@ public enum OutputSettingsBuilder {
                 AVVideoYCbCrMatrixKey: color.matrix
             ]
         ]
+        if let pixelAspect, pixelAspect.width > 0, pixelAspect.height > 0, pixelAspect.width != pixelAspect.height {
+            output[AVVideoPixelAspectRatioKey] = [
+                AVVideoPixelAspectRatioHorizontalSpacingKey: Int(pixelAspect.width),
+                AVVideoPixelAspectRatioVerticalSpacingKey: Int(pixelAspect.height)
+            ]
+        }
         if settings.videoCodec.supportsRateControl {
             output[AVVideoCompressionPropertiesKey] = compression(settings: settings, sourceFrameRate: sourceFrameRate)
         }
@@ -63,12 +96,15 @@ public enum OutputSettingsBuilder {
     }
 
     static func compression(settings: EncodeSettings, sourceFrameRate: Double?) -> [String: Any] {
-        let fps = settings.frameRate == .source ? (sourceFrameRate ?? 30) : settings.frameRate.rawValue
+        let followsSource = settings.frameRate == .source || settings.videoOptions.frameRateMode == .variable
+        let fps = followsSource ? (sourceFrameRate ?? 30) : settings.frameRate.rawValue
         var props: [String: Any] = [
             AVVideoExpectedSourceFrameRateKey: fps,
             AVVideoMaxKeyFrameIntervalDurationKey: settings.keyframeIntervalSeconds,
             AVVideoAllowFrameReorderingKey: settings.allowBFrames,
-            AVVideoProfileLevelKey: profile(settings.videoCodec)
+            AVVideoProfileLevelKey: profileLevel(
+                codec: settings.videoCodec, profile: settings.videoOptions.profile, level: settings.videoOptions.level
+            )
         ]
         switch settings.rateControl {
         case .quality(let value):
@@ -76,8 +112,14 @@ public enum OutputSettingsBuilder {
         case .averageBitrate(let kbps):
             props[AVVideoAverageBitRateKey] = kbps * 1_000
         }
-        if settings.prioritizeSpeed {
+        switch settings.videoOptions.speed {
+        case .speed:
             props[kVTCompressionPropertyKey_PrioritizeEncodingSpeedOverQuality as String] = true
+        case .quality:
+            props[kVTCompressionPropertyKey_PrioritizeEncodingSpeedOverQuality as String] = false
+            props[kVTCompressionPropertyKey_MaximizePowerEfficiency as String] = false
+        case .balanced:
+            break
         }
         return props
     }
@@ -94,11 +136,20 @@ public enum OutputSettingsBuilder {
         }
     }
 
-    static func profile(_ codec: VideoCodec) -> String {
-        switch codec {
-        case .h264: AVVideoProfileLevelH264HighAutoLevel
-        case .hevc10: kVTProfileLevel_HEVC_Main10_AutoLevel as String
-        default: kVTProfileLevel_HEVC_Main_AutoLevel as String
+    /// H.264 honours profile and level (VideoToolbox names `H264_<Profile>_<L_M>`); HEVC only has AutoLevel.
+    static func profileLevel(codec: VideoCodec, profile: VideoProfile, level: VideoLevel) -> String {
+        guard codec == .h264 else {
+            return codec == .hevc10 ? kVTProfileLevel_HEVC_Main10_AutoLevel as String : kVTProfileLevel_HEVC_Main_AutoLevel as String
         }
+        let resolved = profile.resolved(for: codec)
+        if level == .auto {
+            switch resolved {
+            case .baseline: return AVVideoProfileLevelH264BaselineAutoLevel
+            case .main: return AVVideoProfileLevelH264MainAutoLevel
+            default: return AVVideoProfileLevelH264HighAutoLevel
+            }
+        }
+        let name = resolved == .baseline ? "Baseline" : resolved == .main ? "Main" : "High"
+        return "H264_\(name)_\(level.rawValue.replacingOccurrences(of: ".", with: "_"))"
     }
 }
