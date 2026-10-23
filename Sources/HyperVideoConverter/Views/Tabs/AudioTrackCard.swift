@@ -47,12 +47,13 @@ struct AudioEncodingFields: View {
 
     private var mixdownRow: some View {
         SettingRow(title: "Mixdown", help: "Falls back automatically if the source has fewer channels") {
+            // No fixedSize around ViewThatFits: it would hide the available width and always
+            // pick the wide segmented control, pushing the settings panel over the list.
             ViewThatFits(in: .horizontal) {
-                mixdownPicker.pickerStyle(.segmented)
-                mixdownPicker.pickerStyle(.menu)
+                mixdownPicker.pickerStyle(.segmented).fixedSize()
+                mixdownPicker.pickerStyle(.menu).fixedSize()
             }
             .labelsHidden()
-            .fixedSize()
         }
     }
 

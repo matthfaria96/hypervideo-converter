@@ -1,26 +1,29 @@
 import SwiftUI
 
-/// The conversion page: the drop target while the list is empty, then the native list
-/// of videos and jobs, with the finished banner above and the Convert bar below.
+/// Centre of the window: the drop target while the list is empty, then the native list
+/// of videos and jobs, with the finished banner above and the status footer below.
 struct WorkspaceView: View {
     @Environment(AppModel.self) private var model
 
     private var isEmpty: Bool { model.sources.isEmpty && model.activeJobs.isEmpty }
 
     var body: some View {
-        ZStack {
-            if isEmpty {
-                emptyState.motionTransition(.pop)
-            } else {
-                WorkListView().motionTransition(.content)
+        VStack(spacing: 0) {
+            ZStack {
+                if isEmpty {
+                    emptyState.motionTransition(.pop)
+                } else {
+                    WorkListView().motionTransition(.content)
+                }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .motion(value: isEmpty)
+            .safeAreaInset(edge: .top, spacing: 0) { topInset }
+            Divider()
+            StatusFooter()
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .motion(value: isEmpty)
-        .safeAreaInset(edge: .top, spacing: 0) { topInset }
-        .safeAreaInset(edge: .bottom, spacing: 0) { BottomBar() }
         .overlay { DropHighlight(isTargeted: model.ui.isDropTargeted) }
-        .background(Theme.background)
+        .background(.background)
     }
 
     /// The drop target, centred in the page (and scrollable in a short window).
@@ -28,7 +31,7 @@ struct WorkspaceView: View {
         GeometryReader { proxy in
             ScrollView {
                 DropZoneView(compact: false)
-                    .frame(maxWidth: 560)
+                    .frame(maxWidth: 520)
                     .padding(Spacing.xxl)
                     .frame(maxWidth: .infinity, minHeight: proxy.size.height)
             }
@@ -46,8 +49,8 @@ struct WorkspaceView: View {
                 DropZoneView(compact: true)
             }
         }
-        .padding(.horizontal, Spacing.xl)
-        .padding(.top, isEmpty && model.finishedBatch == nil ? 0 : Spacing.l)
+        .padding(.horizontal, Spacing.l)
+        .padding(.top, isEmpty && model.finishedBatch == nil ? 0 : Spacing.m)
         .motion(Motion.emphasized, value: model.finishedBatch?.count)
     }
 }

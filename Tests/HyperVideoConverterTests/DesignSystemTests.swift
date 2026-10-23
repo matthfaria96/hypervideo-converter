@@ -21,43 +21,35 @@ struct DesignSystemTests {
     }
 }
 
-@Suite("Sidebar navigation")
+@Suite("Page navigation")
 @MainActor
-struct SidebarNavigationTests {
-    @Test func everySidebarItemMapsToASectionAndBack() {
-        for item in SidebarItem.allCases {
-            #expect(SidebarItem.current(section: item.section, mode: item.mode ?? .convert) == item)
-        }
+struct PageNavigationTests {
+    @Test func pagesOpenAsSheetsOverTheWorkspace() throws {
+        let model = try TestEnvironment().makeModel()
+        #expect(model.presentedPage == nil)
+        model.presentedPage = .history
+        #expect(model.section == .history)
+        model.presentedPage = nil
+        #expect(model.section == .conversion)
+        #expect(AppSection.pages == [.history, .favorites, .analyze])
     }
 
-    @Test func compressIsTheConversionSectionInCompressMode() {
-        #expect(SidebarItem.compress.section == .conversion && SidebarItem.compress.mode == .compress)
-        #expect(SidebarItem.current(section: .conversion, mode: .compress) == .compress)
-        #expect(SidebarItem.current(section: .conversion, mode: .convert) == .conversion)
+    @Test func changingModeClosesAnOpenPage() throws {
+        let model = try TestEnvironment().makeModel()
+        model.presentedPage = .favorites
+        model.setMode(.compress)
+        #expect(model.presentedPage == nil && model.mode == .compress)
     }
 
     @Test func initialSectionLaunchArgumentOpensThatPage() throws {
         let env = try TestEnvironment()
         env.defaults.set("favorites", forKey: "InitialSection")
-        #expect(env.makeModel().section == .favorites)
+        #expect(env.makeModel().presentedPage == .favorites)
         env.defaults.set("compress", forKey: "InitialSection")
         let compress = env.makeModel()
-        #expect(compress.section == .conversion && compress.mode == .compress)
+        #expect(compress.presentedPage == nil && compress.mode == .compress)
         env.defaults.set("bogus", forKey: "InitialSection")
-        #expect(env.makeModel().section == .conversion)
-    }
-
-    @Test func selectingAnItemDrivesSectionAndMode() throws {
-        let model = try TestEnvironment().makeModel()
-        model.sidebarSelection = .history
-        #expect(model.section == .history && model.sidebarSelection == .history)
-        model.sidebarSelection = .compress
-        #expect(model.section == .conversion && model.mode == .compress && model.sidebarSelection == .compress)
-        model.sidebarSelection = .conversion
-        #expect(model.mode == .convert)
-        // Deselecting in the list (nil) keeps the current page.
-        model.sidebarSelection = nil
-        #expect(model.section == .conversion && model.sidebarSelection == .conversion)
+        #expect(env.makeModel().presentedPage == nil)
     }
 }
 
@@ -124,13 +116,7 @@ struct NativeListTests {
         #expect(model.sources.map(\.id) == ids)
     }
 
-    @Test func inspectorStartsVisibleAndSidebarExpanded() {
-        let ui = UIState()
-        #expect(ui.isInspectorShown)
-        #expect(!ui.isSidebarCollapsed)
-        ui.isSidebarCollapsed = true
-        #expect(ui.sidebarVisibility == .detailOnly)
-        ui.sidebarVisibility = .all
-        #expect(!ui.isSidebarCollapsed)
+    @Test func settingsPanelStartsVisible() {
+        #expect(UIState().isInspectorShown)
     }
 }

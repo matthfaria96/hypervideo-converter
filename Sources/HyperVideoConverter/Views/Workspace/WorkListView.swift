@@ -21,8 +21,6 @@ struct WorkListView: View {
                 .onMove { model.moveSources(fromOffsets: $0, toOffset: $1) }
             } header: {
                 listHeader
-            } footer: {
-                if model.activeJobs.isEmpty { localProcessing }
             }
 
             if !model.activeJobs.isEmpty {
@@ -36,8 +34,6 @@ struct WorkListView: View {
                     .onMove { model.queue.move(fromOffsets: $0, toOffset: $1) }
                 } header: {
                     Text("Queue")
-                } footer: {
-                    localProcessing
                 }
             }
         }
@@ -80,12 +76,6 @@ struct WorkListView: View {
         .controlSize(.small)
         .textCase(nil)
     }
-
-    private var localProcessing: some View {
-        Label("Local processing · Your videos are never uploaded to the cloud", systemImage: "lock.shield")
-            .font(.footnote)
-            .foregroundStyle(.secondary)
-    }
 }
 
 private struct SourceMenu: View {
@@ -97,7 +87,7 @@ private struct SourceMenu: View {
             .disabled(source.info == nil)
         Button("Analyze Video", systemImage: "magnifyingglass") {
             model.selectedIDs = [source.id]
-            model.section = .analyze
+            model.presentedPage = .analyze
         }
         Divider()
         Button("Move to Top", systemImage: "arrow.up.to.line") { model.moveSource(source.id, .top) }

@@ -634,3 +634,14 @@
 "Hide Output Settings" = "Ocultar configurações de saída";
 "All Settings" = "Todas as configurações";
 "When the queue finishes" = "Quando a fila terminar";
+
+/* HyperImage-style layout */
+"1 video" = "1 vídeo";
+"%lld videos" = "%lld vídeos";
+"%lld selected" = "%lld selecionado(s)";
+"%lld waiting" = "%lld na fila";
+"List Actions" = "Ações da lista";
+"List actions" = "Ações da lista";
+"⌘1 Convert · ⌘2 Compress" = "⌘1 Converter · ⌘2 Comprimir";
+"More actions for this video" = "Mais ações para este vídeo";
+"Open in Large Window" = "Abrir em janela grande";

@@ -42,6 +42,14 @@ BIN_DIR="$(swift build -c "$CONFIG" --show-bin-path)"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$WORK"
 cp "$BIN_DIR/$EXE" "$APP/Contents/MacOS/$EXE"
+# SwiftPM stamps the deployment target as the SDK version (sdk 15.0), and newer macOS
+# then runs the app in its old look, without Liquid Glass. Stamp the real SDK.
+SDK_VERSION="$(xcrun --sdk macosx --show-sdk-version 2>/dev/null || true)"
+MIN_FOR_STAMP="$(sed -nE 's/.*\.macOS\(\.v([0-9]+)\).*/\1.0/p' Package.swift | head -1)"
+if [[ -n "$SDK_VERSION" && -n "$MIN_FOR_STAMP" ]]; then
+  vtool -set-build-version macos "$MIN_FOR_STAMP" "$SDK_VERSION" -replace \
+    -output "$APP/Contents/MacOS/$EXE" "$APP/Contents/MacOS/$EXE"
+fi
 
 PLIST="$APP/Contents/Info.plist"
 cp Resources/Info.plist "$PLIST"

@@ -84,9 +84,9 @@ final class AppModel {
             ?? URL(fileURLWithPath: NSHomeDirectory())
         queue.onJobsRemoved = { [weak self] removed in self?.releaseThumbnails(of: removed) }
         // Launch argument `-InitialSection history` opens on that page (used for screenshots).
-        if let item = defaults.string(forKey: "InitialSection").flatMap(SidebarItem.init(rawValue:)) {
-            section = item.section
-            mode = item.mode ?? .convert
+        if let name = defaults.string(forKey: "InitialSection"), let page = AppSection(launchName: name) {
+            section = page
+            mode = name == "compress" ? .compress : .convert
         }
     }
 

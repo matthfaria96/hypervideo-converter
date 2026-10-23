@@ -23,12 +23,6 @@ final class UIState {
     var isSavingPreset = false
     var presetName = ""
     var renamingPreset: Preset?
-    /// The split view's columns; the sidebar collapses natively.
-    var sidebarVisibility: NavigationSplitViewVisibility = .all
-    var isSidebarCollapsed: Bool {
-        get { sidebarVisibility == .detailOnly }
-        set { sidebarVisibility = newValue ? .detailOnly : .all }
-    }
     /// The right column (output settings or one video's settings).
     var isInspectorShown = true
     /// The video whose Advanced settings sheet is open.

@@ -20,6 +20,7 @@ struct SettingsTabBar: View {
             .pickerStyle(.segmented)
             .labelsHidden()
             .controlSize(.large)
+            .frame(maxWidth: .infinity)
             HStack {
                 Text(tab.title)
                     .font(.subheadline.weight(.semibold))

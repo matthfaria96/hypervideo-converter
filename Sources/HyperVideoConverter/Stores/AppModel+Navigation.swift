@@ -1,38 +1,16 @@
 import Foundation
 import SwiftUI
 
-/// The rows of the native sidebar. Compress is the conversion page in Compress mode.
-enum SidebarItem: String, CaseIterable, Identifiable {
-    case conversion, history, favorites, compress, analyze
-    var id: String { rawValue }
-
-    static let library: [SidebarItem] = [.conversion, .history, .favorites]
-    static let tools: [SidebarItem] = [.compress, .analyze]
-
-    var section: AppSection {
-        switch self {
-        case .conversion, .compress: .conversion
-        case .history: .history
-        case .favorites: .favorites
-        case .analyze: .analyze
-        }
-    }
-
-    /// The workspace mode the row switches to; nil for pages outside the workspace.
-    var mode: WorkMode? {
-        switch self {
-        case .conversion: .convert
-        case .compress: .compress
-        default: nil
-        }
-    }
+/// The pages other than the workspace. The window always shows the workspace; these
+/// open over it as sheets from the status footer (like HyperImage's sibling layout).
+extension AppSection {
+    static let pages: [AppSection] = [.history, .favorites, .analyze]
 
     var title: LocalizedStringKey {
         switch self {
-        case .conversion: "Conversion"
+        case .conversion: "Convert Videos"
         case .history: "History"
         case .favorites: "Favorites"
-        case .compress: "Compress"
         case .analyze: "Analyze Video"
         }
     }
@@ -42,30 +20,27 @@ enum SidebarItem: String, CaseIterable, Identifiable {
         case .conversion: "rectangle.stack"
         case .history: "clock.arrow.circlepath"
         case .favorites: "star"
-        case .compress: "arrow.down.to.line"
         case .analyze: "magnifyingglass"
         }
     }
 
-    static func current(section: AppSection, mode: WorkMode) -> SidebarItem {
-        switch section {
-        case .conversion: mode == .compress ? .compress : .conversion
-        case .history: .history
-        case .favorites: .favorites
-        case .analyze: .analyze
+    /// Launch argument values (`-InitialSection history`), "compress" included.
+    init?(launchName: String) {
+        switch launchName {
+        case "conversion", "compress": self = .conversion
+        case "history": self = .history
+        case "favorites": self = .favorites
+        case "analyze": self = .analyze
+        default: return nil
         }
     }
 }
 
 extension AppModel {
-    /// The sidebar's selection: reading reflects the page, writing navigates. A nil
-    /// write (the list losing its selection) leaves the page as it is.
-    var sidebarSelection: SidebarItem? {
-        get { SidebarItem.current(section: section, mode: mode) }
-        set {
-            guard let item = newValue else { return }
-            if let mode = item.mode { setMode(mode) } else { section = item.section }
-        }
+    /// The page sheet over the workspace, nil when none is open.
+    var presentedPage: AppSection? {
+        get { section == .conversion ? nil : section }
+        set { section = newValue ?? .conversion }
     }
 
     /// The conversion list's selection. Queued jobs share the list but can't be

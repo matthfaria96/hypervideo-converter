@@ -182,16 +182,18 @@ struct AppCommands: Commands {
                 .disabled(model.selectedIDs.isEmpty)
         }
         CommandGroup(after: .sidebar) {
-            Button("Conversion") { model.setMode(.convert) }
+            // ⌘1/⌘2 pick the mode like HyperImage (⌘3 stays free for AI Upscale).
+            Button("Convert") { model.setMode(.convert) }
                 .keyboardShortcut("1")
-            Button("History") { model.section = .history }
-                .keyboardShortcut("2")
-            Button("Favorites") { model.section = .favorites }
-                .keyboardShortcut("3")
             Button("Compress") { model.setMode(.compress) }
-                .keyboardShortcut("4")
-            Button("Analyze Video") { model.section = .analyze }
-                .keyboardShortcut("5")
+                .keyboardShortcut("2")
+            Divider()
+            Button("History") { model.presentedPage = .history }
+                .keyboardShortcut("y")
+            Button("Favorites") { model.presentedPage = .favorites }
+                .keyboardShortcut("p", modifiers: [.command, .shift])
+            Button("Analyze Video") { model.presentedPage = .analyze }
+                .keyboardShortcut("i")
             Divider()
             ForEach(Array(SettingsTab.allCases.enumerated()), id: \.element) { index, tab in
                 Button { model.ui.detailTab = tab } label: { Text(tab.title) }
@@ -201,15 +203,10 @@ struct AppCommands: Commands {
                     .disabled(model.panelSource == nil && model.ui.advancedSourceID == nil)
             }
             Divider()
-            Button(model.ui.isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar") {
-                model.ui.isSidebarCollapsed.toggle()
-            }
-            .keyboardShortcut("s", modifiers: [.command, .control])
             Button(model.ui.isInspectorShown ? "Hide Output Settings" : "Show Output Settings") {
                 model.ui.isInspectorShown.toggle()
             }
             .keyboardShortcut("i", modifiers: [.command, .option])
-            .disabled(model.section != .conversion)
         }
     }
 }
