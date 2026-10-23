@@ -12,8 +12,11 @@ enum FrameFilter {
     ) -> CIImage {
         var frame = image
         // Field lines run horizontally in the stored frame, so deinterlace before any rotation or scaling.
-        if deinterlace { frame = blendFields(frame) }
+        if deinterlace { frame = filters.deinterlaceMethod == .bob ? bob(frame) : blendFields(frame) }
         if filters.denoise != .off { frame = denoise(frame, filters: filters) }
+        if filters.chromaSmooth != .off {
+            frame = chromaSmooth(frame, strength: filters.chromaSmooth, tune: filters.chromaSmoothTune)
+        }
         if filters.sharpen != .off { frame = sharpen(frame, filters: filters) }
         if filters.grayscale { frame = grayscale(frame) }
 

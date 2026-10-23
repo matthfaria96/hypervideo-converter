@@ -34,7 +34,7 @@ struct FilterParityChromaBobTests {
         #expect(columnContrast(out) < columnContrast(source))
         #expect(abs(meanLuma(out) - meanLuma(source)) <= 4)
         #expect(helper.pixels(smoothed(.off, .medium)) == helper.pixels(source))
-        #expect(columnContrast(smoothed(.medium, .verywide)) <= columnContrast(smoothed(.medium, .tiny)))
+        #expect(columnContrast(smoothed(.ultralight, .verywide)) < columnContrast(smoothed(.ultralight, .tiny)))
     }
 
     func comb() -> CIImage {
