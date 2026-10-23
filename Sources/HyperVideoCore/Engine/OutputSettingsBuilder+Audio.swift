@@ -46,8 +46,22 @@ extension OutputSettingsBuilder {
             return min(max(kbps, 16), ceiling)
         }
         let channelCeiling = channels >= 6 ? 640 : (channels == 1 ? 256 : 320)
-        let ceiling = max(1, min(channelCeiling, sampleRate * 6 * channels / 1_000))
-        return min(max(kbps, min(32, ceiling)), ceiling)
+        let limits = lowRateLimits(sampleRate: sampleRate)
+        let ceiling = max(1, min(channelCeiling, sampleRate * 6 * channels / 1_000, limits.max * channels))
+        let floor = min(sampleRate >= 44_100 ? (channels >= 8 ? 320 : 32) : limits.min * channels, ceiling)
+        return min(max(kbps, floor), ceiling)
+    }
+
+    /// Per-channel AAC-LC bitrate range (kbit/s) the system encoder accepts at a sample rate,
+    /// found by probing the encoder; rates from 44.1 kHz up keep the generic range.
+    private static func lowRateLimits(sampleRate: Int) -> (min: Int, max: Int) {
+        switch sampleRate {
+        case ..<12_001: (8, 20)
+        case ..<16_001: (8, 48)
+        case ..<24_001: (16, 48)
+        case ..<32_001: (24, 160)
+        default: (16, 320)
+        }
     }
 
     static func channelLayoutData(channels: Int) -> Data {
@@ -55,7 +69,7 @@ extension OutputSettingsBuilder {
         switch channels {
         case 1: layout.mChannelLayoutTag = kAudioChannelLayoutTag_Mono
         case 6: layout.mChannelLayoutTag = kAudioChannelLayoutTag_MPEG_5_1_D
-        case 8: layout.mChannelLayoutTag = kAudioChannelLayoutTag_MPEG_7_1_C
+        case 8: layout.mChannelLayoutTag = kAudioChannelLayoutTag_MPEG_7_1_B
         default: layout.mChannelLayoutTag = kAudioChannelLayoutTag_Stereo
         }
         return Data(bytes: &layout, count: MemoryLayout<AudioChannelLayout>.size)

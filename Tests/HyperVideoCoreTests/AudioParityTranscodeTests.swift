@@ -1,4 +1,5 @@
 @preconcurrency import AVFoundation
+import AudioToolbox
 import Testing
 @testable import HyperVideoCore
 
@@ -30,6 +31,15 @@ struct AudioParityTranscodeTests {
             ids.append(asbd?.mFormatID ?? 0)
         }
         return ids
+    }
+
+    private func formatListIDs(of url: URL) async throws -> [UInt32] {
+        let track = try #require(try await AVURLAsset(url: url).loadTracks(withMediaType: .audio).first)
+        let format = try #require(try await track.load(.formatDescriptions).first)
+        var size = 0
+        guard let items = CMAudioFormatDescriptionGetFormatList(format, sizeOut: &size) else { return [] }
+        let list = Array(UnsafeBufferPointer(start: items, count: size / MemoryLayout<AudioFormatListItem>.size))
+        return list.map(\.mASBD.mFormatID)
     }
 
     private func rms(of url: URL) async throws -> Double {
@@ -75,8 +85,8 @@ struct AudioParityTranscodeTests {
     @Test func explicitList() async throws {
         let out = try await convert([.init(), .init()]) {
             $0.audioOptions.tracks = [
-                AudioTrackSetting(sourceTrackID: 2, encoding: AudioEncoding(codec: .aac, mixdown: .mono, bitrateKbps: 96)),
-                AudioTrackSetting(sourceTrackID: 1, encoding: AudioEncoding(codec: .alac, mixdown: .stereo, bitrateKbps: 160))
+                AudioTrackSetting(sourceTrackID: 3, encoding: AudioEncoding(codec: .aac, mixdown: .mono, bitrateKbps: 96)),
+                AudioTrackSetting(sourceTrackID: 2, encoding: AudioEncoding(codec: .alac, mixdown: .stereo, bitrateKbps: 160))
             ]
         }
         let info = try await MediaInspector.inspect(out)
@@ -102,7 +112,11 @@ struct AudioParityTranscodeTests {
             $0.audioBitrateKbps = 64
             $0.audioOptions.sampleRate = .hz44100
         }
-        #expect(try await formatIDs(of: out) == [kAudioFormatMPEG4AAC_HE])
+        // MOV reports the AAC base format; the SBR extension shows in the cookie's format list.
+        let ids = try await formatIDs(of: out)
+        #expect(ids == [kAudioFormatMPEG4AAC])
+        let list = try await formatListIDs(of: out)
+        #expect(list.contains(kAudioFormatMPEG4AAC_HE), "list \(list)")
     }
 
     @Test func autoPassthru() async throws {

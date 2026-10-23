@@ -30,7 +30,7 @@ struct AudioParityTests {
     @Test func layoutAndBitrates() {
         let data = OutputSettingsBuilder.channelLayoutData(channels: 8)
         let tag = data.withUnsafeBytes { $0.load(as: AudioChannelLayout.self).mChannelLayoutTag }
-        #expect(tag == kAudioChannelLayoutTag_MPEG_7_1_C)
+        #expect(tag == kAudioChannelLayoutTag_MPEG_7_1_B)
         #expect(OutputSettingsBuilder.clampedAACBitrate(160, channels: 2) == 160)
         #expect(OutputSettingsBuilder.clampedAACBitrate(320, channels: 2, sampleRate: 8_000) <= 96)
         #expect(OutputSettingsBuilder.clampedAACBitrate(640, channels: 8) == 640)
