@@ -10,7 +10,7 @@ struct TagsSettingsTab: View {
             field("Title", \.title)
             field("Actors", \.actors)
             field("Director", \.director)
-            field("Release Date", \.releaseDate, prompt: "2026-10-22")
+            field("Release Date", \.releaseDate, prompt: String(localized: "YYYY-MM-DD"))
             field("Comment", \.comment)
             field("Genre", \.genre)
             field("Description", \.description)

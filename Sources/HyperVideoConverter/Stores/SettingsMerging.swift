@@ -29,7 +29,7 @@ extension EncodeSettings {
         copy.audioCodec = profile.audioCodec
         copy.audioBitrateKbps = profile.audioBitrateKbps
         if profile.audioCodec == .passthrough { copy.audioTracks = profile.audioTracks }
-        return copy.fixingCodecForContainer()
+        return copy.retuningAudioTracks().fixingCodecForContainer().normalizingEncoderOptions(after: self)
     }
 
     /// Whether the fields a quality profile decides still equal `profile`'s.
@@ -43,7 +43,22 @@ extension EncodeSettings {
     /// markers, other tags, rotation, flip, extra audio, track selection) that the
     /// preset leaves at their defaults.
     func adopting(_ template: EncodeSettings) -> EncodeSettings {
-        template.keepingPerVideo(from: self).keepingAdvanced(from: self, template: template)
+        template.keepingPerVideo(from: self).keepingAdvanced(from: self, template: template).retuningAudioTracks()
+            .normalizingEncoderOptions(after: self)
+    }
+
+    /// The Audio tab's explicit tracks with the main audio encoder and bitrate, so a
+    /// profile, preset or inspector change to the audio reaches them too; each track
+    /// keeps its mixdown, sample rate, gain and name.
+    func retuningAudioTracks() -> EncodeSettings {
+        var copy = self
+        copy.audioOptions.tracks = audioOptions.tracks.map { track in
+            var retuned = track
+            retuned.encoding.codec = audioCodec
+            retuned.encoding.bitrateKbps = audioBitrateKbps
+            return retuned
+        }
+        return copy
     }
 
     /// Copies every setting of another video ("Apply to All"), keeping only this
@@ -80,6 +95,7 @@ extension EncodeSettings {
         if video.frameRateMode == defaults.videoOptions.frameRateMode {
             settings.videoOptions.frameRateMode = current.videoOptions.frameRateMode
         }
+        if video.speed == defaults.videoOptions.speed { settings.videoOptions.speed = current.videoOptions.speed }
         if video.profile == defaults.videoOptions.profile { settings.videoOptions.profile = current.videoOptions.profile }
         if video.level == defaults.videoOptions.level { settings.videoOptions.level = current.videoOptions.level }
         keepGeneric(from: current, template: template, defaults: defaults, into: &settings)

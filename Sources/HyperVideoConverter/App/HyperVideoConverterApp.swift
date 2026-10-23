@@ -160,7 +160,9 @@ struct AppCommands: Commands {
             Divider()
             ForEach(Array(SettingsTab.allCases.enumerated()), id: \.element) { index, tab in
                 Button { model.ui.detailTab = tab } label: { Text(tab.title) }
-                    .keyboardShortcut(KeyEquivalent(Character(String(index + 1))), modifiers: [.command, .option])
+                    .keyboardShortcut(SettingsTab.shortcutDigit(at: index).map {
+                        KeyboardShortcut(KeyEquivalent($0), modifiers: [.command, .option])
+                    })
                     .disabled(model.panelSource == nil && model.ui.advancedSourceID == nil)
             }
             Divider()

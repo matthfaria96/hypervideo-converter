@@ -3,9 +3,11 @@ import SwiftUI
 /// "Size estimate": real numbers where the settings make the size predictable.
 struct EstimateCard: View {
     @Environment(AppModel.self) private var model
+    /// One video's estimate; nil shows the inspector targets'.
+    var estimate: SizeEstimate?
 
     var body: some View {
-        let estimate = model.sizeEstimate
+        let estimate = self.estimate ?? model.sizeEstimate
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text("SIZE ESTIMATE")

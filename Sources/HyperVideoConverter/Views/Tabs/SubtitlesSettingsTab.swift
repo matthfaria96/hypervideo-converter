@@ -47,7 +47,7 @@ struct SubtitlesSettingsTab: View {
                 .fixedSize()
             }
             SettingRow(title: "Languages", help: "Empty keeps every language") {
-                TextField("eng, por", text: languages).textFieldStyle(.roundedBorder).frame(maxWidth: 220)
+                CommittingTextField(title: "eng, por", text: languages).textFieldStyle(.roundedBorder).frame(maxWidth: 220)
             }
             SettingRow(title: "Burn In", help: "Draws one subtitle into the picture, so it always shows; needs video re-encoding") {
                 Picker("Burn In", selection: $settings.burnIn) {

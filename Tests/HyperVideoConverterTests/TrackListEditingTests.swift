@@ -34,6 +34,17 @@ struct TrackListEditingTests {
         #expect(s.audioOptions.tracks.map(\.sourceTrackID) == [1, 2, 1])
     }
 
+    @Test func updatingAudioTrackByIDIgnoresRemovedTracks() throws {
+        var s = EncodeSettings().addingAllAudioTracks(from: info())
+        let first = try #require(s.audioOptions.tracks.first)
+        var renamed = first
+        renamed.encoding.trackName = "Main"
+        s = s.updatingAudioTrack(renamed)
+        #expect(s.audioOptions.tracks.first?.encoding.trackName == "Main" && s.audioOptions.tracks.count == 2)
+        let removed = s.removingAudioTrack(first.id)
+        #expect(removed.updatingAudioTrack(renamed) == removed, "a late write to a removed card changes nothing")
+    }
+
     @Test func defaultEncodingWithoutAudioIsAAC() {
         var s = EncodeSettings()
         s.audioCodec = .none
@@ -94,5 +105,14 @@ struct TrackListEditingTests {
         #expect(model.sources[0].subtitleFiles.map(\.offsetMs) == [500, 0])
         model.updateSubtitleFile(a, in: item.id) { $0.isDefault = true }
         #expect(model.sources[0].subtitleFiles.map(\.isDefault) == [true, false])
+    }
+}
+
+@Suite("Audio track labels")
+struct AudioTrackLabelTests {
+    @Test func missingLanguageIsWordedNotACode() {
+        let track = AudioTrackInfo(id: 1, codec: "AAC", channels: 2, sampleRate: 48_000, language: nil)
+        let label = AudioTrackCard.label(track, index: 0)
+        #expect(label.hasPrefix("1 · Unknown language · AAC") && !label.contains("und"))
     }
 }

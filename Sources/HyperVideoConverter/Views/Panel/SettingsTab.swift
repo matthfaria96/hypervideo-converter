@@ -5,6 +5,11 @@ enum SettingsTab: String, CaseIterable, Identifiable {
     case summary, dimensions, filters, video, audio, subtitles, chapters, tags
     var id: String { rawValue }
 
+    /// ⌥⌘1…⌥⌘9 for the first nine tabs; later ones get no digit shortcut.
+    static func shortcutDigit(at index: Int) -> Character? {
+        (0..<9).contains(index) ? Character(String(index + 1)) : nil
+    }
+
     var title: LocalizedStringKey {
         switch self {
         case .summary: "Summary"

@@ -165,6 +165,7 @@ struct InspectorToggles: View {
                 edit { settings in
                     settings.audioCodec = on ? .passthrough : .aac
                     if on { settings.audioTracks = .all }
+                    settings = settings.retuningAudioTracks()
                 }
             }
             row("Remove metadata", "Drops titles, dates, location and chapters from the file.",

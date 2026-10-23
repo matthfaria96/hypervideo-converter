@@ -4,6 +4,8 @@ import SwiftUI
 /// Inline Summary: output, quality profile, before → after, trim and chapter range.
 struct SummarySettingsTab: View {
     let info: MediaInfo
+    /// The video shown; the profile cards and estimate act on it alone.
+    let sourceID: UUID
     @Binding var settings: EncodeSettings
     var subtitleFiles: [SubtitleFile] = []
     @Environment(AppModel.self) private var model
@@ -12,8 +14,8 @@ struct SummarySettingsTab: View {
         VStack(spacing: 16) {
             outputSection
             SettingsSection(title: "Quality Profile", symbol: "dial.medium") {
-                ProfileCards(selected: model.inspectorProfile) { model.applyProfile($0) }
-                EstimateCard()
+                ProfileCards(selected: model.profile(of: sourceID)) { model.applyProfile($0, to: sourceID) }
+                EstimateCard(estimate: model.sizeEstimate(for: sourceID))
             }
             BeforeAfterSection(info: info, settings: settings, subtitleFiles: subtitleFiles)
             TrimTab(info: info, settings: $settings)

@@ -16,16 +16,17 @@ struct VideoSettingsTab: View {
                 optionsSection
             }
         }
-        .onChange(of: settings.videoCodec) { _, codec in
-            settings.videoOptions.profile = settings.videoOptions.profile.resolved(for: codec)
-            if codec != .h264 { settings.videoOptions.level = .auto }
-        }
+    }
+
+    /// Picking an encoder also drops the profile and level it doesn't support.
+    private var codec: Binding<VideoCodec> {
+        Binding(get: { settings.videoCodec }, set: { settings = settings.choosing(codec: $0) })
     }
 
     private var encoderSection: some View {
         SettingsSection(title: "Encoder", symbol: "cpu") {
             SettingRow(title: "Video encoder") {
-                Picker("Video encoder", selection: $settings.videoCodec) {
+                Picker("Video encoder", selection: codec) {
                     ForEach(VideoCodec.allCases) { Text(localizing: $0.displayName).tag($0) }
                 }
                 .labelsHidden()

@@ -39,6 +39,13 @@ extension EncodeSettings {
         return copy
     }
 
+    /// Replaces the track with `track`'s id; a track removed meanwhile stays removed.
+    func updatingAudioTrack(_ track: AudioTrackSetting) -> EncodeSettings {
+        var copy = self
+        copy.audioOptions.tracks = audioOptions.tracks.map { $0.id == track.id ? track : $0 }
+        return copy
+    }
+
     func resettingAudioTracks() -> EncodeSettings {
         var copy = self
         copy.audioOptions.tracks = []

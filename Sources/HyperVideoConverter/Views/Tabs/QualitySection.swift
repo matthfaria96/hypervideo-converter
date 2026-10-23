@@ -4,24 +4,25 @@ import SwiftUI
 /// Constant quality or average bitrate.
 struct QualitySection: View {
     @Binding var settings: EncodeSettings
+    @State private var memory = RateControlMemory()
 
     private var isQuality: Binding<Bool> {
         Binding(
             get: { if case .quality = settings.rateControl { true } else { false } },
-            set: { settings.rateControl = $0 ? .quality(0.62) : .averageBitrate(6_000) }
+            set: { settings.rateControl = memory.switching(toQuality: $0, from: settings.rateControl) }
         )
     }
 
     private var quality: Binding<Double> {
         Binding(
-            get: { if case .quality(let q) = settings.rateControl { q } else { 0.62 } },
+            get: { if case .quality(let q) = settings.rateControl { q } else { RateControlMemory.defaultQuality } },
             set: { settings.rateControl = .quality($0) }
         )
     }
 
     private var bitrate: Binding<Int> {
         Binding(
-            get: { if case .averageBitrate(let kbps) = settings.rateControl { kbps } else { 6_000 } },
+            get: { if case .averageBitrate(let kbps) = settings.rateControl { kbps } else { RateControlMemory.defaultBitrateKbps } },
             set: { settings.rateControl = .averageBitrate(max(100, $0)) }
         )
     }

@@ -4,7 +4,8 @@ import HyperVideoCore
 /// Pure and off-main helpers behind the Chapters, Tags and chapter-range controls.
 enum ChapterEditing {
     private static let boundaryTolerance = 0.05
-    private static let sizeLimit = 1_048_576
+    /// The core's `ChapterCSV` limit (1 MiB); kept in step until the core exposes its own.
+    static let sizeLimit = 1_048_576
 
     /// The edited title for chapter `index`, or the source title when none is set.
     static func title(at index: Int, chapters: [Chapter], titles: [String]) -> String {
@@ -41,19 +42,58 @@ enum ChapterEditing {
 
     static func importTitles(from url: URL, chapterCount: Int, existing: [String]) async throws -> [String] {
         try await Task.detached(priority: .userInitiated) {
-            let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
-            guard size <= sizeLimit else { throw ChapterCSV.ParseError.tooLarge }
-            let data = try Data(contentsOf: url)
-            let text = String(data: data, encoding: .utf8) ?? String(data: data, encoding: .isoLatin1) ?? ""
-            let parsed = try ChapterCSV.parse(text)
+            let parsed = try ChapterCSV.parse(decodeCSV(try readCSV(at: url)))
             return ChapterCSV.titles(applying: parsed, to: existing, count: chapterCount)
         }.value
+    }
+
+    /// Reads at most one byte past the limit, so a huge file (or one whose size the
+    /// file system doesn't report) is never loaded whole.
+    static func readCSV(at url: URL) throws -> Data {
+        let handle = try FileHandle(forReadingFrom: url)
+        defer { try? handle.close() }
+        let data = try handle.read(upToCount: sizeLimit + 1) ?? Data()
+        guard data.count <= sizeLimit else { throw ChapterCSV.ParseError.tooLarge }
+        return data
+    }
+
+    /// UTF-16 when the file starts with a byte order mark (Excel's "Unicode Text"),
+    /// else UTF-8, else Windows Latin-1, which accepts any bytes.
+    static func decodeCSV(_ data: Data) -> String {
+        let bytes = [UInt8](data.prefix(3))
+        if bytes.starts(with: [0xFF, 0xFE]) || bytes.starts(with: [0xFE, 0xFF]),
+           let text = String(data: data, encoding: .utf16) {
+            return text
+        }
+        let body = bytes.starts(with: [0xEF, 0xBB, 0xBF]) ? data.dropFirst(3) : data
+        return String(data: body, encoding: .utf8)
+            ?? String(data: body, encoding: .windowsCP1252)
+            ?? String(decoding: body, as: UTF8.self)
     }
 
     static func exportCSV(titles: [String], to url: URL) async throws {
         try await Task.detached(priority: .userInitiated) {
             try ChapterCSV.format(titles).write(to: url, atomically: true, encoding: .utf8)
         }.value
+    }
+}
+
+/// A chapter file that couldn't be read or written, with the alert title to match.
+enum ChapterFileProblem: Equatable {
+    case `import`(String)
+    case export(String)
+
+    var title: String {
+        switch self {
+        case .import: String(localized: "Chapters not imported")
+        case .export: String(localized: "Chapters not exported")
+        }
+    }
+
+    var message: String {
+        switch self {
+        case .import(let text), .export(let text): text
+        }
     }
 }
 

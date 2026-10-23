@@ -152,7 +152,7 @@
 "Frame rate" = "Taxa de quadros";
 "Full HD · 1080p" = "Full HD · 1080p";
 "General" = "Geral";
-"Give every video in the list these settings (each keeps its own trim, crop and burned-in subtitle)" = "Dá estas configurações a todos os vídeos da lista (cada um mantém seu corte, recorte e legenda gravada)";
+"Give every video in the list these settings (each keeps its own trim, crop, burned-in subtitle, track lists, chapter names and title)" = "Dá estas configurações a todos os vídeos da lista (cada um mantém seu corte, recorte, legenda gravada, listas de faixas, nomes de capítulos e título)";
 "Good quality, smaller file" = "Boa qualidade, arquivo menor";
 "Grayscale" = "Tons de cinza";
 "H.264 — works almost everywhere" = "H.264 — compatível com quase tudo";
@@ -395,7 +395,7 @@
 "Fast 720p30" = "Rápido 720p30";
 "Fixed size: about %@ of video, whatever the content." = "Tamanho fixo: cerca de %@ de vídeo, seja qual for o conteúdo.";
 "Frames per second (FPS)" = "Quadros por segundo (FPS)";
-"Gives %@ these settings. Each keeps its own trim, crop and burned-in subtitle." = "Dá estas configurações para %@. Cada um mantém seu corte de tempo, recorte e legenda embutida.";
+"Gives %@ these settings. Each keeps its own trim, crop, burned-in subtitle, track lists, chapter names and title." = "Dá estas configurações para %@. Cada um mantém seu corte de tempo, recorte, legenda embutida, listas de faixas, nomes de capítulos e título.";
 "Go back to this profile's settings" = "Voltar às configurações deste perfil";
 "H.264 plays everywhere. HEVC (H.265) makes smaller files with the same look on recent devices." = "H.264 toca em qualquer lugar. HEVC (H.265) gera arquivos menores com a mesma aparência em aparelhos recentes.";
 "H.264 · 1080p · 30 fps · AAC stereo" = "H.264 · 1080p · 30 fps · AAC estéreo";
@@ -615,3 +615,10 @@
 "Width & Height" = "Largura e altura";
 "Width (Pillarbox)" = "Largura (pillarbox)";
 "Pixels" = "Pixels";
+"%lld tracks" = "%lld faixas";
+"Chapters not exported" = "Capítulos não exportados";
+"Only these tracks are kept, each with its own encoding. Quality profiles and presets set their encoder and bitrate." = "Só estas faixas são mantidas, cada uma com sua própria codificação. Perfis de qualidade e perfis salvos definem o codificador e a taxa de bits delas.";
+"Chapter %lld title" = "Título do capítulo %lld";
+"Saves this video's output settings as a reusable preset." = "Salva as configurações de saída deste vídeo como um perfil reutilizável.";
+"Unknown language" = "Idioma desconhecido";
+"YYYY-MM-DD" = "AAAA-MM-DD";

@@ -104,4 +104,36 @@ struct VideoTabsLogicTests {
         #expect(parts?.red == 0 && parts?.green == 1 && parts?.blue == 0)
         #expect(PadColorHex.components("xyz") == nil)
     }
+
+    @Test func choosingACodecNormalizesProfileAndLevel() {
+        var s = EncodeSettings()
+        s.videoCodec = .h264
+        s.videoOptions.profile = .high
+        s.videoOptions.level = .l41
+        let hevc = s.choosing(codec: .hevc)
+        #expect(hevc.videoOptions.profile == VideoProfile.high.resolved(for: .hevc) && hevc.videoOptions.level == .auto)
+        let profiled = s.applyingProfile(QualityProfile.smallerFile.settings)
+        #expect(profiled.videoCodec == .hevc && profiled.videoOptions.level == .auto)
+        var template = EncodeSettings()
+        template.videoCodec = .hevc
+        #expect(s.adopting(template).videoOptions.level == .auto, "a kept H.264 level doesn't survive a codec change")
+        #expect(s.choosing(codec: .h264).videoOptions.level == .l41)
+    }
+}
+
+@Suite("Rate control memory")
+struct RateControlMemoryTests {
+    @Test func switchingModesBringsBackTheLastValueOfEach() {
+        var memory = RateControlMemory()
+        let first = memory.switching(toQuality: false, from: .quality(0.8))
+        #expect(first == .averageBitrate(RateControlMemory.defaultBitrateKbps))
+        let back = memory.switching(toQuality: true, from: .averageBitrate(2_500))
+        #expect(back == .quality(0.8))
+        #expect(memory.switching(toQuality: false, from: back) == .averageBitrate(2_500))
+    }
+
+    @Test func freshMemoryUsesNamedDefaults() {
+        var memory = RateControlMemory()
+        #expect(memory.switching(toQuality: true, from: .averageBitrate(1_000)) == .quality(RateControlMemory.defaultQuality))
+    }
 }

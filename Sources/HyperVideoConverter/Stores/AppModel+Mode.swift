@@ -106,7 +106,7 @@ extension AppModel {
     func applyToAllMessage(from id: UUID) -> String {
         let others = sources.filter { $0.id != id }.count
         let videos = others == 1 ? String(localized: "1 other video") : String(localized: "\(others) other videos")
-        return String(localized: "Gives \(videos) these settings. Each keeps its own trim, crop and burned-in subtitle.")
+        return String(localized: "Gives \(videos) these settings. Each keeps its own trim, crop, burned-in subtitle, track lists, chapter names and title.")
     }
 
     // MARK: Finished run

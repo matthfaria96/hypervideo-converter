@@ -65,6 +65,11 @@ struct PanelSelectionTests {
         #expect(SettingsTab.allCases.map(\.symbol) == ["doc.text.magnifyingglass", "crop", "camera.filters", "film", "waveform", "captions.bubble", "list.bullet.indent", "tag"])
     }
 
+    @Test func onlyTheFirstNineTabsGetDigitShortcuts() {
+        #expect(SettingsTab.shortcutDigit(at: 0) == "1" && SettingsTab.shortcutDigit(at: 8) == "9")
+        #expect(SettingsTab.shortcutDigit(at: 9) == nil && SettingsTab.shortcutDigit(at: -1) == nil)
+    }
+
     @Test func initialTabFollowsDefaults() {
         UserDefaults.standard.set("filters", forKey: "InitialSettingsTab")
         #expect(UIState().detailTab == .filters)

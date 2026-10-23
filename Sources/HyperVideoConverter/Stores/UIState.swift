@@ -34,7 +34,6 @@ final class UIState {
     /// Confirmations of destructive actions.
     var confirmingClearList = false
     var confirmingClearHistory = false
-    var confirmingApplyToAll = false
     /// The file shown in Quick Look (Space on a selected row).
     var quickLookURL: URL?
 

@@ -9,8 +9,17 @@ struct SettingsTabContent: View {
 
     var body: some View {
         let settings = model.settingsBinding(for: source.id)
+        Group {
+            tab(settings)
+        }
+        // One view identity per video: drafts, detections and other tab state never leak to the next one.
+        .id(source.id)
+    }
+
+    @ViewBuilder
+    private func tab(_ settings: Binding<EncodeSettings>) -> some View {
         switch model.ui.detailTab {
-        case .summary: SummarySettingsTab(info: info, settings: settings, subtitleFiles: source.subtitleFiles)
+        case .summary: SummarySettingsTab(info: info, sourceID: source.id, settings: settings, subtitleFiles: source.subtitleFiles)
         case .dimensions: DimensionsSettingsTab(info: info, settings: settings)
         case .filters: FiltersSettingsTab(info: info, settings: settings)
         case .video: VideoSettingsTab(info: info, settings: settings)
