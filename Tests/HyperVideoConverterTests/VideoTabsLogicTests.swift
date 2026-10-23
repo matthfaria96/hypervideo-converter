@@ -120,3 +120,20 @@ struct VideoTabsLogicTests {
         #expect(s.choosing(codec: .h264).videoOptions.level == .l41)
     }
 }
+
+@Suite("Rate control memory")
+struct RateControlMemoryTests {
+    @Test func switchingModesBringsBackTheLastValueOfEach() {
+        var memory = RateControlMemory()
+        let first = memory.switching(toQuality: false, from: .quality(0.8))
+        #expect(first == .averageBitrate(RateControlMemory.defaultBitrateKbps))
+        let back = memory.switching(toQuality: true, from: .averageBitrate(2_500))
+        #expect(back == .quality(0.8))
+        #expect(memory.switching(toQuality: false, from: back) == .averageBitrate(2_500))
+    }
+
+    @Test func freshMemoryUsesNamedDefaults() {
+        var memory = RateControlMemory()
+        #expect(memory.switching(toQuality: true, from: .averageBitrate(1_000)) == .quality(RateControlMemory.defaultQuality))
+    }
+}

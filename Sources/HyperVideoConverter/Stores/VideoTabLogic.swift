@@ -99,3 +99,27 @@ enum PadColorHex {
             Double((value >> 16) & 0xFF) / 255, Double((value >> 8) & 0xFF) / 255, Double(value & 0xFF) / 255)
     }
 }
+
+/// The last value of each Quality mode, so switching Constant Quality ↔ Average Bitrate
+/// and back restores what the user had instead of resetting it.
+struct RateControlMemory: Equatable {
+    static let defaultQuality = 0.62
+    static let defaultBitrateKbps = 6_000
+
+    private(set) var quality = Self.defaultQuality
+    private(set) var bitrateKbps = Self.defaultBitrateKbps
+
+    /// Remembers `current`'s value and returns the rate control for the chosen mode.
+    mutating func switching(toQuality: Bool, from current: RateControl) -> RateControl {
+        switch current {
+        case .quality(let value):
+            guard !toQuality else { return current }
+            quality = value
+            return .averageBitrate(bitrateKbps)
+        case .averageBitrate(let kbps):
+            guard toQuality else { return current }
+            bitrateKbps = kbps
+            return .quality(quality)
+        }
+    }
+}
