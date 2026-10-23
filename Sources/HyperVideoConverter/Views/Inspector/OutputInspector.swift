@@ -2,48 +2,70 @@ import HyperVideoCore
 import SwiftUI
 
 /// "Output settings": the everyday choices, applied to the selected videos or to all of them.
+/// A fixed header (title, scope, the way into every setting) over the scrolling fields,
+/// laid out like the single-video panel so switching between them doesn't jump.
 struct OutputInspector: View {
     @Environment(AppModel.self) private var model
 
     private var settings: EncodeSettings { model.inspectorSettings }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: Spacing.l) {
-                Text("Output Settings").font(.title3.weight(.semibold))
-                ScopeChip()
-                // The way into every HandBrake setting stays in view, above the quick fields.
-                AllSettingsHintCard()
+        VStack(spacing: 0) {
+            header
+            Divider()
+            ScrollView {
+                VStack(alignment: .leading, spacing: Spacing.l) {
+                    group {
+                        FieldLabel(title: "Output Format")
+                        FormatPicker(settings: settings) { container in model.editTargets { $0 = $0.choosing(container: container) } }
+                            .help("The file type, shown as the file's extension (.mp4, .mov…).")
+                    }
 
-                group {
-                    FieldLabel(title: "Output Format")
-                    FormatPicker(settings: settings) { container in model.editTargets { $0 = $0.choosing(container: container) } }
-                        .help("The file type, shown as the file's extension (.mp4, .mov…).")
-                }
+                    group {
+                        FieldLabel(title: "Quality Profile")
+                        ProfileCards(selected: model.inspectorProfile) { model.applyProfile($0) }
+                        if let personalized = model.inspectorPersonalizedProfile {
+                            PersonalizedNote(profile: personalized) { model.applyProfile(personalized) }
+                                .motionTransition(.pop)
+                        }
+                        EstimateCard()
+                    }
+                    .motion(value: model.inspectorPersonalizedProfile)
 
-                group {
-                    FieldLabel(title: "Quality Profile")
-                    ProfileCards(selected: model.inspectorProfile) { model.applyProfile($0) }
-                    if let personalized = model.inspectorPersonalizedProfile {
-                        PersonalizedNote(profile: personalized) { model.applyProfile(personalized) }
+                    group { VideoFields(settings: settings) { change in model.editTargets(change) } }
+                    group { InspectorToggles(settings: settings) { change in model.editTargets(change) } }
+
+                    if !settings.validationIssues.isEmpty {
+                        StatusBanner(messages: settings.validationIssues.map { String(localized: String.LocalizationValue($0)) })
                             .motionTransition(.pop)
                     }
-                    EstimateCard()
                 }
-                .motion(value: model.inspectorPersonalizedProfile)
+                .padding(Spacing.l)
+                .motion(value: settings.validationIssues)
+            }
+            .compatSoftScrollEdges()
+        }
+    }
 
-                group { VideoFields(settings: settings) { change in model.editTargets(change) } }
-                group { InspectorToggles(settings: settings) { change in model.editTargets(change) } }
-
-                if !settings.validationIssues.isEmpty {
-                    StatusBanner(messages: settings.validationIssues.map { String(localized: String.LocalizationValue($0)) })
-                        .motionTransition(.pop)
+    private var header: some View {
+        VStack(alignment: .leading, spacing: Spacing.m) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Output Settings").font(.title3.weight(.semibold))
+                Spacer()
+                if !model.sources.isEmpty {
+                    Button { model.showFirstVideoSettings() } label: {
+                        Label("All Settings", systemImage: "slider.horizontal.3")
+                    }
+                    .compatGlassButtonStyle()
+                    .controlSize(.small)
+                    .help("Select one video to see every setting: dimensions, filters, video, audio, subtitles, chapters and tags.")
+                    .motionTransition(.pop)
                 }
             }
-            .padding(Spacing.l)
-            .motion(value: settings.validationIssues)
+            ScopeChip()
         }
-        .compatSoftScrollEdges()
+        .padding(Spacing.l)
+        .motion(value: model.sources.isEmpty)
     }
 
     /// One card per group of fields.

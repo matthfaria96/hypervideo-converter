@@ -29,10 +29,12 @@ struct ScopeChip: View {
             .card(model.inspectsSelection ? .selected : .standard, radius: Radius.s + 2)
             .accessibilityElement(children: .combine)
 
+            // A line limit, not fixedSize: this sits outside a scroll view, where a
+            // vertical fixedSize at zero width would demand a very tall window.
             Text(verbatim: detail)
                 .font(.footnote)
                 .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+                .lineLimit(3)
         }
         .motion(value: model.inspectsSelection)
     }

@@ -23,12 +23,15 @@ struct WorkspaceView: View {
         .background(Theme.background)
     }
 
+    /// The drop target, centred in the page (and scrollable in a short window).
     private var emptyState: some View {
-        ScrollView {
-            DropZoneView(compact: false)
-                .frame(maxWidth: 560)
-                .padding(Spacing.xxl)
-                .frame(maxWidth: .infinity)
+        GeometryReader { proxy in
+            ScrollView {
+                DropZoneView(compact: false)
+                    .frame(maxWidth: 560)
+                    .padding(Spacing.xxl)
+                    .frame(maxWidth: .infinity, minHeight: proxy.size.height)
+            }
         }
     }
 

@@ -61,6 +61,23 @@ struct SidebarNavigationTests {
     }
 }
 
+@Suite("Row facts")
+struct RowFactsTests {
+    @Test func tagsAreContainerCodecAndSizeWithoutTheDuration() {
+        let url = URL(fileURLWithPath: "/tmp/clip.mov")
+        let info = MediaInfo(url: url, duration: 135, displaySize: CGSize(width: 1920, height: 1080), frameRate: 30,
+                             videoCodec: "HEVC", videoBitrate: nil, dynamicRange: .sdr, audioTracks: [], fileBytes: 1)
+        #expect(RowFacts.tags(url: url, info: info) == ["MOV", "HEVC", "1920 × 1080"])
+    }
+
+    @Test func missingFactsAreLeftOut() {
+        let url = URL(fileURLWithPath: "/tmp/noext")
+        let info = MediaInfo(url: url, duration: 10, displaySize: nil, frameRate: nil,
+                             videoCodec: nil, videoBitrate: nil, dynamicRange: .sdr, audioTracks: [], fileBytes: 1)
+        #expect(RowFacts.tags(url: url, info: info).isEmpty)
+    }
+}
+
 @Suite("Native list wiring")
 @MainActor
 struct NativeListTests {
