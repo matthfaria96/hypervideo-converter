@@ -10,7 +10,7 @@ struct SettingsTabContent: View {
     var body: some View {
         let settings = model.settingsBinding(for: source.id)
         switch model.ui.detailTab {
-        case .summary: SummarySettingsTab(info: info, settings: settings, subtitleFiles: source.subtitleFiles)
+        case .summary: SummarySettingsTab(info: info, sourceID: source.id, settings: settings, subtitleFiles: source.subtitleFiles)
         case .dimensions: DimensionsSettingsTab(info: info, settings: settings)
         case .filters: FiltersSettingsTab(info: info, settings: settings)
         case .video: VideoSettingsTab(info: info, settings: settings)
