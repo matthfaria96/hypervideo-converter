@@ -218,7 +218,7 @@ struct MatroskaMetadataTests {
         return item
     }
 
-    private func encode(keepMetadata: Bool) async throws -> MatroskaReader {
+    private func encode(keepMetadata: Bool, extra: [AVMetadataItem] = []) async throws -> MatroskaReader {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("hvc-mkvmeta-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         var spec = StressClip.Spec()
@@ -227,7 +227,7 @@ struct MatroskaMetadataTests {
             item(.commonIdentifierArtist, "Ana"),
             item(.commonIdentifierCreationDate, "2024-05-01T10:00:00Z"),
             item(.commonIdentifierDescription, "Trip & more")
-        ]
+        ] + extra
         let source = try await StressClip.make(in: dir, spec)
         var settings = EncodeSettings()
         settings.videoCodec = .h264
@@ -249,6 +249,15 @@ struct MatroskaMetadataTests {
         // The SeekHead lists the Tags element, and it points at it.
         let offset = try #require(mkv.seeks.first { $0.0 == EBML.ID.tags }?.1)
         #expect(mkv.segmentChild(at: offset)?.id == EBML.ID.tags)
+    }
+
+    /// D-05: with default settings only the tags written before this phase appear.
+    @Test func defaultSettingsAddNoNewTags() async throws {
+        let mkv = try await encode(keepMetadata: true, extra: [
+            item(.quickTimeMetadataArtist, "Ana"), item(.quickTimeMetadataDirector, "Dir"),
+            item(.quickTimeMetadataComment, "Note"), item(.quickTimeMetadataGenre, "Travel")
+        ])
+        #expect(Set(mkv.tagValues.keys) == ["TITLE", "ARTIST", "DATE_RELEASED", "DESCRIPTION"], "\(mkv.tagValues)")
     }
 
     @Test func nothingIsWrittenWhenMetadataIsDropped() async throws {

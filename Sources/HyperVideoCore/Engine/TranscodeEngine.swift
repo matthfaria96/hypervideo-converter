@@ -175,7 +175,7 @@ public struct TranscodeEngine: Sendable {
             throw TranscodeError.writerFailed(writer.error?.localizedDescription ?? "unknown error")
         }
         if remuxes {
-            try await remux(encoded, to: partial) { progress(encodeShare + $0 * (1 - encodeShare)) }
+            try await remux(encoded, to: partial, tags: settings.tags) { progress(encodeShare + $0 * (1 - encodeShare)) }
         }
 
         let final = try Self.moveIntoPlace(partial, destination: destination, container: settings.container)
@@ -216,10 +216,12 @@ public struct TranscodeEngine: Sendable {
     }
 
     /// Copies the finished intermediate movie into Matroska, stopping if the task is cancelled.
-    private func remux(_ movie: URL, to output: URL, progress: @escaping @Sendable (Double) -> Void) async throws {
+    private func remux(
+        _ movie: URL, to output: URL, tags: MetadataTags, progress: @escaping @Sendable (Double) -> Void
+    ) async throws {
         let cancel = CancelFlag()
         try await withTaskCancellationHandler {
-            try await MatroskaRemuxer(source: movie, destination: output).run(cancel: cancel, progress: progress)
+            try await MatroskaRemuxer(source: movie, destination: output, tags: tags).run(cancel: cancel, progress: progress)
         } onCancel: {
             cancel.set()
         }

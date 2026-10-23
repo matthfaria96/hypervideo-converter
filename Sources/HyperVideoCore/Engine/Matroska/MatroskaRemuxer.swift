@@ -8,11 +8,13 @@ struct MatroskaRemuxer {
     let source: URL
     let destination: URL
     var appName = "HyperVideo Converter"
+    /// The job's own tags; the user-only Matroska tags come from these.
+    var tags = MetadataTags()
 
     /// Remuxes on a private queue. `cancel` is polled between samples; progress runs 0...1.
     func run(cancel: CancelFlag, progress: @escaping @Sendable (Double) -> Void) async throws {
         let asset = AVURLAsset(url: source)
-        let plan = try await Plan.make(asset: asset)
+        let plan = try await Plan.make(asset: asset, tags: tags)
         let job = Unchecked((self, plan))
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             DispatchQueue(label: "HyperVideo.remux.mkv", qos: .userInitiated).async {
@@ -41,7 +43,7 @@ struct MatroskaRemuxer {
         let metadata: MatroskaWriter.Metadata
         let duration: Double
 
-        static func make(asset: AVURLAsset) async throws -> Plan {
+        static func make(asset: AVURLAsset, tags: MetadataTags = MetadataTags()) async throws -> Plan {
             var sources: [Source] = []
             do {
                 if let video = try await asset.loadTracks(withMediaType: .video).first {
@@ -76,7 +78,7 @@ struct MatroskaRemuxer {
             let chapters = try await MediaInspector.chapters(of: asset).map {
                 MatroskaWriter.Chapter(title: $0.title, startNs: nanoseconds($0.start), endNs: nanoseconds($0.end))
             }
-            let metadata = await MatroskaMetadata.metadata(of: asset)
+            let metadata = await MatroskaMetadata.metadata(of: asset, tags: tags)
             return Plan(asset: asset, sources: sources, chapters: chapters, metadata: metadata, duration: duration)
         }
 

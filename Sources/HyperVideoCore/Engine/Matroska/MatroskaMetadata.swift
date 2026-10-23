@@ -1,14 +1,15 @@
 @preconcurrency import AVFoundation
 
 enum MatroskaMetadata {
-    private static let iTunesPlot = AVMetadataItem.identifier(forKey: "ldes" as NSString, keySpace: .iTunes)
-
-    /// What the title, artist, dates, tags and so on of `asset` become in Matroska. The
-    /// movie the encoder wrote only has them when the job keeps metadata or sets tags.
-    static func metadata(of asset: AVAsset) async -> MatroskaWriter.Metadata {
+    /// What the title, artist, dates and so on of `asset` become in Matroska. The movie the
+    /// encoder wrote only has them when the job keeps metadata or sets tags. ACTOR, DIRECTOR,
+    /// COMMENT, GENRE and SYNOPSIS come only from the user's `tags`, so default settings write
+    /// the same tags as before (D-05) and a music artist isn't relabelled as an actor.
+    static func metadata(of asset: AVAsset, tags: MetadataTags = MetadataTags()) async -> MatroskaWriter.Metadata {
         var items = (try? await asset.load(.commonMetadata)) ?? []
         items += (try? await asset.load(.metadata)) ?? []
-        guard !items.isEmpty else { return MatroskaWriter.Metadata() }
+        let user = userTags(tags)
+        guard !items.isEmpty || !user.isEmpty else { return MatroskaWriter.Metadata() }
         var metadata = MatroskaWriter.Metadata()
         metadata.title = await text(items, [.commonIdentifierTitle, .quickTimeMetadataTitle, .iTunesMetadataSongName])
         var artist = await text(items, [.commonIdentifierArtist])
@@ -16,26 +17,27 @@ enum MatroskaMetadata {
         let named: [(String, String?)] = await [
             ("TITLE", metadata.title),
             ("ARTIST", artist),
-            ("ACTOR", text(items, [.quickTimeMetadataArtist, .iTunesMetadataArtist])),
             ("ALBUM", text(items, [.commonIdentifierAlbumName])),
-            ("DATE_RELEASED", text(items, [.commonIdentifierCreationDate, .iTunesMetadataReleaseDate])),
+            ("DATE_RELEASED", text(items, [.commonIdentifierCreationDate])),
             ("DESCRIPTION", text(items, [.commonIdentifierDescription])),
             ("COPYRIGHT", text(items, [.commonIdentifierCopyrights])),
             ("PUBLISHER", text(items, [.commonIdentifierPublisher])),
             ("SUBJECT", text(items, [.commonIdentifierSubject]))
         ]
-        let user = await userTags(items)
         metadata.tags = (named + user).compactMap { name, value in value.map { .init(name: name, value: $0) } }
         return metadata
     }
 
-    private static func userTags(_ items: [AVMetadataItem]) async -> [(String, String?)] {
-        await [
-            ("DIRECTOR", text(items, [.quickTimeMetadataDirector, .iTunesMetadataDirector])),
-            ("COMMENT", text(items, [.quickTimeMetadataComment, .iTunesMetadataUserComment])),
-            ("GENRE", text(items, [.quickTimeMetadataGenre, .iTunesMetadataUserGenre])),
-            ("SYNOPSIS", text(items, [.quickTimeMetadataInformation] + (iTunesPlot.map { [$0] } ?? [])))
+    /// Tags only the user can set, taken straight from the job's settings.
+    static func userTags(_ tags: MetadataTags) -> [(String, String?)] {
+        let fields: [(String, String?)] = [
+            ("ACTOR", tags.actors), ("DIRECTOR", tags.director), ("COMMENT", tags.comment),
+            ("GENRE", tags.genre), ("SYNOPSIS", tags.plot)
         ]
+        return fields.compactMap { name, value in
+            guard let text = value?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else { return nil }
+            return (name, text)
+        }
     }
 
     /// The first non-empty string (or ISO date) among items with any of `identifiers`.
