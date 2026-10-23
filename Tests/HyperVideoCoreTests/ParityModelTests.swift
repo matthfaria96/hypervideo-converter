@@ -1,3 +1,4 @@
+import AudioToolbox
 import Foundation
 import Testing
 @testable import HyperVideoCore
@@ -80,5 +81,76 @@ struct ParityModelTests {
     @Test func emptyJSONGivesDefaults() throws {
         #expect(try decode(VideoEncoderOptions.self, "{}") == VideoEncoderOptions())
         #expect(try decode(PictureOptions.self, "{}") == PictureOptions())
+    }
+
+    // MARK: Audio, subtitles, chapters, tags, languages
+
+    @Test func sampleRateResolution() {
+        #expect(AudioSampleRate.auto.resolved(sourceRate: 44_100, codec: .aac) == 44_100)
+        #expect(AudioSampleRate.auto.resolved(sourceRate: 96_000, codec: .aac) == 48_000)
+        #expect(AudioSampleRate.auto.resolved(sourceRate: 8_000, codec: .aac) == 8_000)
+        #expect(AudioSampleRate.auto.resolved(sourceRate: 6_000, codec: .aac) == 8_000)
+        #expect(AudioSampleRate.auto.resolved(sourceRate: 22_050, codec: .heAAC) == 32_000)
+        #expect(AudioSampleRate.hz22050.resolved(sourceRate: 48_000, codec: .aac) == 22_050)
+        #expect(AudioSampleRate.auto.resolved(sourceRate: 96_000, codec: .alac) == 96_000)
+        #expect(AudioSampleRate.auto.displayName == "Auto")
+        #expect(AudioSampleRate.hz44100.displayName == "44.1 kHz")
+        #expect(AudioSampleRate.hz48000.displayName == "48 kHz")
+        #expect(AudioSampleRate.hz11025.displayName == "11.025 kHz")
+    }
+
+    @Test func passthruFormatMapping() {
+        #expect(PassthruCodec.from(formatID: kAudioFormatMPEG4AAC) == .aac)
+        #expect(PassthruCodec.from(formatID: kAudioFormatMPEG4AAC_HE) == .aac)
+        #expect(PassthruCodec.from(formatID: kAudioFormatAC3) == .ac3)
+        #expect(PassthruCodec.from(formatID: kAudioFormatEnhancedAC3) == .eac3)
+        #expect(PassthruCodec.from(formatID: kAudioFormatMPEGLayer3) == .mp3)
+        #expect(PassthruCodec.from(formatID: kAudioFormatAppleLossless) == .alac)
+        #expect(PassthruCodec.from(formatID: kAudioFormatFLAC) == .flac)
+        #expect(PassthruCodec.from(formatID: kAudioFormatOpus) == .opus)
+        #expect(PassthruCodec.from(formatID: kAudioFormatLinearPCM) == nil)
+    }
+
+    @Test func mixdown71() {
+        #expect(AudioMixdown.surround71.channelCount == 8)
+        #expect(AudioMixdown.surround71.resolved(sourceChannels: 6) == .surround51)
+        #expect(AudioMixdown.surround71.resolved(sourceChannels: 2) == .stereo)
+        #expect(AudioMixdown.surround71.resolved(sourceChannels: 8) == .surround71)
+        #expect(AudioTrackSelection.none.displayName == "None")
+    }
+
+    @Test func legacyAudioEncodingDecodes() throws {
+        let e = try decode(AudioEncoding.self, #"{"codec":"aac","mixdown":"stereo","bitrateKbps":160}"#)
+        #expect(e.sampleRate == .hz48000)
+        #expect(e.gainDb == 0)
+        #expect(e.trackName == nil)
+        #expect(e == AudioEncoding(codec: .aac, mixdown: .stereo, bitrateKbps: 160))
+    }
+
+    @Test func legacySubtitleFileDecodes() throws {
+        let f = try decode(SubtitleFile.self, #"{"url":"file:///tmp/a.srt","language":"en"}"#)
+        #expect(f.offsetMs == 0)
+        #expect(f.title == nil)
+        #expect(!f.isDefault)
+        #expect(!f.isForced)
+    }
+
+    @Test func languageMatching() {
+        #expect(LanguageFilter.matches("pt-BR", in: ["por"]))
+        #expect(LanguageFilter.matches("en", in: ["eng"]))
+        #expect(!LanguageFilter.matches("fr", in: ["eng"]))
+        #expect(LanguageFilter.matches(nil, in: []))
+        #expect(LanguageFilter.matches("fr", in: ["any"]))
+        #expect(!LanguageFilter.matches(nil, in: ["eng"]))
+    }
+
+    @Test func chapterAndTagHelpers() {
+        #expect(!ChapterOptions().writesMarkers(keepMetadata: false))
+        var chapters = ChapterOptions()
+        chapters.markers = true
+        #expect(chapters.writesMarkers(keepMetadata: false))
+        #expect(MetadataTags().isEmpty)
+        #expect(MetadataTags(title: "  ").isEmpty)
+        #expect(!MetadataTags(genre: "Drama").isEmpty)
     }
 }
