@@ -7,6 +7,9 @@ struct CropSection: View {
     @Binding var settings: EncodeSettings
     @Binding var detectedCrop: Crop?
     @State private var isDetecting = false
+    /// Bumped by the Detect button: re-runs the detection task, which SwiftUI cancels
+    /// when the video or mode changes, so a stale result never lands.
+    @State private var detectRun = 0
 
     private var mode: CropMode { settings.pictureOptions.cropMode }
 
@@ -32,7 +35,7 @@ struct CropSection: View {
             }
             modeDetails
         }
-        .task(id: "\(info.url.path)|\(mode.rawValue)") { await detect() }
+        .task(id: "\(info.url.path)|\(mode.rawValue)|\(detectRun)") { await detect() }
     }
 
     @ViewBuilder private var modeDetails: some View {
@@ -54,7 +57,7 @@ struct CropSection: View {
                     .monospacedDigit()
             }
             Spacer()
-            Button("Detect", systemImage: "arrow.clockwise") { Task { await detect() } }
+            Button("Detect", systemImage: "arrow.clockwise") { detectRun += 1 }
                 .buttonStyle(.subtle)
                 .disabled(isDetecting)
                 .help("Analyse 10 frames for black bars again")
@@ -101,13 +104,16 @@ struct CropSection: View {
     }
 
     private func detect() async {
+        detectedCrop = nil
         guard mode.detects else {
-            detectedCrop = nil
+            isDetecting = false
             return
         }
         isDetecting = true
-        let result = try? await CropDetector.detect(url: info.url, mode: mode)
-        guard !Task.isCancelled else { return }
+        let url = info.url
+        let result = try? await CropDetector.detect(url: url, mode: mode)
+        // A cancelled run was replaced by a newer one, which owns `isDetecting` now.
+        guard !Task.isCancelled, url == info.url else { return }
         detectedCrop = result
         isDetecting = false
     }
