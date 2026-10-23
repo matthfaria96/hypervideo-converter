@@ -36,9 +36,21 @@ enum TimedText {
         return status == noErr ? format : nil
     }
 
+    /// The UTF-8 bytes of `text`, cut at a character boundary so they fit in `maxBytes`.
+    static func utf8Prefix(_ text: String, maxBytes: Int) -> [UInt8] {
+        guard text.utf8.count > maxBytes else { return Array(text.utf8) }
+        var bytes: [UInt8] = []
+        for character in text {
+            let encoded = Array(character.utf8)
+            guard bytes.count + encoded.count <= maxBytes else { break }
+            bytes += encoded
+        }
+        return bytes
+    }
+
     /// One sample: a 16-bit big-endian length followed by the UTF-8 text.
     static func sample(_ text: String, start: Double, duration: Double, format: CMFormatDescription) -> CMSampleBuffer? {
-        let utf8 = Array(text.utf8.prefix(Int(UInt16.max)))
+        let utf8 = utf8Prefix(text, maxBytes: Int(UInt16.max))
         let bytes = [UInt8(utf8.count >> 8), UInt8(utf8.count & 0xFF)] + utf8
         var block: CMBlockBuffer?
         guard CMBlockBufferCreateWithMemoryBlock(

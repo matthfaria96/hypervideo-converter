@@ -33,9 +33,11 @@ public enum ChapterCSV {
         return result
     }
 
+    /// One line per title; line breaks inside a title become spaces so `parse` reads it back.
     public static func format(_ titles: [String]) -> String {
         titles.enumerated().map { index, title in
-            "\(index + 1),\"\(title.replacingOccurrences(of: "\"", with: "\"\""))\"\n"
+            let line = title.split(omittingEmptySubsequences: false, whereSeparator: \.isNewline).joined(separator: " ")
+            return "\(index + 1),\"\(line.replacingOccurrences(of: "\"", with: "\"\""))\"\n"
         }.joined()
     }
 
