@@ -4,10 +4,10 @@ milestone: v1.0
 milestone_name: milestone
 status: completed
 stopped_at: Initialization complete
-last_updated: "2026-10-23T08:32:09.402Z"
+last_updated: "2026-10-23T12:35:15.781Z"
 last_activity: 2026-10-23 — Phase 03.1 HandBrake parity executed, reviewed, fixed and verified
 progress:
-  total_phases: 6
+  total_phases: 7
   completed_phases: 3
   total_plans: 24
   completed_plans: 24
@@ -37,6 +37,7 @@ Progress: [█████░░░░░] 50%
 
 - Phase 03.1 inserted after Phase 3: User: redesign hid all HandBrake-derived settings; restore them in new visual (URGENT)
 - Phase 03.1.2 inserted after Phase 03.1: User: fix all visual issues, premium Apple-native macOS 27 UI/UX with animation on every action (URGENT)
+- Phase 03.1.2.1 inserted after Phase 03.1.2: User: video converter will get AI upscale like HyperImage
 
 ### Decisions
 
