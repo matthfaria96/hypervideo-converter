@@ -7,10 +7,9 @@ struct HistoryView: View {
 
     var body: some View {
         @Bindable var ui = model.ui
-        PageScaffold(eyebrow: "Library", title: "History",
-                     subtitle: "Finished, failed and cancelled conversions.") {
+        PageScaffold(subtitle: "Finished, failed and cancelled conversions.") {
             Button("Clear History", systemImage: "trash") { ui.confirmingClearHistory = true }
-                .buttonStyle(.subtle)
+                .compatGlassButtonStyle()
                 .disabled(model.historyJobs.isEmpty)
                 .confirmationDialog("Clear History?", isPresented: $ui.confirmingClearHistory) {
                     Button("Clear History", role: .destructive) { model.queue.clearFinished() }
@@ -21,18 +20,19 @@ struct HistoryView: View {
         } content: {
             if model.historyJobs.isEmpty {
                 EmptyPage(symbol: "clock.arrow.circlepath", text: "Converted videos will appear here.")
+                    .motionTransition(.pop)
             } else {
-                LazyVStack(spacing: 0) {
+                ListCard {
                     ForEach(model.historyJobs) { job in
                         HistoryRow(job: job)
-                            .padding(12)
-                            .overlay(alignment: .bottom) { Color(hex: 0x333338).frame(height: 1) }
+                            .listCardRow()
+                            .motionTransition(.row)
                     }
                 }
-                .clipShape(.rect(cornerRadius: 11))
-                .card(fill: Color(hex: 0x202023))
+                .motionTransition(.content)
             }
         }
+        .motion(value: model.historyJobs.map(\.id))
     }
 }
 
@@ -41,20 +41,20 @@ private struct HistoryRow: View {
     let job: EncodeJob
 
     var body: some View {
-        HStack(spacing: 11) {
+        HStack(spacing: Spacing.m) {
             Image(systemName: symbol)
-                .font(.system(size: 14, weight: .semibold))
+                .font(.body.weight(.semibold))
                 .foregroundStyle(tint)
                 .frame(width: 34, height: 34)
-                .background(tint.opacity(0.15), in: .rect(cornerRadius: 8))
-            VStack(alignment: .leading, spacing: 4) {
+                .background(tint.opacity(0.14), in: .rect(cornerRadius: Radius.s + 2))
+            VStack(alignment: .leading, spacing: Spacing.xs) {
                 Text(job.destination.lastPathComponent)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.body.weight(.medium))
                     .lineLimit(1)
                     .truncationMode(.middle)
                 Text(verbatim: detail)
-                    .font(.system(size: 10))
-                    .foregroundStyle(isFailure ? Theme.red : Theme.muted)
+                    .font(.caption)
+                    .foregroundStyle(isFailure ? Theme.danger : .secondary)
                     .lineLimit(2)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -74,7 +74,7 @@ private struct HistoryRow: View {
     }
 
     private var actions: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: Spacing.s) {
             if case .completed = job.state {
                 Button("Open", systemImage: "play.fill") { NSWorkspace.shared.open(job.destination) }
                     .help("Play the converted video")
@@ -89,7 +89,8 @@ private struct HistoryRow: View {
                 .help("Remove from History (the file isn't deleted)")
                 .accessibilityLabel(Text("Remove from History"))
         }
-        .buttonStyle(.subtle)
+        .compatGlassButtonStyle()
+        .controlSize(.small)
     }
 
     private var isFailure: Bool { if case .failed = job.state { true } else { false } }
@@ -118,8 +119,8 @@ private struct HistoryRow: View {
 
     private var tint: Color {
         switch job.state {
-        case .completed: Theme.green
-        case .failed: Theme.red
+        case .completed: Theme.success
+        case .failed: Theme.danger
         default: Theme.accent
         }
     }

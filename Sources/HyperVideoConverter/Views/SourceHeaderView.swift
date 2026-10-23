@@ -21,16 +21,17 @@ struct SourceHeaderView: View {
                         .font(.title.bold())
                         .lineLimit(1)
                         .truncationMode(.middle)
-                    Text(presetName).foregroundStyle(.secondary)
+                    Text(presetName).foregroundStyle(.white.opacity(0.8))
                 }
                 if let info = source.info { chips(info) }
             }
-            .padding(20)
+            .padding(Spacing.l)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.black.opacity(0.5), in: .rect(cornerRadius: 14))
-            .padding(14)
+            .compatGlass(in: .rect(cornerRadius: Radius.l))
+            .environment(\.colorScheme, .dark)
+            .padding(Spacing.m)
         }
-        .clipShape(.rect(cornerRadius: 14))
+        .clipShape(.rect(cornerRadius: Radius.xl))
     }
 
     @ViewBuilder

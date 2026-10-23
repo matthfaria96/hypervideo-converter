@@ -10,14 +10,12 @@ struct FavoritesView: View {
     var body: some View {
         @Bindable var ui = model.ui
 
-        PageScaffold(eyebrow: "Library", title: "Favorites",
-                     subtitle: "Presets apply to the selected videos, or to every video in the list.") {
-            HStack(spacing: 8) {
+        PageScaffold(subtitle: "Presets apply to the selected videos, or to every video in the list.") {
+            HStack(spacing: Spacing.s) {
                 Button("Save Current Settings…", systemImage: "plus") {
                     ui.presetName = ""
                     ui.isSavingPreset = true
                 }
-                .buttonStyle(.subtle)
                 Menu("More", systemImage: "ellipsis") {
                     Button("Import Presets…", systemImage: "square.and.arrow.down") { PresetFiles.importPresets(model) }
                         .help("HyperVideo or HandBrake preset exports (.json)")
@@ -25,25 +23,27 @@ struct FavoritesView: View {
                         .disabled(model.presets.custom.isEmpty)
                 }
                 .menuStyle(.button)
+                .labelStyle(.iconOnly)
                 .fixedSize()
             }
+            .compatGlassButtonStyle()
         } content: {
             ForEach(model.presets.grouped, id: \.category) { group in
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: Spacing.s) {
                     Eyebrow(text: LocalizedStringKey(group.presets.first?.displayCategory ?? group.category))
-                    VStack(spacing: 0) {
+                    ListCard {
                         ForEach(group.presets) { preset in
                             PresetRow(preset: preset, isDefault: preset.id == model.defaultPreset.id)
-                                .padding(12)
-                                .overlay(alignment: .bottom) { Color(hex: 0x333338).frame(height: 1) }
+                                .listCardRow()
                                 .contextMenu { menu(for: preset) }
+                                .motionTransition(.row)
                         }
                     }
-                    .clipShape(.rect(cornerRadius: 11))
-                    .card(fill: Color(hex: 0x202023))
                 }
             }
         }
+        .motion(value: model.presets.all.map(\.id))
+        .motion(Motion.quick, value: defaultID)
         .alert("Save Preset", isPresented: $ui.isSavingPreset) {
             TextField("Name", text: $ui.presetName)
             Button("Save") { saveCurrent() }
@@ -92,33 +92,38 @@ private struct PresetRow: View {
     let isDefault: Bool
 
     var body: some View {
-        HStack(spacing: 11) {
+        HStack(spacing: Spacing.m) {
             Image(systemName: preset.symbol)
-                .font(.system(size: 13))
-                .foregroundStyle(isDefault ? Theme.accentLight : Color(hex: 0xDDDDDD))
+                .font(.body.weight(.medium))
+                .foregroundStyle(isDefault ? AnyShapeStyle(Theme.accent) : AnyShapeStyle(.secondary))
                 .frame(width: 30, height: 30)
-                .background(isDefault ? Color(hex: 0x594421) : Color(hex: 0x39393F), in: .rect(cornerRadius: 8))
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 6) {
-                    Text(verbatim: preset.displayName).font(.system(size: 12, weight: .semibold))
+                .background(isDefault ? AnyShapeStyle(Theme.accent.opacity(0.18)) : AnyShapeStyle(.fill.tertiary),
+                            in: .rect(cornerRadius: Radius.s + 2))
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: Spacing.xs + 2) {
+                    Text(verbatim: preset.displayName).font(.body.weight(.medium))
                     if isDefault {
-                        Text("Default").font(.system(size: 9, weight: .semibold)).foregroundStyle(Theme.accentLight)
-                            .padding(.horizontal, 5).padding(.vertical, 1)
-                            .background(Theme.accentWash, in: .capsule)
+                        Text("Default").font(.caption2.weight(.semibold)).foregroundStyle(Theme.accent)
+                            .padding(.horizontal, 6).padding(.vertical, 2)
+                            .background(Theme.accent.opacity(0.14), in: .capsule)
+                            .motionTransition(.pop)
                     }
                 }
-                Text(verbatim: preset.displaySummary).font(.system(size: 10)).foregroundStyle(Theme.muted).lineLimit(1)
+                Text(verbatim: preset.displaySummary).font(.caption).foregroundStyle(.secondary).lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            HStack(spacing: 6) {
+            HStack(spacing: Spacing.s) {
                 Button("Make Default", systemImage: isDefault ? "star.fill" : "star") { defaultID = preset.id.uuidString }
                     .labelStyle(.iconOnly)
-                    .buttonStyle(.ghost)
+                    .buttonStyle(.accessoryBar)
+                    .foregroundStyle(isDefault ? AnyShapeStyle(Theme.accent) : AnyShapeStyle(.secondary))
+                    .contentTransition(.symbolEffect(.replace))
                     .help(isDefault ? "This is the default profile for new videos" : "Make this the default profile for new videos")
                     .accessibilityLabel(Text("Make Default"))
                     .accessibilityAddTraits(isDefault ? .isSelected : [])
                 Button("Apply") { model.applyPresetToTargets(preset) }
-                    .buttonStyle(.subtle)
+                    .compatGlassButtonStyle()
+                    .controlSize(.small)
                     .help("Apply to the selected videos, or to all when none is selected")
             }
         }

@@ -1,33 +1,48 @@
 import SwiftUI
 
-/// The shared frame of the History, Favorites and Analyze pages.
+/// The shared frame of the History, Favorites and Analyze pages. The page title lives
+/// in the window toolbar; the scaffold adds the one-line description and the actions.
 struct PageScaffold<Trailing: View, Content: View>: View {
-    let eyebrow: LocalizedStringKey
-    let title: LocalizedStringKey
     let subtitle: LocalizedStringKey
     @ViewBuilder var trailing: Trailing
     @ViewBuilder var content: Content
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                HStack(alignment: .top, spacing: 16) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(eyebrow).textCase(.uppercase).font(.system(size: 11)).foregroundStyle(Theme.muted)
-                        Text(title).font(.system(size: 24, weight: .bold)).kerning(-0.7)
-                        Text(subtitle).font(.system(size: 12)).foregroundStyle(Theme.muted)
-                    }
-                    Spacer(minLength: 8)
+            VStack(alignment: .leading, spacing: Spacing.l) {
+                HStack(alignment: .firstTextBaseline, spacing: Spacing.l) {
+                    Text(subtitle).foregroundStyle(.secondary)
+                    Spacer(minLength: Spacing.s)
                     trailing
                 }
                 content
             }
-            .padding(.horizontal, 28)
-            .padding(.vertical, 24)
-            .frame(maxWidth: 980, alignment: .leading)
+            .padding(Spacing.xl)
+            .frame(maxWidth: 960, alignment: .leading)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .compatSoftScrollEdges()
         .background(Theme.background)
+    }
+}
+
+/// A list card: rows separated by hairlines inside one rounded panel.
+struct ListCard<Content: View>: View {
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        VStack(spacing: 0) { content }
+            .clipShape(.rect(cornerRadius: Radius.m))
+            .card()
+    }
+}
+
+extension View {
+    /// A row of a `ListCard`.
+    func listCardRow() -> some View {
+        padding(.horizontal, Spacing.l)
+            .padding(.vertical, Spacing.m)
+            .overlay(alignment: .bottom) { Divider().padding(.leading, Spacing.l) }
     }
 }
 
@@ -36,12 +51,11 @@ struct EmptyPage: View {
     let text: LocalizedStringKey
 
     var body: some View {
-        VStack(spacing: 10) {
-            Image(systemName: symbol).font(.system(size: 26)).foregroundStyle(Theme.faint)
-            Text(text).font(.system(size: 12)).foregroundStyle(Theme.muted)
+        ContentUnavailableView {
+            Label(text, systemImage: symbol)
         }
+        .padding(Spacing.xl)
         .frame(maxWidth: .infinity)
-        .padding(40)
-        .card(fill: Color(hex: 0x202023))
+        .card()
     }
 }

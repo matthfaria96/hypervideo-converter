@@ -8,26 +8,28 @@ struct AnalyzeView: View {
     private var source: SourceItem? { model.selectedSource ?? model.sources.first { model.selectedIDs.contains($0.id) } }
 
     var body: some View {
-        PageScaffold(eyebrow: "Tools", title: "Analyze Video",
-                     subtitle: "What's inside a video: streams, tracks, chapters and file details.") {
+        PageScaffold(subtitle: "What's inside a video: streams, tracks, chapters and file details.") {
             if !model.sources.isEmpty { picker }
         } content: {
             if let source {
                 SourceHeaderView(source: source, presetName: model.presetName(for: source),
                                  picture: model.ui.hero?.url == source.url ? model.ui.hero?.image : source.thumbnail)
                     .task(id: source.info?.duration) { await model.loadHero(for: source) }
+                    .id(source.id)
+                    .motionTransition(.content)
                 if let info = source.info {
-                    MediaFacts(info: info, url: source.url)
+                    MediaFacts(info: info, url: source.url).motionTransition(.content)
                 } else if let error = source.errorMessage {
                     StatusBanner(messages: [error])
                 } else {
-                    Label("Analyzing media…", systemImage: "rays").foregroundStyle(Theme.muted)
+                    Label("Analyzing media…", systemImage: "rays").foregroundStyle(.secondary)
                 }
             } else {
                 EmptyPage(symbol: "magnifyingglass",
                           text: model.sources.isEmpty ? "Add a video to see what's inside it." : "Choose a video to analyze.")
             }
         }
+        .motion(value: source?.id)
     }
 
     private var picker: some View {
@@ -45,9 +47,9 @@ private struct MediaFacts: View {
     let url: URL
 
     var body: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: Spacing.m) {
             if info.hasVideo {
-                FactSection(title: "Video") {
+                FactSection(title: "Video", symbol: "film") {
                     fact("Codec", info.videoCodec ?? "—")
                     fact("Resolution", info.displaySize.map(Format.size) ?? "—")
                     fact("Frame rate", info.frameRate.map(Format.fps) ?? "—")
@@ -56,7 +58,7 @@ private struct MediaFacts: View {
                     fact("Scan", info.isInterlaced ? String(localized: "Interlaced") : String(localized: "Progressive"))
                 }
             }
-            FactSection(title: "Audio") {
+            FactSection(title: "Audio", symbol: "waveform") {
                 if info.audioTracks.isEmpty { fact("Tracks", String(localized: "None")) }
                 ForEach(Array(info.audioTracks.enumerated()), id: \.element.id) { index, track in
                     fact(String(localized: "Track \(index + 1)"),
@@ -65,34 +67,32 @@ private struct MediaFacts: View {
                 }
             }
             if !info.subtitleTracks.isEmpty {
-                FactSection(title: "Subtitles") {
+                FactSection(title: "Subtitles", symbol: "captions.bubble") {
                     ForEach(Array(info.subtitleTracks.enumerated()), id: \.element.id) { index, track in
                         fact(String(localized: "Track \(index + 1)"), [track.format, track.language].compactMap { $0 }.joined(separator: " · "))
                     }
                 }
             }
             if !info.chapters.isEmpty {
-                FactSection(title: "Chapters") {
+                FactSection(title: "Chapters", symbol: "list.bullet.indent") {
                     ForEach(Array(info.chapters.enumerated()), id: \.offset) { index, chapter in
                         fact("\(index + 1). \(chapter.title)", Format.duration(chapter.start))
                     }
                 }
             }
-            FactSection(title: "File") {
+            FactSection(title: "File", symbol: "doc") {
                 fact("Name", url.lastPathComponent)
                 GridRow {
-                    Text("Folder").foregroundStyle(Theme.muted)
+                    Text("Folder").foregroundStyle(.secondary)
                     Button {
                         SystemIntegration.reveal([url])
                     } label: {
                         Label(Format.path(url.deletingLastPathComponent()), systemImage: "folder")
                             .lineLimit(1).truncationMode(.middle)
                     }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(Theme.accentLight)
+                    .buttonStyle(.link)
                     .help("Show in Finder")
                 }
-                .font(.system(size: 12))
                 fact("Size", Format.bytes(info.fileBytes))
                 fact("Duration", Format.duration(info.duration))
             }
@@ -101,24 +101,20 @@ private struct MediaFacts: View {
 
     private func fact(_ title: String, _ value: String) -> some View {
         GridRow {
-            Text(LocalizedStringKey(title)).foregroundStyle(Theme.muted)
+            Text(LocalizedStringKey(title)).foregroundStyle(.secondary)
             Text(verbatim: value).textSelection(.enabled).lineLimit(2).truncationMode(.middle)
         }
-        .font(.system(size: 12))
     }
 }
 
 private struct FactSection<Content: View>: View {
     let title: LocalizedStringKey
+    let symbol: String
     @ViewBuilder var content: Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(title).font(.system(size: 13, weight: .semibold))
-            Grid(alignment: .leading, horizontalSpacing: 24, verticalSpacing: 8) { content }
+        SettingsSection(title: title, symbol: symbol) {
+            Grid(alignment: .leading, horizontalSpacing: Spacing.xl, verticalSpacing: Spacing.s) { content }
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .card(fill: Color(hex: 0x202023))
     }
 }

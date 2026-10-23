@@ -622,3 +622,13 @@
 "Saves this video's output settings as a reusable preset." = "Salva as configurações de saída deste vídeo como um perfil reutilizável.";
 "Unknown language" = "Idioma desconhecido";
 "YYYY-MM-DD" = "AAAA-MM-DD";
+
+/* Premium native design (phase 03.1.2) */
+"Change Folder…" = "Alterar pasta…";
+"Hide the output settings (⌥⌘I)" = "Ocultar as configurações de saída (⌥⌘I)";
+"Show the output settings (⌥⌘I)" = "Mostrar as configurações de saída (⌥⌘I)";
+"Convert changes the format; Compress reduces the size" = "Converter troca o formato; Comprimir reduz o tamanho";
+"Choose Videos… (⌘O)" = "Escolher vídeos… (⌘O)";
+"Size estimate" = "Estimativa de tamanho";
+"Show Output Settings" = "Mostrar configurações de saída";
+"Hide Output Settings" = "Ocultar configurações de saída";
