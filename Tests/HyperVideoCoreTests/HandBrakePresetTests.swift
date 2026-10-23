@@ -33,7 +33,7 @@ struct HandBrakePresetTests {
           "VideoEncoder": "x265_10bit", "VideoQualityType": 1, "VideoAvgBitrate": 13000,
           "VideoPreset": "slow", "VideoFramerate": "23.976", "VideoFramerateMode": "cfr",
           "PictureWidth": 3840, "PictureHeight": 2160, "PictureRotate": "angle=90:hflip=1",
-          "PictureCropMode": 1, "PictureTopCrop": 4, "PictureBottomCrop": 6, "PictureLeftCrop": 0, "PictureRightCrop": 2,
+          "PictureCropMode": 3, "PictureTopCrop": 4, "PictureBottomCrop": 6, "PictureLeftCrop": 0, "PictureRightCrop": 2,
           "PictureDeinterlaceFilter": "off", "PictureDenoiseFilter": "nlmeans", "PictureDenoisePreset": "medium",
           "PictureSharpenFilter": "lapsharp", "PictureSharpenPreset": "ultralight", "VideoGrayScale": true,
           "Optimize": false, "ChapterMarkers": false,
@@ -72,7 +72,7 @@ struct HandBrakePresetTests {
         #expect(s.rateControl == .quality(0.57))
         #expect(s.prioritizeSpeed && s.optimizeForWeb && s.keepMetadata)
         #expect(s.maxResolution == .hd720)
-        #expect(s.frameRate == .source, "a peak frame rate is a cap, never an upsample")
+        #expect(s.frameRate == .fps30 && s.videoOptions.frameRateMode == .peak)
         #expect(s.filters.deinterlace == .auto)
         #expect(s.audioCodec == .aac && s.audioBitrateKbps == 128 && s.audioMixdown == .stereo && s.audioTracks == .first)
         #expect(s.subtitles == .none)
@@ -87,8 +87,8 @@ struct HandBrakePresetTests {
         #expect(s.frameRate == .fps23976 && s.maxResolution == .uhd2160)
         #expect(s.rotation == .cw90 && s.flipHorizontal)
         #expect(s.crop == Crop(top: 4, bottom: 6, left: 0, right: 2))
-        #expect(s.filters.deinterlace == .off && s.filters.denoise == .medium && s.filters.sharpen == .light && s.filters.grayscale)
-        #expect(s.audioCodec == .passthrough && s.audioTracks == .all && s.subtitles == .all)
+        #expect(s.filters.deinterlace == .off && s.filters.denoise == .medium && s.filters.sharpen == .ultralight && s.filters.grayscale)
+        #expect(s.audioCodec == .autoPassthru && s.audioTracks == .all && s.subtitles == .all)
         #expect(s.keepMetadata, "chapter markers off must not drop other tags")
         #expect(!s.prioritizeSpeed)
         #expect(s.container == .mkv, "av_mkv maps to Matroska instead of falling back")
@@ -101,7 +101,7 @@ struct HandBrakePresetTests {
         let tiny = try imported()[2]
         let s = tiny.preset.settings
         #expect(s.videoCodec == .hevc10 && s.audioCodec == .aac && s.audioMixdown == .surround51)
-        #expect(s.maxResolution == .source && s.frameRate == .source)
+        #expect(s.maxResolution == .source && s.frameRate == .source && s.videoOptions.frameRateMode == .variable)
         #expect(tiny.notes.count == 3, "\(tiny.notes)")
         #expect(s.isValid)
     }
