@@ -48,6 +48,8 @@ public extension OutputEstimate {
         case .proRes422: return 2.4
         case .proRes422HQ: return 3.6
         case .proRes4444: return 5.4
+        case .proRes422LT: return 1.7
+        case .proRes422Proxy: return 0.75
         case .passthrough: return 0
         }
     }

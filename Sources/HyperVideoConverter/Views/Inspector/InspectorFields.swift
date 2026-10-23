@@ -133,6 +133,8 @@ struct VideoFields: View {
         case .proRes422: "Apple ProRes 422 — editing"
         case .proRes422HQ: "Apple ProRes 422 HQ — editing"
         case .proRes4444: "Apple ProRes 4444 — editing, alpha"
+        case .proRes422LT: "Apple ProRes 422 LT — editing, lighter files"
+        case .proRes422Proxy: "Apple ProRes 422 Proxy — offline editing"
         case .passthrough: "Passthrough — copy without re-encoding"
         }
     }
@@ -140,6 +142,7 @@ struct VideoFields: View {
     static func title(_ resolution: MaxResolution) -> LocalizedStringKey {
         switch resolution {
         case .source: "Keep original resolution"
+        case .uhd4320: "8K · 4320p"
         case .uhd2160: "4K · 2160p"
         case .qhd1440: "QHD · 1440p"
         case .fhd1080: "Full HD · 1080p"
