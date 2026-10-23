@@ -9,6 +9,12 @@ enum StressClip {
         var channels = 2
         var sampleRate = 48_000
         var language: String?
+        /// Channel layout of the source; nil uses the engine's own layout for the channel count.
+        var layoutTag: AudioChannelLayoutTag?
+        /// When set, only this channel carries the tone; the others are silent.
+        var onlyChannel: Int?
+        /// Store uncompressed float PCM instead of AAC (any channel layout is allowed).
+        var lpcm = false
         /// The ISO 639-2 `mdhd` code alone, as HandBrake and ffmpeg write it.
         var languageCode: String?
     }
@@ -48,11 +54,19 @@ enum StressClip {
             ])
         }
         let audios = spec.audio.map { audio in
-            let input = AVAssetWriterInput(mediaType: .audio, outputSettings: [
+            var settings: [String: Any] = [
                 AVFormatIDKey: kAudioFormatMPEG4AAC, AVSampleRateKey: audio.sampleRate,
                 AVNumberOfChannelsKey: audio.channels,
-                AVChannelLayoutKey: OutputSettingsBuilder.channelLayoutData(channels: audio.channels)
-            ])
+                AVChannelLayoutKey: layoutData(audio)
+            ]
+            if audio.lpcm {
+                settings[AVFormatIDKey] = kAudioFormatLinearPCM
+                settings[AVLinearPCMBitDepthKey] = 32
+                settings[AVLinearPCMIsFloatKey] = true
+                settings[AVLinearPCMIsBigEndianKey] = false
+                settings[AVLinearPCMIsNonInterleaved] = false
+            }
+            let input = AVAssetWriterInput(mediaType: .audio, outputSettings: settings)
             input.extendedLanguageTag = audio.language
             input.languageCode = audio.languageCode
             input.expectsMediaDataInRealTime = false
@@ -105,6 +119,13 @@ enum StressClip {
         }
     }
 
+    private static func layoutData(_ audio: Audio) -> Data {
+        guard let tag = audio.layoutTag else { return OutputSettingsBuilder.channelLayoutData(channels: audio.channels) }
+        var layout = AudioChannelLayout()
+        layout.mChannelLayoutTag = tag
+        return Data(bytes: &layout, count: MemoryLayout<AudioChannelLayout>.size)
+    }
+
     private static func pcm(_ audio: Audio, start: Int, frames: Int) -> CMSampleBuffer? {
         let channels = UInt32(audio.channels)
         var asbd = AudioStreamBasicDescription(
@@ -113,18 +134,18 @@ enum StressClip {
             mBytesPerPacket: 4 * channels, mFramesPerPacket: 1, mBytesPerFrame: 4 * channels,
             mChannelsPerFrame: channels, mBitsPerChannel: 32, mReserved: 0
         )
-        let layoutData = OutputSettingsBuilder.channelLayoutData(channels: audio.channels)
+        let layoutBytes = layoutData(audio)
         var format: CMAudioFormatDescription?
-        layoutData.withUnsafeBytes { layout in
+        layoutBytes.withUnsafeBytes { layout in
             _ = CMAudioFormatDescriptionCreate(
-                allocator: nil, asbd: &asbd, layoutSize: layoutData.count,
+                allocator: nil, asbd: &asbd, layoutSize: layoutBytes.count,
                 layout: layout.baseAddress?.assumingMemoryBound(to: AudioChannelLayout.self),
                 magicCookieSize: 0, magicCookie: nil, extensions: nil, formatDescriptionOut: &format)
         }
         guard let format else { return nil }
         let samples = (0..<frames).flatMap { i -> [Float] in
             let value = Float(sin(2 * Double.pi * 440 * Double(start + i) / Double(audio.sampleRate)) * 0.2)
-            return Array(repeating: value, count: audio.channels)
+            return (0..<audio.channels).map { channel in audio.onlyChannel.map { $0 == channel ? value : 0 } ?? value }
         }
         let data = samples.withUnsafeBytes { Data($0) }
         var block: CMBlockBuffer?

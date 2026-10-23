@@ -118,6 +118,45 @@ struct AudioParityTranscodeTests {
         #expect(try await MediaInspector.inspect(out).audioTracks.first?.channels == expected)
     }
 
+    /// RMS of each channel when the output is decoded into `tag`'s channel order.
+    private func channelLevels(of url: URL, tag: AudioChannelLayoutTag, channels: Int) async throws -> [Double] {
+        let asset = AVURLAsset(url: url)
+        let track = try #require(try await asset.loadTracks(withMediaType: .audio).first)
+        var layout = AudioChannelLayout()
+        layout.mChannelLayoutTag = tag
+        var settings = OutputSettingsBuilder.audioReaderPCM(channels: channels)
+        settings[AVChannelLayoutKey] = Data(bytes: &layout, count: MemoryLayout<AudioChannelLayout>.size)
+        let reader = try AVAssetReader(asset: asset)
+        let output = AVAssetReaderAudioMixOutput(audioTracks: [track], audioSettings: settings)
+        reader.add(output)
+        reader.startReading()
+        var sums = [Double](repeating: 0, count: channels)
+        while let buffer = output.copyNextSampleBuffer() {
+            guard let block = CMSampleBufferGetDataBuffer(buffer) else { continue }
+            var data = [Float](repeating: 0, count: CMBlockBufferGetDataLength(block) / 4)
+            CMBlockBufferCopyDataBytes(block, atOffset: 0, dataLength: data.count * 4, destination: &data)
+            for (index, value) in data.enumerated() { sums[index % channels] += Double(value * value) }
+        }
+        return sums.map { $0.squareRoot() }
+    }
+
+    /// Pins the 7.1 layout choice (03.1 review IN-06). Apple's AAC encoder rejects the rear-surround
+    /// SMPTE layout (MPEG_7_1_C) and, given AAC_7_1_B, silently drops Rls, Rrs and LFE. MPEG_7_1_B is
+    /// the only accepted 8-channel layout that keeps every channel audible: back surrounds fold into
+    /// the side pair instead of vanishing.
+    @Test(arguments: [4, 5, 6, 7])
+    func surround71KeepsEverySourceChannelAudible(channel: Int) async throws {
+        // Uncompressed SMPTE 7.1 source (L R C LFE Ls Rs Rls Rrs), tone on one channel only.
+        var source = StressClip.Audio(channels: 8)
+        source.layoutTag = kAudioChannelLayoutTag_MPEG_7_1_C
+        source.onlyChannel = channel
+        source.lpcm = true
+        let out = try await convert([source]) { $0.audioMixdown = .surround71 }
+        #expect(try await MediaInspector.inspect(out).audioTracks.first?.channels == 8)
+        let levels = try await channelLevels(of: out, tag: kAudioChannelLayoutTag_MPEG_7_1_C, channels: 8)
+        #expect(levels.reduce(0, +) > 1, "channel \(channel): \(levels)")
+    }
+
     @Test func heAAC() async throws {
         let out = try await convert([.init()]) {
             $0.audioCodec = .heAAC
