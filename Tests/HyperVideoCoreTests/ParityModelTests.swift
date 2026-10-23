@@ -59,13 +59,17 @@ struct ParityModelTests {
         #expect(VideoLevel.options(for: .h264).count == 10)
     }
 
+    private func close(_ p: Padding, _ r: Double, _ g: Double, _ b: Double) -> Bool {
+        abs(p.red - r) < 1e-9 && abs(p.green - g) < 1e-9 && abs(p.blue - b) < 1e-9
+    }
+
     @Test func paddingColors() {
-        func rgb(_ p: Padding) -> [Double] { [p.red, p.green, p.blue] }
-        #expect(rgb(Padding(color: .gray)) == [112.0 / 255, 128.0 / 255, 144.0 / 255])
-        #expect(rgb(Padding(color: .darkGray)) == [47.0 / 255, 79.0 / 255, 79.0 / 255])
-        #expect(rgb(Padding(color: .white)) == [1, 1, 1])
-        #expect(rgb(Padding(color: .custom, customHex: "FF8000")) == [1, 128.0 / 255, 0])
-        #expect(rgb(Padding(color: .custom, customHex: "zz")) == [0, 0, 0])
+        let k: Double = 255
+        #expect(close(Padding(color: .gray), 112 / k, 128 / k, 144 / k))
+        #expect(close(Padding(color: .darkGray), 47 / k, 79 / k, 79 / k))
+        #expect(close(Padding(color: .white), 1, 1, 1))
+        #expect(close(Padding(color: .custom, customHex: "FF8000"), 1, 128 / k, 0))
+        #expect(close(Padding(color: .custom, customHex: "zz"), 0, 0, 0))
     }
 
     @Test func cropModeDetects() {
