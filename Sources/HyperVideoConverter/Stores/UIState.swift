@@ -2,6 +2,7 @@ import AppKit
 import AVFoundation
 import HyperVideoCore
 import Observation
+import SwiftUI
 
 /// A video's big picture, for the Analyze header.
 struct HeroPicture {
@@ -22,7 +23,14 @@ final class UIState {
     var isSavingPreset = false
     var presetName = ""
     var renamingPreset: Preset?
-    var isSidebarCollapsed = false
+    /// The split view's columns; the sidebar collapses natively.
+    var sidebarVisibility: NavigationSplitViewVisibility = .all
+    var isSidebarCollapsed: Bool {
+        get { sidebarVisibility == .detailOnly }
+        set { sidebarVisibility = newValue ? .detailOnly : .all }
+    }
+    /// The right column (output settings or one video's settings).
+    var isInspectorShown = true
     /// The video whose Advanced settings sheet is open.
     var advancedSourceID: UUID?
     /// Thumbnails of videos that moved from the editing list into the queue.

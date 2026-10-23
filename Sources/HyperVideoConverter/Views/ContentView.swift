@@ -1,37 +1,30 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Sidebar, page and (on the conversion page) the output inspector, side by side.
-/// Plain stacks with fixed side widths instead of a split view: the centre takes what
-/// is left and never feeds an ideal width back into AppKit's split-view layout.
+/// The window: a native split view with the sidebar, the page and, on the conversion
+/// page, the inspector column. The system draws the toolbar, sidebar and inspector
+/// materials (Liquid Glass on macOS 26+).
 struct ContentView: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
         @Bindable var model = model
+        @Bindable var ui = model.ui
 
-        HStack(spacing: 0) {
+        NavigationSplitView(columnVisibility: $ui.sidebarVisibility) {
             SidebarView()
-                .frame(width: model.ui.isSidebarCollapsed ? 64 : 220)
-            Theme.separator.frame(width: 1)
-            page
-                .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity)
-            if model.section == .conversion {
-                Theme.separator.frame(width: 1)
-                if let source = model.panelSource {
-                    VideoSettingsPanel(source: source).frame(width: 460)
-                } else {
-                    OutputInspector().frame(width: 310)
+                .navigationSplitViewColumnWidth(min: 190, ideal: 220, max: 300)
+        } detail: {
+            pages
+                .navigationTitle(pageTitle)
+                .navigationSubtitle(model.section == .conversion ? model.statusText : "")
+                .inspector(isPresented: inspectorIsShown) {
+                    InspectorColumn()
+                        .inspectorColumnWidth(min: 320, ideal: 400, max: 600)
                 }
-            }
+                .toolbar { WindowToolbar() }
         }
-        .background(Theme.background)
-        .foregroundStyle(Theme.text)
-        .animation(.smooth(duration: 0.2), value: model.ui.isSidebarCollapsed)
-        .animation(.smooth(duration: 0.2), value: model.panelSource?.id)
-        .toolbar { WindowToolbar() }
-        .toolbar(removing: .title)
-        .toolbarBackground(Color(hex: 0x202023), for: .windowToolbar)
+        .navigationSplitViewStyle(.balanced)
         .fileImporter(isPresented: $model.isImporting, allowedContentTypes: [.audiovisualContent, .folder],
                       allowsMultipleSelection: true) { result in
             if case .success(let urls) = result { Task { await model.addSources(urls) } }
@@ -51,52 +44,73 @@ struct ContentView: View {
         }
     }
 
+    private var inspectorIsShown: Binding<Bool> {
+        Binding(get: { model.section == .conversion && model.ui.isInspectorShown },
+                set: { model.ui.isInspectorShown = $0 })
+    }
+
     private var advancedIsShown: Binding<Bool> {
         Binding(get: { model.ui.advancedSourceID != nil }, set: { if !$0 { model.ui.advancedSourceID = nil } })
     }
 
-    @ViewBuilder
-    private var page: some View {
+    private var pageTitle: LocalizedStringKey {
         switch model.section {
-        case .conversion: WorkspaceView()
-        case .history: HistoryView()
-        case .favorites: FavoritesView()
-        case .analyze: AnalyzeView()
+        case .conversion: model.mode == .compress ? "Compress Videos" : "Convert Videos"
+        case .history: "History"
+        case .favorites: "Favorites"
+        case .analyze: "Analyze Video"
         }
+    }
+
+    /// One page at a time, crossfading between them.
+    private var pages: some View {
+        ZStack {
+            switch model.section {
+            case .conversion: WorkspaceView().motionTransition(.content)
+            case .history: HistoryView().motionTransition(.content)
+            case .favorites: FavoritesView().motionTransition(.content)
+            case .analyze: AnalyzeView().motionTransition(.content)
+            }
+        }
+        .motion(value: model.section)
     }
 }
 
-/// Brand on the left; status and settings on the right.
+/// Add Videos, the Convert | Compress switch and the inspector toggle.
 private struct WindowToolbar: ToolbarContent {
     @Environment(AppModel.self) private var model
 
     var body: some ToolbarContent {
-        ToolbarItem(placement: .navigation) {
-            HStack(spacing: 10) {
-                Image(nsImage: NSApp.applicationIconImage)
-                    .resizable()
-                    .frame(width: 26, height: 26)
-                Text(verbatim: "HyperVideo Converter").font(.system(size: 14, weight: .bold))
-                Text("BETA").font(.system(size: 10, weight: .medium)).foregroundStyle(Theme.faint)
+        if model.section == .conversion {
+            ToolbarItem(placement: .principal) {
+                Picker("Mode", selection: modeSelection) {
+                    Text("Convert").tag(WorkMode.convert)
+                    Text("Compress").tag(WorkMode.compress)
+                }
+                .pickerStyle(.segmented)
+                .help("Convert changes the format; Compress reduces the size")
             }
-            .padding(.horizontal, 6)
         }
-        .compatHiddenSharedBackground()
-
-        ToolbarItem(placement: .primaryAction) {
-            Text(model.statusText)
-                .font(.system(size: 11))
-                .foregroundStyle(Theme.muted)
-                .monospacedDigit()
-                .padding(.horizontal, 8)
-        }
-        .compatHiddenSharedBackground()
-
-        ToolbarItem(placement: .primaryAction) {
-            SettingsLink {
-                Label("Settings", systemImage: "gearshape")
+        ToolbarItemGroup(placement: .primaryAction) {
+            Button {
+                model.section = .conversion
+                model.isImporting = true
+            } label: {
+                Label("Choose Videos…", systemImage: "plus")
             }
-            .help("Settings (⌘,)")
+            .help("Choose Videos… (⌘O)")
+            if model.section == .conversion {
+                Button {
+                    model.ui.isInspectorShown.toggle()
+                } label: {
+                    Label("Output Settings", systemImage: "sidebar.trailing")
+                }
+                .help(model.ui.isInspectorShown ? "Hide the output settings (⌥⌘I)" : "Show the output settings (⌥⌘I)")
+            }
         }
+    }
+
+    private var modeSelection: Binding<WorkMode> {
+        Binding(get: { model.mode }, set: { model.setMode($0) })
     }
 }

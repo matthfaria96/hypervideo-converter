@@ -24,9 +24,8 @@ struct HyperVideoConverterApp: App {
         Window("HyperVideo Converter", id: "main") {
             ContentView()
                 .environment(model)
-                .frame(minWidth: 1100, minHeight: 680)
+                .frame(minWidth: 1000, minHeight: 640)
                 .tint(Theme.accent)
-                .preferredColorScheme(.dark)
                 .onAppear { appDelegate.model = model }
                 .modifier(WindowOpener(delegate: appDelegate))
         }
@@ -207,6 +206,11 @@ struct AppCommands: Commands {
                 model.ui.isSidebarCollapsed.toggle()
             }
             .keyboardShortcut("s", modifiers: [.command, .control])
+            Button(model.ui.isInspectorShown ? "Hide Output Settings" : "Show Output Settings") {
+                model.ui.isInspectorShown.toggle()
+            }
+            .keyboardShortcut("i", modifiers: [.command, .option])
+            .disabled(model.section != .conversion)
         }
     }
 }

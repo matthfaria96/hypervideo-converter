@@ -83,6 +83,11 @@ final class AppModel {
             ?? FileManager.default.urls(for: .moviesDirectory, in: .userDomainMask).first
             ?? URL(fileURLWithPath: NSHomeDirectory())
         queue.onJobsRemoved = { [weak self] removed in self?.releaseThumbnails(of: removed) }
+        // Launch argument `-InitialSection history` opens on that page (used for screenshots).
+        if let item = defaults.string(forKey: "InitialSection").flatMap(SidebarItem.init(rawValue:)) {
+            section = item.section
+            mode = item.mode ?? .convert
+        }
     }
 
     var defaultPreset: Preset {
