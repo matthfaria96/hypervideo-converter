@@ -79,7 +79,7 @@ struct ChaptersSettingsTab: View {
                         from: url, chapterCount: count, existing: existing
                     )
                 } catch {
-                    importError = error.localizedDescription
+                    importError = Self.message(for: error)
                 }
             }
         }
@@ -93,8 +93,17 @@ struct ChaptersSettingsTab: View {
         PanelPresenter.present(panel) { response in
             guard response == .OK, let url = panel.url else { return }
             Task {
-                do { try await ChapterEditing.exportCSV(titles: titles, to: url) } catch { importError = error.localizedDescription }
+                do { try await ChapterEditing.exportCSV(titles: titles, to: url) } catch { importError = Self.message(for: error) }
             }
+        }
+    }
+
+    /// The core library has no string tables, so chapter-file errors are localized here.
+    static func message(for error: Error) -> String {
+        switch error as? ChapterCSV.ParseError {
+        case .invalidLine(let line): String(localized: "Line \(line) of the chapter file isn't “number,title”.")
+        case .tooLarge: String(localized: "The chapter file is too large.")
+        case nil: error.localizedDescription
         }
     }
 }
