@@ -5,7 +5,7 @@ milestone_name: milestone
 status: completed
 stopped_at: Initialization complete
 last_updated: "2026-10-23T12:35:15.781Z"
-last_activity: 2026-10-23 — Phase 03.1 HandBrake parity executed, reviewed, fixed and verified
+last_activity: 2026-10-23 — Settings panel standardised (one header, one row layout, safe-area bar) — e61429d
 progress:
   total_phases: 7
   completed_phases: 3
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-10-19)
 Phase: 4 (Release) is next; Phase 3 still needs its 03-03 VM verification
 Plan: Not started
 Status: Phase 03.1.2 (premium native design) complete, 322 + 199 tests green; 03.1-HUMAN-UAT.md still has 6 manual checks; phase 3 VM check pending
-Last activity: 2026-10-23 — Phase 03.1 HandBrake parity executed, reviewed, fixed and verified
+Last activity: 2026-10-23 — Settings panel standardised (one header, one row layout, safe-area bar) — e61429d
 
 Progress: [█████░░░░░] 50%
 
