@@ -62,7 +62,7 @@ extension HandBrakePresets {
                 padding.color = .custom
                 padding.customHex = hex
             } else {
-                notes.append("The \(color) border colour isn't available, so it uses Black.")
+                notes.append("The \(color) border color isn't available, so it uses Black.")
             }
         }
     }

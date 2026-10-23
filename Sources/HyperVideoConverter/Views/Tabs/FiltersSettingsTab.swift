@@ -69,7 +69,7 @@ struct FiltersSettingsTab: View {
 
     private var chromaRows: some View {
         Group {
-            SettingRow(title: "Chroma smooth", help: "Cleans up colour fringing") {
+            SettingRow(title: "Chroma smooth", help: "Cleans up color fringing") {
                 menu("Chroma smooth", FilterStrength.allCases, filters.chromaSmooth)
             }
             if settings.filters.chromaSmooth != .off {
