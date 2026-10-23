@@ -128,7 +128,12 @@ struct AudioTrackCard: View {
         .card(fill: Theme.panelRaised, radius: 10)
     }
 
-    private func label(_ track: AudioTrackInfo, index: Int) -> String {
-        "\(index + 1) · \(track.language ?? "und") · \(track.codec) \(track.channelDescription)"
+    private func label(_ track: AudioTrackInfo, index: Int) -> String { Self.label(track, index: index) }
+
+    /// "1 · eng · AAC Stereo", with the channel layout and a missing language localized.
+    static func label(_ track: AudioTrackInfo, index: Int) -> String {
+        let language = track.language ?? String(localized: "Unknown language")
+        let channels = String(localized: String.LocalizationValue(track.channelDescription))
+        return "\(index + 1) · \(language) · \(track.codec) \(channels)"
     }
 }

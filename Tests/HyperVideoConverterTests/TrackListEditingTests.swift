@@ -107,3 +107,12 @@ struct TrackListEditingTests {
         #expect(model.sources[0].subtitleFiles.map(\.isDefault) == [true, false])
     }
 }
+
+@Suite("Audio track labels")
+struct AudioTrackLabelTests {
+    @Test func missingLanguageIsWordedNotACode() {
+        let track = AudioTrackInfo(id: 1, codec: "AAC", channels: 2, sampleRate: 48_000, language: nil)
+        let label = AudioTrackCard.label(track, index: 0)
+        #expect(label.hasPrefix("1 · Unknown language · AAC") && !label.contains("und"))
+    }
+}
