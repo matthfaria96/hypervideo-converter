@@ -36,29 +36,12 @@ struct OutputInspector: View {
                     StatusBanner(messages: settings.validationIssues.map { String(localized: String.LocalizationValue($0)) })
                         .padding(.top, 12)
                 }
-                advanced.padding(.top, 18)
+                AllSettingsHintCard().padding(.top, 18)
             }
             .padding(.horizontal, 18)
             .padding(.vertical, 22)
         }
         .background(Theme.inspector)
-    }
-
-    private var advanced: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Button {
-                model.ui.advancedSourceID = model.selectedSource?.id
-            } label: {
-                Label("Advanced Settings…", systemImage: "slider.horizontal.3")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.subtle)
-            .disabled(model.selectedSource?.info == nil)
-            Text("Trim, crop, filters, audio tracks, subtitles and chapters for one video.")
-                .font(.system(size: 10))
-                .foregroundStyle(Theme.muted)
-                .fixedSize(horizontal: false, vertical: true)
-        }
     }
 }
 

@@ -18,13 +18,17 @@ struct ContentView: View {
                 .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity)
             if model.section == .conversion {
                 Theme.separator.frame(width: 1)
-                OutputInspector()
-                    .frame(width: 310)
+                if let source = model.panelSource {
+                    VideoSettingsPanel(source: source).frame(width: 460)
+                } else {
+                    OutputInspector().frame(width: 310)
+                }
             }
         }
         .background(Theme.background)
         .foregroundStyle(Theme.text)
         .animation(.smooth(duration: 0.2), value: model.ui.isSidebarCollapsed)
+        .animation(.smooth(duration: 0.2), value: model.panelSource?.id)
         .toolbar { WindowToolbar() }
         .toolbar(removing: .title)
         .toolbarBackground(Color(hex: 0x202023), for: .windowToolbar)

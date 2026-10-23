@@ -24,7 +24,7 @@ struct HyperVideoConverterApp: App {
         Window("HyperVideo Converter", id: "main") {
             ContentView()
                 .environment(model)
-                .frame(minWidth: 1080, minHeight: 680)
+                .frame(minWidth: 1100, minHeight: 680)
                 .tint(Theme.accent)
                 .preferredColorScheme(.dark)
                 .onAppear { appDelegate.model = model }
@@ -157,6 +157,12 @@ struct AppCommands: Commands {
                 .keyboardShortcut("4")
             Button("Analyze Video") { model.section = .analyze }
                 .keyboardShortcut("5")
+            Divider()
+            ForEach(Array(SettingsTab.allCases.enumerated()), id: \.element) { index, tab in
+                Button { model.ui.detailTab = tab } label: { Text(tab.title) }
+                    .keyboardShortcut(KeyEquivalent(Character(String(index + 1))), modifiers: [.command, .option])
+                    .disabled(model.panelSource == nil && model.ui.advancedSourceID == nil)
+            }
             Divider()
             Button(model.ui.isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar") {
                 model.ui.isSidebarCollapsed.toggle()
