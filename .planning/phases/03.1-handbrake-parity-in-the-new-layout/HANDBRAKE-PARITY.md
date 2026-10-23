@@ -44,9 +44,9 @@ Every PH item becomes PV in this phase because the per-video tabs move inline.
 |---|---|---|---|---|
 | DIM-01 | Rotation 0/90/180/270 (`PictureRotate angle=`) | `rotation` | PH | |
 | DIM-02 | Flip horizontal (`PictureRotate hflip=`) | `flipHorizontal` | PH | |
-| DIM-03 | Cropping: Custom (`PictureCropMode`=1, `Picture*Crop`) | `crop` | PH | |
-| DIM-04 | Cropping: Automatic / Conservative (`PictureCropMode` 0/2) | — | MF | Black-bar detection on ~10 frames from AVAssetImageGenerator, luma threshold per row/column with Core Image area-average. Conservative = smallest bars found, Automatic = most common bars. `CropMode` enum + `CropDetector`. |
-| DIM-05 | Cropping: None | `crop = .zero` | PH | Becomes CropMode.none |
+| DIM-03 | Cropping: Custom (`PictureCropMode`=3, `Picture*Crop`) | `crop` | PH | |
+| DIM-04 | Cropping: Automatic / Conservative (`PictureCropMode` 0/1) | — | MF | Black-bar detection on ~10 frames from AVAssetImageGenerator, luma threshold per row/column with Core Image area-average. Conservative = smallest bars found, Automatic = most common bars. `CropMode` enum + `CropDetector`. |
+| DIM-05 | Cropping: None (`PictureCropMode`=2) | `crop = .zero` | PH | Becomes CropMode.none |
 | DIM-06 | Resolution limit 480p…2160p (`PictureWidth/Height`) | `maxResolution` | PV | Inspector "Resolution" |
 | DIM-07 | Resolution limit 4320p 8K and Custom max width/height | — | MF | Add `.uhd4320`. Optional custom max width/height *(deferred: the presets cover common sizes)* |
 | DIM-08 | Allow Upscaling (`PictureAllowUpscaling`) | never upscales | MF | `allowUpscaling` flag in GeometryPlanner |
@@ -182,6 +182,6 @@ Rows are HandBrake settings. A row that is partly present and partly missing is 
 3. **Audio (HBP-04):** AUD-01 per-track list, AUD-02 languages, AUD-04 HE-AAC, AUD-06 auto passthru + fallback, AUD-09 7.1, AUD-11 sample rate, AUD-13 gain, AUD-15 names, AUD-16.
 4. **Subtitles / chapters / tags (HBP-04):** SUB-01/02/04/05/10/13, CHP-01/02/03/04, TAG-01…08.
 5. **Dimensions / filters (HBP-03):** DIM-04 auto crop, DIM-07 8K, DIM-08 upscaling, DIM-10 anamorphic auto, DIM-12/13 padding, FIL-04 bob, FIL-05/06/07 denoise, FIL-08 chroma smooth, FIL-09/10 sharpen, FIL-12 colorspace, SUM-04 align A/V.
-6. **Preset import (HBP-05):** map every new key: `VideoFramerateMode`, `VideoPreset`, `VideoProfile`, `VideoLevel`, `AudioList[*]` (`AudioSamplerate`, `AudioTrackGainSlider`, `AudioTrackName`), `AudioCopyMask`/`AudioAllow*Pass`, `AudioEncoderFallback`, `AudioLanguageList`, `AudioSecondaryEncoderMode`, `SubtitleLanguageList`, `ChapterMarkers`, `MetadataPassthrough`, `AlignAVStart`, `PictureCropMode` 0/2, `PictureAllowUpscaling`, `PicturePAR`, `PicturePadMode/Color/*`, `PictureDenoiseFilter/Preset/Tune`, `PictureChromaSmoothPreset/Tune`, `PictureSharpenFilter/Preset/Tune`, `PictureColorspacePreset`, `PictureDeinterlacePreset` (bob), `PictureDeblockPreset` (note: NF), `PictureDetelecine` (note: NF).
+6. **Preset import (HBP-05):** map every new key: `VideoFramerateMode`, `VideoPreset`, `VideoProfile`, `VideoLevel`, `AudioList[*]` (`AudioSamplerate`, `AudioTrackGainSlider`, `AudioTrackName`), `AudioCopyMask`/`AudioAllow*Pass`, `AudioEncoderFallback`, `AudioLanguageList`, `AudioSecondaryEncoderMode`, `SubtitleLanguageList`, `ChapterMarkers`, `MetadataPassthrough`, `AlignAVStart`, `PictureCropMode` 0–3, `PictureAllowUpscaling`, `PicturePAR`, `PicturePadMode/Color/*`, `PictureDenoiseFilter/Preset/Tune`, `PictureChromaSmoothPreset/Tune`, `PictureSharpenFilter/Preset/Tune`, `PictureColorspacePreset`, `PictureDeinterlacePreset` (bob), `PictureDeblockPreset` (note: NF), `PictureDetelecine` (note: NF).
 
 Backward compatibility: every new field decodes with `decodeIfPresent` and defaults that reproduce today's output, so saved queues and presets (`queue.json`, presets) keep loading and encoding the same.
