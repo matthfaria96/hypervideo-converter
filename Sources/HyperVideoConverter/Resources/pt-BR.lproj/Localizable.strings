@@ -619,3 +619,4 @@
 "Chapters not exported" = "Capítulos não exportados";
 "Only these tracks are kept, each with its own encoding. Quality profiles and presets set their encoder and bitrate." = "Só estas faixas são mantidas, cada uma com sua própria codificação. Perfis de qualidade e perfis salvos definem o codificador e a taxa de bits delas.";
 "Chapter %lld title" = "Título do capítulo %lld";
+"Saves this video's output settings as a reusable preset." = "Salva as configurações de saída deste vídeo como um perfil reutilizável.";

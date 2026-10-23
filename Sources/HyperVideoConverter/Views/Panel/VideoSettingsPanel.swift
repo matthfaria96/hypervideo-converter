@@ -22,7 +22,7 @@ struct VideoSettingsPanel: View {
             Button("Save") { saveCurrent() }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Saves the output settings shown in the inspector as a reusable preset.")
+            Text("Saves this video's output settings as a reusable preset.")
         }
     }
 
@@ -83,8 +83,6 @@ struct VideoSettingsPanel: View {
     }
 
     private func saveCurrent() {
-        let preset = model.presets.save(name: model.ui.presetName, category: String(localized: "My Presets"),
-                                        settings: model.inspectorSettings)
-        model.inspectorTargetIDs.forEach { id in model.update(id) { $0.presetID = preset.id } }
+        model.saveAsPreset(name: model.ui.presetName, from: source.id)
     }
 }

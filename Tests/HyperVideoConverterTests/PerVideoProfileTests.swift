@@ -44,4 +44,16 @@ struct PerVideoProfileTests {
         #expect(estimate.count == 1 && estimate.originalBytes == 300_000_000)
         #expect(model.sizeEstimate.count == 2)
     }
+
+    @Test func savingAPresetFromOneVideoUsesItsSettingsAndNamesOnlyIt() throws {
+        let model = try TestEnvironment().makeModel()
+        let a = source("a.mov")
+        var b = source("b.mov")
+        b.settings.rateControl = .quality(0.4)
+        model.setSources([a, b])
+        let preset = try #require(model.saveAsPreset(name: "Mine", from: b.id))
+        #expect(preset.settings.rateControl == .quality(0.4))
+        #expect(model.sources.first { $0.id == b.id }?.presetID == preset.id)
+        #expect(model.sources.first { $0.id == a.id }?.presetID == a.presetID)
+    }
 }

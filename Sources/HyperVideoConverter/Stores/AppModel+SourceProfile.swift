@@ -29,4 +29,13 @@ extension AppModel {
     func sizeEstimate(for id: UUID) -> SizeEstimate {
         SizeEstimate(sources.filter { $0.id == id })
     }
+
+    /// Saves video `id`'s output settings as a preset, which it then names.
+    @discardableResult
+    func saveAsPreset(name: String, from id: UUID) -> Preset? {
+        guard let item = sources.first(where: { $0.id == id }) else { return nil }
+        let preset = presets.save(name: name, category: String(localized: "My Presets"), settings: item.settings)
+        update(id) { $0.presetID = preset.id }
+        return preset
+    }
 }
