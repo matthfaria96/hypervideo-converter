@@ -77,6 +77,18 @@ struct HandBrakeParityImportTests {
         #expect(r.preset.settings.isValid)
     }
 
+    @Test func copyCodecIsConditionalPassthru() throws {
+        let r = try imported("""
+        "AudioTrackSelectionBehavior": "first",
+        "AudioList": [{ "AudioEncoder": "copy:ac3" }, { "AudioEncoder": "copy:aac" }]
+        """)
+        let s = r.preset.settings
+        #expect(s.audioCodec == .autoPassthru && s.audioOptions.passthruOnly == .ac3)
+        #expect(s.extraAudio?.codec == .autoPassthru && s.extraAudio?.passthruOnly == .aac)
+        #expect(s.audioEncodings.map(\.passthruOnly) == [.ac3, .aac])
+        #expect(r.notes.isEmpty, "\(r.notes)")
+    }
+
     @Test(arguments: [(0, CropMode.automatic), (1, .conservative), (2, .none), (3, .custom)])
     func cropModes(raw: Int, mode: CropMode) throws {
         #expect(try imported("\"PictureCropMode\": \(raw)").preset.settings.pictureOptions.cropMode == mode)

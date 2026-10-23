@@ -15,6 +15,18 @@ struct VideoEncoderSettingsTests {
         #expect(props[kVTCompressionPropertyKey_PrioritizeEncodingSpeedOverQuality as String] == nil)
     }
 
+    @Test func baselineNeverReordersFrames() {
+        var settings = EncodeSettings()
+        settings.videoCodec = .h264
+        settings.allowBFrames = true
+        settings.videoOptions.profile = .baseline
+        let baseline = OutputSettingsBuilder.compression(settings: settings, sourceFrameRate: 30)
+        #expect(baseline[AVVideoAllowFrameReorderingKey] as? Bool == false)
+        settings.videoOptions.profile = .main
+        let main = OutputSettingsBuilder.compression(settings: settings, sourceFrameRate: 30)
+        #expect(main[AVVideoAllowFrameReorderingKey] as? Bool == true)
+    }
+
     @Test func speedMapsToEncoderKeys() {
         var settings = EncodeSettings()
         settings.videoOptions.speed = .speed

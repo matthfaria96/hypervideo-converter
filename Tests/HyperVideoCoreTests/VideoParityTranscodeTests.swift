@@ -168,6 +168,18 @@ struct VideoParityTranscodeTests {
                 "\(before) -> \(after)")
     }
 
+    /// The filter path must stretch the stored frame to the display size, like the plain compositor.
+    @Test func filteredAnamorphicSourceFillsTheFrame() async throws {
+        let dir = try TranscodeIntegrationTests.tempDir()
+        let source = try await ParityClip.make(in: dir, .init(size: CGSize(width: 480, height: 360), pixelAspect: CGSize(width: 4, height: 3)))
+        var s = settings()
+        s.filters.grayscale = true
+        let out = try await encode(source, s)
+        #expect(try await MediaInspector.inspect(out).displaySize == CGSize(width: 640, height: 360))
+        let right = try await OutputProbe.columnLuma(out, time: 0.5, columnFraction: 0.95)
+        #expect(right > 80, "right edge luma \(right)")
+    }
+
     /// Probe result (recorded in the 03.1-03 summary): AVFoundation reports the display size
     /// (storage width x pixel aspect) as `naturalSize` for a pixel-aspect-tagged track.
     @Test func naturalSizeOfTaggedClipIsDisplaySize() async throws {

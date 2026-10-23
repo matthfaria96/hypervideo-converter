@@ -69,6 +69,9 @@ extension OutputSettingsBuilder {
         switch channels {
         case 1: layout.mChannelLayoutTag = kAudioChannelLayoutTag_Mono
         case 6: layout.mChannelLayoutTag = kAudioChannelLayoutTag_MPEG_5_1_D
+        // Apple's AAC encoder rejects MPEG_7_1_C (L R C LFE Ls Rs Rls Rrs) and, with AAC_7_1_B,
+        // drops Rls, Rrs and LFE; MPEG_7_1_B is the accepted layout that keeps all eight
+        // channels, folding back surrounds into the side pair (pinned by AudioParityTranscodeTests).
         case 8: layout.mChannelLayoutTag = kAudioChannelLayoutTag_MPEG_7_1_B
         default: layout.mChannelLayoutTag = kAudioChannelLayoutTag_Stereo
         }

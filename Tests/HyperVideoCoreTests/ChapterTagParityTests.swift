@@ -10,6 +10,23 @@ struct ChapterTagParityTests {
         #expect(try ChapterCSV.parse(text) == [1: "Intro", 2: "Say \"hi\", Bob"])
     }
 
+    @Test func csvFormatFoldsLineBreaks() throws {
+        let text = ChapterCSV.format(["Part\none", "Two\r\nlines", "Three\rx"])
+        #expect(try ChapterCSV.parse(text) == [1: "Part one", 2: "Two lines", 3: "Three x"])
+    }
+
+    @Test func longCueIsCutOnACharacterBoundary() throws {
+        let format = try #require(TimedText.format(mediaType: kCMMediaType_Text))
+        let text = String(repeating: "a", count: Int(UInt16.max) - 1) + "é"
+        let sample = try #require(TimedText.sample(text, start: 0, duration: 1, format: format))
+        let block = try #require(CMSampleBufferGetDataBuffer(sample))
+        var bytes = [UInt8](repeating: 0, count: CMBlockBufferGetDataLength(block))
+        CMBlockBufferCopyDataBytes(block, atOffset: 0, dataLength: bytes.count, destination: &bytes)
+        let length = Int(bytes[0]) << 8 | Int(bytes[1])
+        #expect(length == Int(UInt16.max) - 1)
+        #expect(String(validating: bytes[2...].prefix(length), as: UTF8.self) != nil)
+    }
+
     @Test func csvAcceptsLooseInput() throws {
         let text = "\u{FEFF}3,Plain title\r\n\r\n4,A\\, B\r\n"
         #expect(try ChapterCSV.parse(text) == [3: "Plain title", 4: "A, B"])

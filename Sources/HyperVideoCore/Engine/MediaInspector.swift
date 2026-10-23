@@ -129,7 +129,9 @@ public enum MediaInspector {
     }
 
     private static func audioInfo(for track: AVAssetTrack) async throws -> AudioTrackInfo {
-        let (formats, language, rate) = try await track.load(.formatDescriptions, .extendedLanguageTag, .estimatedDataRate)
+        let (formats, tag, code, rate) = try await track.load(
+            .formatDescriptions, .extendedLanguageTag, .languageCode, .estimatedDataRate)
+        let language = tag ?? code
         var channels = 2
         var sampleRate = 48_000.0
         var codec = "Audio"

@@ -82,6 +82,18 @@ struct AudioParityTranscodeTests {
         #expect(info.audioTracks.compactMap { $0.language.flatMap(LanguageFilter.normalized) } == ["por", "spa"])
     }
 
+    @Test func languageSelectionUsesISOCode() async throws {
+        let audio = [StressClip.Audio(languageCode: "eng"), .init(languageCode: "fra")]
+        let out = try await convert(audio) {
+            $0.audioTracks = .all
+            $0.audioOptions.languages = ["fra"]
+        }
+        let tracks = try await AVURLAsset(url: out).loadTracks(withMediaType: .audio)
+        #expect(tracks.count == 1)
+        let code = try await tracks.first?.load(.languageCode)
+        #expect(code == "fra")
+    }
+
     @Test func explicitList() async throws {
         let out = try await convert([.init(), .init()]) {
             $0.audioOptions.tracks = [
@@ -104,6 +116,45 @@ struct AudioParityTranscodeTests {
     func surround71(sourceChannels: Int, expected: Int) async throws {
         let out = try await convert([.init(channels: sourceChannels)]) { $0.audioMixdown = .surround71 }
         #expect(try await MediaInspector.inspect(out).audioTracks.first?.channels == expected)
+    }
+
+    /// RMS of each channel when the output is decoded into `tag`'s channel order.
+    private func channelLevels(of url: URL, tag: AudioChannelLayoutTag, channels: Int) async throws -> [Double] {
+        let asset = AVURLAsset(url: url)
+        let track = try #require(try await asset.loadTracks(withMediaType: .audio).first)
+        var layout = AudioChannelLayout()
+        layout.mChannelLayoutTag = tag
+        var settings = OutputSettingsBuilder.audioReaderPCM(channels: channels)
+        settings[AVChannelLayoutKey] = Data(bytes: &layout, count: MemoryLayout<AudioChannelLayout>.size)
+        let reader = try AVAssetReader(asset: asset)
+        let output = AVAssetReaderAudioMixOutput(audioTracks: [track], audioSettings: settings)
+        reader.add(output)
+        reader.startReading()
+        var sums = [Double](repeating: 0, count: channels)
+        while let buffer = output.copyNextSampleBuffer() {
+            guard let block = CMSampleBufferGetDataBuffer(buffer) else { continue }
+            var data = [Float](repeating: 0, count: CMBlockBufferGetDataLength(block) / 4)
+            CMBlockBufferCopyDataBytes(block, atOffset: 0, dataLength: data.count * 4, destination: &data)
+            for (index, value) in data.enumerated() { sums[index % channels] += Double(value * value) }
+        }
+        return sums.map { $0.squareRoot() }
+    }
+
+    /// Pins the 7.1 layout choice (03.1 review IN-06). Apple's AAC encoder rejects the rear-surround
+    /// SMPTE layout (MPEG_7_1_C) and, given AAC_7_1_B, silently drops Rls, Rrs and LFE. MPEG_7_1_B is
+    /// the only accepted 8-channel layout that keeps every channel audible: back surrounds fold into
+    /// the side pair instead of vanishing.
+    @Test(arguments: [4, 5, 6, 7])
+    func surround71KeepsEverySourceChannelAudible(channel: Int) async throws {
+        // Uncompressed SMPTE 7.1 source (L R C LFE Ls Rs Rls Rrs), tone on one channel only.
+        var source = StressClip.Audio(channels: 8)
+        source.layoutTag = kAudioChannelLayoutTag_MPEG_7_1_C
+        source.onlyChannel = channel
+        source.lpcm = true
+        let out = try await convert([source]) { $0.audioMixdown = .surround71 }
+        #expect(try await MediaInspector.inspect(out).audioTracks.first?.channels == 8)
+        let levels = try await channelLevels(of: out, tag: kAudioChannelLayoutTag_MPEG_7_1_C, channels: 8)
+        #expect(levels.reduce(0, +) > 1, "channel \(channel): \(levels)")
     }
 
     @Test func heAAC() async throws {
@@ -133,6 +184,19 @@ struct AudioParityTranscodeTests {
             $0.audioOptions.fallback = .alac
         }
         #expect(try await formatIDs(of: lossless) == [kAudioFormatAppleLossless])
+    }
+
+    @Test func passthruOnlyCopiesJustThatCodec() async throws {
+        let copied = try await convert([.init(sampleRate: 44_100)], container: .mp4) {
+            $0.audioCodec = .autoPassthru
+            $0.audioOptions.passthruOnly = .aac
+        }
+        #expect(try await MediaInspector.inspect(copied).audioTracks.first?.sampleRate == 44_100)
+        let fallback = try await convert([.init(sampleRate: 44_100)], container: .mp4) {
+            $0.audioCodec = .autoPassthru
+            $0.audioOptions.passthruOnly = .ac3
+        }
+        #expect(try await MediaInspector.inspect(fallback).audioTracks.first?.sampleRate == 48_000)
     }
 
     @Test(arguments: [(6.0, 1.85, 2.15), (-6.0, 0.45, 0.55)])

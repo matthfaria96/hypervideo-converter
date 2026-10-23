@@ -23,6 +23,20 @@ struct SamplePumpTests {
         #expect(finished.withLock { $0 })
     }
 
+    @Test func failingTransformStopsThePumpAndRecordsTheError() throws {
+        let input = AVAssetWriterInput(mediaType: .subtitle, outputSettings: nil,
+                                       sourceFormatHint: TimedText.format(mediaType: kCMMediaType_Subtitle))
+        let format = try #require(TimedText.format(mediaType: kCMMediaType_Subtitle))
+        let sample = try #require(TimedText.sample("x", start: 0, duration: 1, format: format))
+        let pump = SamplePump(next: { sample }, input: input, label: "failing") { _ in
+            throw TranscodeError.writerFailed("boom")
+        }
+        let cancel = CancelFlag()
+        #expect(pump.pull(cancel) == nil)
+        #expect(cancel.isSet)
+        #expect(pump.failure is TranscodeError)
+    }
+
     @Test func timeRangeRejectsLessThanAFrame() throws {
         let duration = CMTime(seconds: 10, preferredTimescale: 600)
         #expect(throws: TranscodeError.self) { try TranscodeEngine.timeRange(TrimRange(start: 2, end: 2.01), duration: duration) }

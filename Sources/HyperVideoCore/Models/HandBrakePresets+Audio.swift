@@ -24,6 +24,7 @@ extension HandBrakePresets {
         s.audioOptions.sampleRate = encoding.sampleRate
         s.audioOptions.gainDb = encoding.gainDb
         s.audioOptions.trackName = encoding.trackName
+        s.audioOptions.passthruOnly = encoding.passthruOnly
         if list.count > 1 { s.extraAudio = audioEncoding(list[1], notes: &notes) }
         if list.count > 2 {
             notes.append("Only the first two of its \(list.count) audio encoders are used.")
@@ -37,20 +38,25 @@ extension HandBrakePresets {
         if audio.bool("AudioTrackQualityEnable") == true {
             notes.append("Quality-based audio isn't available, so it uses the bitrate.")
         }
+        let encoder = audio.string("AudioEncoder") ?? "aac"
         return AudioEncoding(
-            codec: audioCodec(audio.string("AudioEncoder") ?? "aac", notes: &notes),
+            codec: audioCodec(encoder, notes: &notes),
             mixdown: audioMixdown(audio.string("AudioMixdown"), notes: &notes),
             bitrateKbps: bitrate > 0 ? bitrate : 160,
             sampleRate: audioSampleRate(audio),
             gainDb: min(max(audio.double("AudioTrackGainSlider") ?? 0, -20), 20),
-            trackName: name
+            trackName: name,
+            passthruOnly: passthruOnly(encoder)
         )
     }
 
     static func audioCodec(_ encoder: String, notes: inout [String]) -> AudioCodec {
         switch encoder {
         case "copy": return .autoPassthru
-        case _ where encoder.hasPrefix("copy:"): return .passthrough
+        // copy:<codec> copies only that codec and otherwise uses the fallback encoder.
+        case _ where encoder.hasPrefix("copy:"):
+            if passthruOnly(encoder) == nil { notes.append("\(encoder) audio isn't available, so it uses Auto Passthru.") }
+            return .autoPassthru
         case "ca_haac", "fdk_haac", "haac": return .heAAC
         case _ where encoder.contains("aac"): return .aac
         case "alac", "alac16", "alac24": return .alac
@@ -58,6 +64,11 @@ extension HandBrakePresets {
             notes.append("\(encoder) audio isn't available, so it uses AAC.")
             return .aac
         }
+    }
+
+    static func passthruOnly(_ encoder: String) -> PassthruCodec? {
+        guard encoder.hasPrefix("copy:") else { return nil }
+        return PassthruCodec(rawValue: String(encoder.dropFirst("copy:".count)))
     }
 
     static func audioMixdown(_ value: String?, notes: inout [String]) -> AudioMixdown {

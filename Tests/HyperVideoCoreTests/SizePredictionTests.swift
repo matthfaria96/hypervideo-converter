@@ -60,4 +60,12 @@ struct SizePredictionTests {
         }
         #expect(QualityProfile.compressSettings.videoCodec == .hevc)
     }
+
+    /// Saved selections depend on these exact values.
+    @Test func stableIDsKeepTheirValues() {
+        #expect(BuiltInPresets.stableID(7).uuidString == "00000000-0000-0000-0000-000000000007")
+        #expect(QualityProfile.allCases.first?.presetID.uuidString == "00000000-0000-0000-0000-000000000060")
+        #expect(QualityProfile.allCases.first?.compressPresetID.uuidString == "00000000-0000-0000-0000-000000000070")
+        #expect(BuiltInPresets.stableID(123_456_789_012).uuidString == "00000000-0000-0000-0000-123456789012")
+    }
 }

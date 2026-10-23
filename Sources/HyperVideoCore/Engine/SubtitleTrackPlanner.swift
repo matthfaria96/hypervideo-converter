@@ -29,7 +29,8 @@ enum SubtitleTrackPlanner {
             $0.kind.isSupported(in: settings.container) && settings.burnIn != .track(id: $0.id)
         }
         let isExplicit = !settings.subtitleOptions.tracks.isEmpty
-        let entries = isExplicit
+        // "None" wins over a per-track list, so apply-to-all can still drop source subtitles.
+        let entries = settings.subtitles == .none ? [] : isExplicit
             ? explicitEntries(candidates, settings: settings)
             : behaviourEntries(candidates, settings: settings)
         let limit = !isExplicit && settings.subtitles == .first ? 1 : nil
@@ -50,8 +51,9 @@ enum SubtitleTrackPlanner {
         var entries: [SubtitlePlanEntry] = []
         for source in candidates {
             guard let setting = settings.subtitleOptions.tracks.first(where: { $0.sourceTrackID == source.id }),
-                  setting.include, !setting.forcedOnly || source.forcedOnly else { continue }
-            let isDefault = setting.isDefault && !defaultTaken
+                  setting.include, !setting.forcedOnly || source.kind == .subtitle else { continue }
+            // Only text subtitles join the alternate group, so a caption can't be its default.
+            let isDefault = setting.isDefault && !defaultTaken && source.kind == .subtitle
             defaultTaken = defaultTaken || isDefault
             let name = setting.name.flatMap { $0.isEmpty ? nil : $0 }
             entries.append(SubtitlePlanEntry(sourceTrackID: source.id, isDefault: isDefault,

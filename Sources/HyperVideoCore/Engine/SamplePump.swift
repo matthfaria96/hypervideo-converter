@@ -1,8 +1,8 @@
 @preconcurrency import AVFoundation
 import Synchronization
 
-/// Rewrites a sample between reader and writer; nil drops it.
-typealias SampleTransform = (CMSampleBuffer) -> CMSampleBuffer?
+/// Rewrites a sample between reader and writer; nil drops it, and a throw fails the encode.
+typealias SampleTransform = (CMSampleBuffer) throws -> CMSampleBuffer?
 
 /// Thread-safe cancellation flag shared between the engine and its pumps.
 final class CancelFlag: Sendable {
@@ -25,7 +25,8 @@ final class ActivityClock: Sendable {
 final class SamplePump: @unchecked Sendable {
     let input: AVAssetWriterInput
     let reportsProgress: Bool
-    private let next: () -> CMSampleBuffer?
+    private let next: () throws -> CMSampleBuffer?
+    private let failed = Mutex<(any Error)?>(nil)
     private let queue: DispatchQueue
     /// The waiting `run` call; taken exactly once, by whoever ends the pump first.
     private let completion = Mutex<CheckedContinuation<Void, Never>?>(nil)
@@ -60,11 +61,13 @@ final class SamplePump: @unchecked Sendable {
 
     /// Wraps `source` so each buffer passes through `transform`; dropped buffers are
     /// skipped in a loop (no recursion), and a nil from `source` ends the stream.
-    static func filtered(_ source: @escaping () -> CMSampleBuffer?, _ transform: SampleTransform?) -> () -> CMSampleBuffer? {
+    static func filtered(
+        _ source: @escaping () -> CMSampleBuffer?, _ transform: SampleTransform?
+    ) -> () throws -> CMSampleBuffer? {
         guard let transform else { return source }
         return {
             while let buffer = source() {
-                if let result = transform(buffer) { return result }
+                if let result = try transform(buffer) { return result }
             }
             return nil
         }
@@ -104,7 +107,7 @@ final class SamplePump: @unchecked Sendable {
             }
             input.requestMediaDataWhenReady(on: queue) { [self] in
                 while !isDone.withLock({ $0 }) && input.isReadyForMoreMediaData {
-                    guard !cancel.isSet, let buffer = next() else {
+                    guard let buffer = pull(cancel) else {
                         finish()
                         return
                     }
@@ -119,6 +122,22 @@ final class SamplePump: @unchecked Sendable {
                     }
                 }
             }
+        }
+    }
+
+    /// Why this pump stopped the encode, when a transform failed.
+    var failure: (any Error)? { failed.withLock { $0 } }
+
+    /// The next sample, or nil at the end, after a cancel, or when the transform throws;
+    /// a throw is recorded in `failure` and cancels the sibling pumps.
+    func pull(_ cancel: CancelFlag) -> CMSampleBuffer? {
+        guard !cancel.isSet else { return nil }
+        do {
+            return try next()
+        } catch {
+            failed.withLock { $0 = error }
+            cancel.set()
+            return nil
         }
     }
 

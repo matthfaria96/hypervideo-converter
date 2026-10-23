@@ -57,6 +57,21 @@ struct CropDetectorTests {
         for pair in zip(admitted, admitted.dropFirst()) { #expect(pair.1 - pair.0 >= 1.0 / 30 - 0.0005) }
     }
 
+    /// HandBrake keeps close to the peak rather than snapping to a divisor of the source rate.
+    @Test(arguments: [(50.0, 30.0), (120.0, 50.0), (60.0, 24.0)])
+    func peakLimiterStaysNearThePeak(source: Double, peak: Double) {
+        var limiter = PeakRateLimiter(peak: peak)
+        let times = (0..<Int(source * 2)).map { Double($0) / source }
+        let perSecond = Double(times.filter { limiter.admits($0) }.count) / 2
+        #expect(abs(perSecond - peak) <= 1, "\(perSecond) fps from \(source) with peak \(peak)")
+    }
+
+    @Test func peakLimiterDoesNotBankTimeAcrossPauses() {
+        var limiter = PeakRateLimiter(peak: 30)
+        let results = [0, 1, 1.01, 1.02].map { limiter.admits($0) }
+        #expect(results == [true, true, false, false])
+    }
+
     @Test func peakLimiterKeepsLowerRates() {
         var limiter = PeakRateLimiter(peak: 30)
         let times = (0..<60).map { Double($0) / 29.97 }

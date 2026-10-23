@@ -101,7 +101,9 @@ public enum OutputSettingsBuilder {
         var props: [String: Any] = [
             AVVideoExpectedSourceFrameRateKey: fps,
             AVVideoMaxKeyFrameIntervalDurationKey: settings.keyframeIntervalSeconds,
-            AVVideoAllowFrameReorderingKey: settings.allowBFrames,
+            // H.264 Baseline has no B-frames, so don't leave it to VideoToolbox to ignore the request.
+            AVVideoAllowFrameReorderingKey: settings.allowBFrames
+                && !(settings.videoCodec == .h264 && settings.videoOptions.profile == .baseline),
             AVVideoProfileLevelKey: profileLevel(
                 codec: settings.videoCodec, profile: settings.videoOptions.profile, level: settings.videoOptions.level
             )

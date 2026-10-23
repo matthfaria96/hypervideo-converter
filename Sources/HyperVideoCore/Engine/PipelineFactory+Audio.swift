@@ -5,7 +5,9 @@ extension PipelineFactory {
         let tracks = try await asset.loadTracks(withMediaType: .audio)
         var sources: [AudioSourceTrack] = []
         for track in tracks {
-            sources.append(AudioSourceTrack(id: Int(track.trackID), language: try await track.load(.extendedLanguageTag)))
+            // Most muxers write only the ISO 639-2 `mdhd` code, with no extended tag.
+            let (tag, code) = try await track.load(.extendedLanguageTag, .languageCode)
+            sources.append(AudioSourceTrack(id: Int(track.trackID), language: tag ?? code))
         }
         var pumps: [SamplePump] = []
         for job in AudioTrackPlanner.plan(sources: sources, settings: settings) {
@@ -18,11 +20,11 @@ extension PipelineFactory {
     }
 
     func audioPump(for track: AVAssetTrack, job: AudioJob, reportsProgress: Bool) async throws -> SamplePump {
-        let (formats, language) = try await track.load(.formatDescriptions, .extendedLanguageTag)
+        let (formats, language, code) = try await track.load(.formatDescriptions, .extendedLanguageTag, .languageCode)
         let sourceFormat = formats.first.flatMap { CMAudioFormatDescriptionGetStreamBasicDescription($0)?.pointee }
         var encoding = job.encoding
         if encoding.codec == .autoPassthru {
-            let allowed = settings.audioOptions.allowedPassthru
+            let allowed = encoding.passthruOnly.map { Set([$0]) } ?? settings.audioOptions.allowedPassthru
             let copies = AutoPassthru.copies(formatID: sourceFormat?.mFormatID ?? 0, allowed: allowed, container: settings.container)
             if copies, writer.canAdd(AVAssetWriterInput(mediaType: .audio, outputSettings: nil, sourceFormatHint: formats.first)) {
                 encoding.codec = .passthrough
@@ -35,6 +37,7 @@ extension PipelineFactory {
             ? passthroughPump(track: track, formats: formats)
             : try encodedPump(track: track, encoding: encoding, sourceFormat: sourceFormat, label: job.label)
         input.extendedLanguageTag = language
+        input.languageCode = code
         if let name = await trackName(for: encoding, track: track, copied: copied) {
             input.metadata = TrackNames.items(name)
         }

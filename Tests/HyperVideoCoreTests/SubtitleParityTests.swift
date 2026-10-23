@@ -1,4 +1,4 @@
-import CoreMedia
+@preconcurrency import AVFoundation
 import Foundation
 import Testing
 @testable import HyperVideoCore
@@ -52,16 +52,62 @@ struct SubtitleParityTests {
         #expect(result.entries.first?.name == "Português")
     }
 
-    @Test func forcedOnlyFiltersNonForcedSources() {
+    @Test func noneOverridesExplicitList() {
+        let result = plan {
+            $0.subtitles = .none
+            $0.subtitleOptions.tracks = [SubtitleTrackSetting(sourceTrackID: 1, isDefault: true)]
+        }
+        #expect(result.entries.isEmpty)
+    }
+
+    @Test func closedCaptionIsNeverDefault() {
+        let result = plan(container: .mov) {
+            $0.subtitleOptions.tracks = [
+                SubtitleTrackSetting(sourceTrackID: 3, isDefault: true),
+                SubtitleTrackSetting(sourceTrackID: 1)
+            ]
+        }
+        #expect(result.entries.map(\.sourceTrackID) == [1, 3])
+        #expect(result.entries.allSatisfy { !$0.isDefault })
+    }
+
+    @Test func groupIgnoresDefaultOutsideInputs() async throws {
+        let dir = try TranscodeIntegrationTests.tempDir()
+        let source = try await ParityClip.make(in: dir, ParityClip.Spec(frameTimes: [0]))
+        let url = dir.appendingPathComponent("group.mov")
+        let writer = try AVAssetWriter(outputURL: url, fileType: .mov)
+        let format = try #require(TimedText.format(mediaType: kCMMediaType_Subtitle))
+        let inputs = (0..<2).map { _ in AVAssetWriterInput(mediaType: .subtitle, outputSettings: nil, sourceFormatHint: format) }
+        let caption = AVAssetWriterInput(mediaType: .closedCaption, outputSettings: nil)
+        (inputs + [caption]).forEach { if writer.canAdd($0) { writer.add($0) } }
+        let asset = AVURLAsset(url: source)
+        let reader = try AVAssetReader(asset: asset)
+        let factory = PipelineFactory(asset: asset, reader: reader, writer: writer, settings: EncodeSettings(), subtitleFiles: [])
+        factory.groupAlternates(inputs, defaultInput: caption)
+        #expect(inputs.allSatisfy { !$0.marksOutputTrackAsEnabled })
+    }
+
+    /// HandBrake's "Forced only" keeps a mixed track and filters its cues; captions can't be filtered.
+    @Test func forcedOnlyKeepsTextTracksForCueFiltering() {
         let forced = SubtitleSourceTrack(id: 4, kind: .subtitle, language: "en", forcedOnly: true)
-        let result = plan(sources + [forced]) {
+        let result = plan(sources + [forced], container: .mov) {
             $0.subtitleOptions.tracks = [
                 SubtitleTrackSetting(sourceTrackID: 1, forcedOnly: true),
+                SubtitleTrackSetting(sourceTrackID: 3, forcedOnly: true),
                 SubtitleTrackSetting(sourceTrackID: 4, forcedOnly: true)
             ]
         }
-        #expect(result.entries.map(\.sourceTrackID) == [4])
-        #expect(result.entries.first?.forced == true)
+        #expect(result.entries.map(\.sourceTrackID) == [1, 4])
+        #expect(result.entries.allSatisfy { $0.forced })
+    }
+
+    @Test func forcedBoxIsFoundAfterTheText() {
+        let text: [UInt8] = [0, 2, 0x48, 0x69]
+        let style: [UInt8] = [0, 0, 0, 10] + Array("styl".utf8) + [0, 0]
+        let forced: [UInt8] = [0, 0, 0, 8] + Array("frcd".utf8)
+        #expect(ForcedSubtitles.hasForcedBox(text + style + forced))
+        #expect(!ForcedSubtitles.hasForcedBox(text + style))
+        #expect(!ForcedSubtitles.hasForcedBox([0, 9, 1]))
     }
 
     @Test func fileDefaultOnlyWithoutSourceDefault() {

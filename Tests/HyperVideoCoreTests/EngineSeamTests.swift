@@ -20,7 +20,7 @@ struct EngineSeamTests {
             return seen == 1 ? nil : buffer
         })
         var out: [CMSampleBuffer] = []
-        while let buffer = next() { out.append(buffer) }
+        while let buffer = try next() { out.append(buffer) }
         #expect(out.count == 3)
         #expect(out[0] === all[0])
         #expect(out[1] === all[2])
@@ -32,7 +32,7 @@ struct EngineSeamTests {
         var iterator = all.makeIterator()
         let next = SamplePump.filtered({ iterator.next() }, nil)
         var count = 0
-        while next() != nil { count += 1 }
+        while try next() != nil { count += 1 }
         #expect(count == 4)
     }
 
