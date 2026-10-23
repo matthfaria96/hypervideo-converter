@@ -17,13 +17,22 @@ struct ContentView: View {
         HStack(spacing: 0) {
             WorkspaceView()
                 .frame(minWidth: 440, maxWidth: .infinity, maxHeight: .infinity)
-            Divider()
             // Always there: the settings are half of the job. Clipped as a last line of
             // defence, so a control wider than the column never spills over the list.
             SettingsColumn()
                 .frame(width: 400)
                 .clipped()
+                // The toolbar's items all sit on the left, so the panel's header uses the
+                // band above it too: its title lines up with the window controls.
+                .ignoresSafeArea(.container, edges: .top)
+                // The column's colour and its edge run up under the transparent toolbar,
+                // so the panel fills the window's full height.
+                .background(.background.secondary, ignoresSafeAreaEdges: .top)
+                .overlay(alignment: .leading) {
+                    Rectangle().fill(.separator).frame(width: 1).ignoresSafeArea(edges: .top)
+                }
         }
+        .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
         .navigationTitle(Text(model.mode.title))
         .toolbar(removing: .title)
         .toolbar { WindowToolbar() }
@@ -118,7 +127,6 @@ private struct SettingsColumn: View {
                 .padding(.bottom, Spacing.m)
                 .padding(.top, Spacing.xs)
         }
-        .background(.background.secondary)
     }
 }
 
