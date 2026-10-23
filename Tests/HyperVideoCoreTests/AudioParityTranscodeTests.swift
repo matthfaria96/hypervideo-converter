@@ -82,6 +82,18 @@ struct AudioParityTranscodeTests {
         #expect(info.audioTracks.compactMap { $0.language.flatMap(LanguageFilter.normalized) } == ["por", "spa"])
     }
 
+    @Test func languageSelectionUsesISOCode() async throws {
+        let audio = [StressClip.Audio(languageCode: "eng"), .init(languageCode: "fra")]
+        let out = try await convert(audio) {
+            $0.audioTracks = .all
+            $0.audioOptions.languages = ["fra"]
+        }
+        let tracks = try await AVURLAsset(url: out).loadTracks(withMediaType: .audio)
+        #expect(tracks.count == 1)
+        let code = try await tracks.first?.load(.languageCode)
+        #expect(code == "fra")
+    }
+
     @Test func explicitList() async throws {
         let out = try await convert([.init(), .init()]) {
             $0.audioOptions.tracks = [

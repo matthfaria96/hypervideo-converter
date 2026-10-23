@@ -9,6 +9,8 @@ enum StressClip {
         var channels = 2
         var sampleRate = 48_000
         var language: String?
+        /// The ISO 639-2 `mdhd` code alone, as HandBrake and ffmpeg write it.
+        var languageCode: String?
     }
 
     struct Spec {
@@ -52,6 +54,7 @@ enum StressClip {
                 AVChannelLayoutKey: OutputSettingsBuilder.channelLayoutData(channels: audio.channels)
             ])
             input.extendedLanguageTag = audio.language
+            input.languageCode = audio.languageCode
             input.expectsMediaDataInRealTime = false
             writer.add(input)
             return input
