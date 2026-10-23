@@ -74,14 +74,8 @@ public extension OutputEstimate {
         return min(rate, source)
     }
 
-    /// When a passthrough track doesn't report its rate: 160 kbit/s per kept track.
+    /// When a passthrough track doesn't report its rate: 160 kbit/s per planned audio track.
     private static func fallbackAudioBitsPerSecond(info: MediaInfo, settings: EncodeSettings) -> Double {
-        let tracks: Int
-        switch settings.audioTracks {
-        case .none: tracks = 0
-        case .first: tracks = min(info.audioTracks.count, 1)
-        case .all: tracks = info.audioTracks.count
-        }
-        return Double(settings.audioEncodings.count * tracks) * 160_000
+        Double(audioJobs(info: info, settings: settings).count) * 160_000
     }
 }

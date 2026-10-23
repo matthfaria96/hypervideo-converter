@@ -47,6 +47,18 @@ struct AudioParityTests {
         #expect(jobs == [AudioJob(sourceTrackID: 1, encoding: EncodeSettings().audioEncodings[0], label: "audio0.0")])
     }
 
+    @Test func noAudioOverridesExplicitList() {
+        var settings = EncodeSettings()
+        settings.audioOptions.tracks = [AudioTrackSetting(sourceTrackID: 1, encoding: aac)]
+        #expect(AudioTrackPlanner.plan(sources: sources(["eng"]), settings: settings).count == 1)
+        var noCodec = settings
+        noCodec.audioCodec = .none
+        #expect(AudioTrackPlanner.plan(sources: sources(["eng"]), settings: noCodec).isEmpty)
+        var noTracks = settings
+        noTracks.audioTracks = .none
+        #expect(AudioTrackPlanner.plan(sources: sources(["eng"]), settings: noTracks).isEmpty)
+    }
+
     @Test func languageSelection() {
         var settings = EncodeSettings()
         settings.audioTracks = .all

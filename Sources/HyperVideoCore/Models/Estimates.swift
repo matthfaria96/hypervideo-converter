@@ -67,38 +67,37 @@ public enum OutputEstimate {
         }
     }
 
-    /// Combined audio bitrate of every kept track in every encoding, nil when it
-    /// can't be predicted.
+    /// Combined audio bitrate of every planned audio job, nil when it can't be predicted.
     static func audioBitsPerSecond(info: MediaInfo, settings: EncodeSettings) -> Double? {
-        let tracks: [AudioTrackInfo]
-        switch settings.audioTracks {
-        case .none: tracks = []
-        case .first: tracks = Array(info.audioTracks.prefix(1))
-        case .all: tracks = info.audioTracks
-        }
         var total = 0.0
-        for encoding in settings.audioEncodings {
-            guard let rate = bitsPerSecond(of: encoding, tracks: tracks) else { return nil }
+        for (track, encoding) in audioJobs(info: info, settings: settings) {
+            guard let rate = bitsPerSecond(of: encoding, track: track) else { return nil }
             total += rate
         }
         return total
     }
 
-    private static func bitsPerSecond(of encoding: AudioEncoding, tracks: [AudioTrackInfo]) -> Double? {
+    /// The source track and encoding of each output audio track, as the engine plans them
+    /// (explicit list, language filter, first/all and extra-version rules included).
+    static func audioJobs(info: MediaInfo, settings: EncodeSettings) -> [(AudioTrackInfo, AudioEncoding)] {
+        let sources = info.audioTracks.map { AudioSourceTrack(id: $0.id, language: $0.language) }
+        return AudioTrackPlanner.plan(sources: sources, settings: settings).compactMap { job in
+            info.audioTracks.first { $0.id == job.sourceTrackID }.map { ($0, job.encoding) }
+        }
+    }
+
+    private static func bitsPerSecond(of encoding: AudioEncoding, track: AudioTrackInfo) -> Double? {
         switch encoding.codec {
         case .none:
             return 0
         case .aac, .heAAC:
-            return Double(encoding.bitrateKbps * 1_000 * tracks.count)
+            return Double(encoding.bitrateKbps * 1_000)
         case .passthrough, .autoPassthru:
-            let rates = tracks.map(\.bitrate)
-            return rates.contains(nil) ? nil : rates.compactMap { $0 }.reduce(0, +)
+            return track.bitrate
         case .alac:
             // Apple Lossless typically lands near 60% of 16-bit PCM.
-            return tracks.reduce(0) { total, track in
-                let channels = encoding.mixdown.resolved(sourceChannels: track.channels).channelCount
-                return total + track.sampleRate * Double(channels) * 16 * 0.6
-            }
+            let channels = encoding.mixdown.resolved(sourceChannels: track.channels).channelCount
+            return track.sampleRate * Double(channels) * 16 * 0.6
         }
     }
 }

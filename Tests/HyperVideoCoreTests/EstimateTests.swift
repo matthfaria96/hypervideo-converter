@@ -66,6 +66,25 @@ struct OutputEstimateTests {
         #expect(try #require(OutputEstimate.bytes(info: info, settings: settings)) == 54_000_000)
     }
 
+    @Test func explicitTrackListDrivesAudioSize() throws {
+        var settings = EncodeSettings()
+        settings.rateControl = .averageBitrate(4_000)
+        settings.audioOptions.tracks = [
+            AudioTrackSetting(sourceTrackID: 3, encoding: AudioEncoding(codec: .aac, mixdown: .stereo, bitrateKbps: 96))
+        ]
+        // 100 s × (4000 + 96) kbit/s
+        #expect(try #require(OutputEstimate.bytes(info: info, settings: settings)) == 51_200_000)
+    }
+
+    @Test func languageFilterDrivesAudioSize() throws {
+        var settings = EncodeSettings()
+        settings.rateControl = .averageBitrate(4_000)
+        settings.audioTracks = .all
+        settings.audioOptions.languages = ["fre"]
+        // Only the French track: 100 s × (4000 + 160) kbit/s
+        #expect(try #require(OutputEstimate.bytes(info: info, settings: settings)) == 52_000_000)
+    }
+
     @Test func passthroughAudioUsesSourceBitrate() throws {
         var settings = EncodeSettings()
         settings.rateControl = .averageBitrate(4_000)

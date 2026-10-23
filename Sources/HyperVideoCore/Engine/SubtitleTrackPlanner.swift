@@ -29,7 +29,8 @@ enum SubtitleTrackPlanner {
             $0.kind.isSupported(in: settings.container) && settings.burnIn != .track(id: $0.id)
         }
         let isExplicit = !settings.subtitleOptions.tracks.isEmpty
-        let entries = isExplicit
+        // "None" wins over a per-track list, so apply-to-all can still drop source subtitles.
+        let entries = settings.subtitles == .none ? [] : isExplicit
             ? explicitEntries(candidates, settings: settings)
             : behaviourEntries(candidates, settings: settings)
         let limit = !isExplicit && settings.subtitles == .first ? 1 : nil

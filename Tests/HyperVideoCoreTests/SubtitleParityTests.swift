@@ -52,6 +52,14 @@ struct SubtitleParityTests {
         #expect(result.entries.first?.name == "Português")
     }
 
+    @Test func noneOverridesExplicitList() {
+        let result = plan {
+            $0.subtitles = .none
+            $0.subtitleOptions.tracks = [SubtitleTrackSetting(sourceTrackID: 1, isDefault: true)]
+        }
+        #expect(result.entries.isEmpty)
+    }
+
     @Test func closedCaptionIsNeverDefault() {
         let result = plan(container: .mov) {
             $0.subtitleOptions.tracks = [

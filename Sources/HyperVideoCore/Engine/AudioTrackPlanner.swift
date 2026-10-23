@@ -15,7 +15,9 @@ struct AudioJob: Equatable, Sendable {
 /// Decides which source audio tracks are encoded, and how.
 enum AudioTrackPlanner {
     static func plan(sources: [AudioSourceTrack], settings: EncodeSettings) -> [AudioJob] {
-        settings.audioOptions.tracks.isEmpty
+        // "No Audio" wins over a per-track list, so apply-to-all can still drop audio.
+        guard settings.audioCodec != .none, settings.audioTracks != .none else { return [] }
+        return settings.audioOptions.tracks.isEmpty
             ? behaviourPlan(sources: sources, settings: settings)
             : explicitPlan(sources: sources, settings: settings)
     }
