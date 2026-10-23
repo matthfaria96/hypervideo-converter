@@ -15,7 +15,10 @@ struct HeroPicture {
 @MainActor
 final class UIState {
     var isDropTargeted = false
-    var detailTab: SettingsTab = .summary
+    /// Launch argument `-InitialSettingsTab filters` picks the first tab (used for screenshots).
+    var detailTab: SettingsTab = SettingsTab(rawValue: UserDefaults.standard.string(forKey: "InitialSettingsTab") ?? "") ?? .summary
+    /// A lone video whose panel the user closed; selecting it again reopens the panel.
+    var dismissedPanelSourceID: UUID?
     var isSavingPreset = false
     var presetName = ""
     var renamingPreset: Preset?

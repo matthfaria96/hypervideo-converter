@@ -35,11 +35,22 @@ struct InfoChip: View {
     }
 }
 
+private struct SettingsLabelWidthKey: EnvironmentKey { static let defaultValue: CGFloat = 170 }
+
+extension EnvironmentValues {
+    /// Width of the label column of `SettingRow` (narrower in the 460 pt panel).
+    var settingsLabelWidth: CGFloat {
+        get { self[SettingsLabelWidthKey.self] }
+        set { self[SettingsLabelWidthKey.self] = newValue }
+    }
+}
+
 /// Label/control row aligned on a shared leading column.
 struct SettingRow<Control: View>: View {
     let title: LocalizedStringKey
     var help: LocalizedStringKey?
     @ViewBuilder var control: Control
+    @Environment(\.settingsLabelWidth) private var labelWidth
 
     var body: some View {
         HStack(alignment: .center, spacing: 16) {
@@ -49,7 +60,7 @@ struct SettingRow<Control: View>: View {
                     Text(help).font(.caption).foregroundStyle(.secondary)
                 }
             }
-            .frame(width: 170, alignment: .leading)
+            .frame(width: labelWidth, alignment: .leading)
             control
             Spacer(minLength: 0)
         }

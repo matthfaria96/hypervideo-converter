@@ -1,33 +1,6 @@
 import HyperVideoCore
 import SwiftUI
 
-enum SettingsTab: String, CaseIterable, Identifiable {
-    case summary, video, dimensions, audio, subtitles, trim
-    var id: String { rawValue }
-
-    var title: LocalizedStringKey {
-        switch self {
-        case .summary: "Summary"
-        case .video: "Video & Filters"
-        case .dimensions: "Size & Crop"
-        case .audio: "Audio"
-        case .subtitles: "Subtitles"
-        case .trim: "Trim & Preview"
-        }
-    }
-
-    var symbol: String {
-        switch self {
-        case .summary: "doc.text.magnifyingglass"
-        case .video: "film"
-        case .dimensions: "crop"
-        case .audio: "waveform"
-        case .subtitles: "captions.bubble"
-        case .trim: "timeline.selection"
-        }
-    }
-}
-
 /// Every detailed setting of one video (trim, crop, filters, tracks, chapters),
 /// opened from the inspector's Advanced button or a row's context menu.
 struct AdvancedSettingsSheet: View {
@@ -47,7 +20,7 @@ struct AdvancedSettingsSheet: View {
                         if !source.settings.validationIssues.isEmpty {
                             StatusBanner(messages: source.settings.validationIssues.map { String(localized: String.LocalizationValue($0)) })
                         }
-                        tabContent(info: info, source: source)
+                        SettingsTabContent(source: source, info: info)
                     }
                     .padding(20)
                 }
@@ -61,6 +34,7 @@ struct AdvancedSettingsSheet: View {
         .frame(minWidth: 900, idealWidth: 920, minHeight: 600, idealHeight: 700)
         .background(Theme.background)
         .environment(\.colorScheme, .dark)
+        .environment(\.settingsLabelWidth, 170)
         .animation(.smooth, value: tab)
     }
 
@@ -120,25 +94,5 @@ struct AdvancedSettingsSheet: View {
                 .buttonStyle(.primary)
         }
         .padding(16)
-    }
-
-    private func settings(_ id: UUID) -> Binding<EncodeSettings> {
-        Binding(
-            get: { model.sources.first { $0.id == id }?.settings ?? EncodeSettings() },
-            set: { newValue in model.update(id) { $0.settings = newValue } }
-        )
-    }
-
-    @ViewBuilder
-    private func tabContent(info: MediaInfo, source: SourceItem) -> some View {
-        let settings = settings(source.id)
-        switch tab {
-        case .summary: SummaryTab(info: info, settings: settings, subtitleFiles: source.subtitleFiles)
-        case .video: VideoTab(info: info, settings: settings)
-        case .dimensions: DimensionsTab(info: info, settings: settings)
-        case .audio: AudioTab(info: info, settings: settings)
-        case .subtitles: SubtitlesTab(info: info, settings: settings, sourceID: source.id, files: source.subtitleFiles)
-        case .trim: TrimTab(info: info, settings: settings)
-        }
     }
 }

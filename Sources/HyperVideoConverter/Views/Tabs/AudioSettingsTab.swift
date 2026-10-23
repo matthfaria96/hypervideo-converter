@@ -75,7 +75,7 @@ struct AudioSettingsTab: View {
             ForEach(Array(info.audioTracks.enumerated()), id: \.element.id) { index, track in
                 HStack {
                     Text("Track \(index + 1)").fontWeight(.medium)
-                    Text(verbatim: "\(track.codec) · \(SummaryTab.local(track.channelDescription)) · \(Int(track.sampleRate / 1000)) kHz")
+                    Text(verbatim: "\(track.codec) · \(String(localized: String.LocalizationValue(track.channelDescription))) · \(Int(track.sampleRate / 1000)) kHz")
                         .foregroundStyle(.secondary)
                     if let name = track.name { Text(verbatim: name).foregroundStyle(.tertiary).lineLimit(1) }
                     Spacer()
