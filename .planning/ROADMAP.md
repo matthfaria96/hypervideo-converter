@@ -57,7 +57,7 @@
 2. Selecting a video shows its full HandBrake-style tabs (Summary, Dimensions, Filters, Video, Audio, Subtitles, Chapters, Tags) inline in the workspace/inspector in the new theme; Advanced sheet is no longer the only path
 3. Every feasible missing setting is implemented end-to-end (model, engine, preset import mapping, EN + pt-BR UI) with tests
 4. Build and all tests green; screenshots of each tab captured
-**Plans:** 11/14 plans executed
+**Plans:** 12/14 plans executed
 
 Plans:
 - [x] 03.1-01-PLAN.md — parity data model + lenient decoding, HBP-01 confirmed (wave 1)
@@ -71,7 +71,7 @@ Plans:
 - [x] 03.1-09-PLAN.md — Dimensions, Filters, Video tab views (wave 3)
 - [x] 03.1-10-PLAN.md — Audio, Subtitles tab views (wave 3)
 - [x] 03.1-11-PLAN.md — Summary, Chapters, Tags tab views (wave 3)
-- [ ] 03.1-12-PLAN.md — inline Video Settings panel, tab bar, inspector hint, shortcuts (wave 4)
+- [x] 03.1-12-PLAN.md — inline Video Settings panel, tab bar, inspector hint, shortcuts (wave 4)
 - [ ] 03.1-13-PLAN.md — pt-BR translations + localization tests (wave 5)
 - [ ] 03.1-14-PLAN.md — full build/test audit + tab screenshots (wave 6)
 
