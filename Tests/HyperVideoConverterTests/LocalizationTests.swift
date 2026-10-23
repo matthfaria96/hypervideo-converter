@@ -82,6 +82,185 @@ struct LocalizationTableTests {
         #expect(!value.isEmpty)
     }
 
+    @Test(arguments: [
+        "Summary",
+        "Dimensions",
+        "Filters",
+        "Video",
+        "Audio",
+        "Subtitles",
+        "Chapters",
+        "Tags",
+        "All HandBrake settings",
+        "Select one video to see every setting: dimensions, filters, video, audio, subtitles, chapters and tags.",
+        "Show Settings of First Video",
+        "Back to the settings for all videos",
+        "Close",
+        "Save as Preset…",
+        "Align A/V start",
+        "Starts every track at the first video frame",
+        "Passthru common metadata",
+        "Keeps titles, dates and other tags from the source",
+        "Range",
+        "From chapter",
+        "To chapter",
+        "Orientation & Cropping",
+        "Cropping",
+        "Conservative",
+        "Detect",
+        "Detecting…",
+        "Analyse 10 frames for black bars again",
+        "The picture is kept whole.",
+        "Resolution & Scaling",
+        "Resolution limit",
+        "Allow upscaling",
+        "Enlarges smaller videos up to the limit",
+        "Anamorphic",
+        "Automatic keeps the source's pixel shape",
+        "Borders",
+        "Fill",
+        "Color",
+        "Height (Letterbox)",
+        "Width (Pillarbox)",
+        "Width & Height",
+        "Black",
+        "White",
+        "Gray",
+        "Dark Gray",
+        "Final Dimensions",
+        "Storage",
+        "Display",
+        "Method",
+        "Blend",
+        "Bob",
+        "Denoise",
+        "Strength",
+        "Tune",
+        "Ultralight",
+        "Stronger",
+        "Very Strong",
+        "Film",
+        "Grain",
+        "High Motion",
+        "Animation",
+        "Tape",
+        "Sprite",
+        "Chroma smooth",
+        "Tiny",
+        "Small",
+        "Wide",
+        "Very Wide",
+        "Sharpen",
+        "Ultrafine",
+        "Fine",
+        "Coarse",
+        "Very Coarse",
+        "Colorspace",
+        "Detelecine and Deblock aren't available on macOS's video engine.",
+        "Filters need the video to be re-encoded. Choose an encoder in Video.",
+        "Video encoder",
+        "Framerate",
+        "Framerate (FPS)",
+        "Mode",
+        "Constant Framerate",
+        "Peak Framerate",
+        "Variable Framerate",
+        "Peak never goes above the chosen rate; Variable keeps the source's timing",
+        "Encoder Options",
+        "Speed",
+        "Quality",
+        "Profile",
+        "Level",
+        "Apple ProRes 422 LT — editing, lighter files",
+        "Apple ProRes 422 Proxy — offline editing",
+        "H.264 can't encode 8K (4320p); choose H.265 or a lower resolution.",
+        "Selection Behavior",
+        "Languages",
+        "Empty keeps every language",
+        "Auto Passthru",
+        "Copied as is when the source uses them",
+        "Passthru fallback",
+        "Only first track gets the extra version",
+        "Name tracks automatically",
+        "Sample rate",
+        "Gain",
+        "Name",
+        "Encoder",
+        "Tracks follow the selection behavior above.",
+        "Add Track",
+        "Add All Tracks",
+        "Reload from Behavior",
+        "Remove Track",
+        "7.1 Surround",
+        "Default",
+        "Default track",
+        "Forced only",
+        "Forced",
+        "Include",
+        "Burn",
+        "Keeps the track only if it holds forced subtitles",
+        "External Files",
+        "Offset",
+        "Title",
+        "Create chapter markers",
+        "Import…",
+        "Export…",
+        "This video has no chapters.",
+        "Chapters not imported",
+        "Line %lld of the chapter file isn't “number,title”.",
+        "The chapter file is too large.",
+        "Actors",
+        "Director",
+        "Release Date",
+        "Comment",
+        "Genre",
+        "Description",
+        "Plot",
+        "Saved into MP4, MOV and MKV files.",
+        "Can't read this video"
+    ])
+    func parityKeysAreTranslated(key: String) throws {
+        let value = try #require(try table()[key], "missing \(key)")
+        #expect(!value.isEmpty)
+    }
+
+    @Test func everyParityDisplayNameIsTranslated() throws {
+        let table = try table()
+        let untranslatable: Set<String> = ["NLMeans", "HQDN3D", "Unsharp", "Lapsharp", "BT.709", "BT.601 NTSC", "BT.601 PAL",
+                                           "BT.2020", "HE-AAC", "AAC", "H.264", "Main 10", "Baseline", "High", "Main",
+                                           "Apple ProRes 422 LT", "Apple ProRes 422 Proxy", "Sprite", "Bob"]
+        var names: [String] = []
+        names += FrameRateMode.allCases.map(\.displayName)
+        names += EncoderSpeed.allCases.map(\.displayName)
+        names += VideoProfile.allCases.map(\.displayName)
+        names += CropMode.allCases.map(\.displayName)
+        names += Anamorphic.allCases.map(\.displayName)
+        names += PaddingMode.allCases.map(\.displayName)
+        names += PadColor.allCases.map(\.displayName)
+        names += FilterStrength.allCases.map(\.displayName)
+        names += DeinterlaceMethod.allCases.map(\.displayName)
+        names += DenoiseFilter.allCases.map(\.displayName)
+        names += DenoiseTune.allCases.map(\.displayName)
+        names += ChromaSmoothTune.allCases.map(\.displayName)
+        names += SharpenFilter.allCases.map(\.displayName)
+        names += SharpenTune.allCases.map(\.displayName)
+        names += ColorspaceTarget.allCases.map(\.displayName)
+        names += AudioCodec.allCases.map(\.displayName)
+        names += AudioMixdown.allCases.map(\.displayName)
+        names += AudioTrackSelection.allCases.map(\.displayName)
+        names += VideoCodec.allCases.map(\.displayName)
+        for name in names where !untranslatable.contains(name) {
+            #expect(table[name] != nil, "\(name)")
+        }
+    }
+
+    @Test func settingsTabsAreTranslated() throws {
+        let table = try table()
+        for key in ["Summary", "Dimensions", "Filters", "Video", "Audio", "Subtitles", "Chapters", "Tags"] {
+            #expect(table[key] != nil, "\(key)")
+        }
+    }
+
     @Test func everyBuiltInPresetIsTranslated() throws {
         let table = try table()
         for preset in BuiltInPresets.all + QualityProfile.presets + QualityProfile.compressPresets {
