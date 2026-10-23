@@ -1,22 +1,23 @@
 import HyperVideoCore
 import SwiftUI
 
-/// All HandBrake settings of one video, inline in the 460 pt right column.
+/// All HandBrake settings of one video, inline in the inspector column.
 struct VideoSettingsPanel: View {
     @Environment(AppModel.self) private var model
     let source: SourceItem
+
+    private var tab: SettingsTab { model.ui.detailTab }
 
     var body: some View {
         @Bindable var ui = model.ui
         VStack(spacing: 0) {
             header
-            SettingsTabBar()
-            Theme.separator.frame(height: 1)
+            Divider()
             content
+            Divider()
             footer
         }
-        .environment(\.settingsLabelWidth, 128)
-        .background(Theme.inspector)
+        .environment(\.settingsLabelWidth, 132)
         .alert("Save Preset", isPresented: $ui.isSavingPreset) {
             TextField("Name", text: $ui.presetName)
             Button("Save") { saveCurrent() }
@@ -27,37 +28,43 @@ struct VideoSettingsPanel: View {
     }
 
     private var header: some View {
-        HStack(spacing: 12) {
-            Thumbnail(image: source.thumbnail, symbol: "film", isLoading: source.isLoading)
-                .frame(width: 44, height: 44)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(source.name).font(.system(size: 13, weight: .semibold))
-                    .lineLimit(1).truncationMode(.middle)
-                Text(verbatim: model.presetName(for: source))
-                    .font(.system(size: 10)).foregroundStyle(Theme.muted)
+        VStack(alignment: .leading, spacing: Spacing.m) {
+            HStack(spacing: Spacing.m) {
+                Thumbnail(image: source.thumbnail, symbol: "film", isLoading: source.isLoading)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(source.name).font(.headline)
+                        .lineLimit(1).truncationMode(.middle)
+                    Text(verbatim: model.presetName(for: source))
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+                RowRemoveButton(help: "Back to the settings for all videos", label: String(localized: "Close")) {
+                    model.closePanel()
+                }
             }
-            Spacer()
-            Button { model.closePanel() } label: { Image(systemName: "xmark") }
-                .buttonStyle(.subtle)
-                .help("Back to the settings for all videos")
-                .accessibilityLabel("Close")
+            SettingsTabBar()
         }
-        .padding(18)
-        .background(Theme.inspector)
+        .padding(Spacing.l)
     }
 
     @ViewBuilder
     private var content: some View {
         if let info = source.info {
             ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: Spacing.m) {
                     if !source.settings.validationIssues.isEmpty {
                         StatusBanner(messages: source.settings.validationIssues.map { String(localized: String.LocalizationValue($0)) })
+                            .motionTransition(.pop)
                     }
                     SettingsTabContent(source: source, info: info)
+                        .id(tab)
+                        .motionTransition(.content)
                 }
-                .padding(16)
+                .padding(Spacing.l)
+                .motion(value: tab)
+                .motion(value: source.settings.validationIssues)
             }
+            .compatSoftScrollEdges()
         } else if let error = source.errorMessage {
             ContentUnavailableView("Can't read this video", systemImage: "exclamationmark.triangle",
                                    description: Text(verbatim: error))
@@ -77,9 +84,9 @@ struct VideoSettingsPanel: View {
                 model.ui.isSavingPreset = true
             }
         }
-        .buttonStyle(.subtle)
-        .padding(14)
-        .overlay(alignment: .top) { Theme.separator.frame(height: 1) }
+        .compatGlassButtonStyle()
+        .controlSize(.small)
+        .padding(Spacing.m)
     }
 
     private func saveCurrent() {

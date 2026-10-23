@@ -15,7 +15,7 @@ struct ChaptersSettingsTab: View {
                 Toggle("Create chapter markers", isOn: markers).labelsHidden().toggleStyle(.switch)
             }
             if info.chapters.isEmpty {
-                Text("This video has no chapters.").foregroundStyle(Theme.muted)
+                Text("This video has no chapters.").foregroundStyle(.secondary)
             } else {
                 chapterGrid
                 HStack(spacing: 8) {
@@ -23,7 +23,7 @@ struct ChaptersSettingsTab: View {
                     Button("Export…") { exportCSV() }
                     Spacer()
                 }
-                .buttonStyle(.subtle)
+                .compatGlassButtonStyle()
             }
         }
         .alert(Text(verbatim: problem?.title ?? ""),
@@ -45,9 +45,9 @@ struct ChaptersSettingsTab: View {
         Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 8) {
             ForEach(Array(info.chapters.enumerated()), id: \.offset) { index, chapter in
                 GridRow {
-                    Text("\(index + 1)").monospacedDigit().foregroundStyle(Theme.muted)
+                    Text("\(index + 1)").monospacedDigit().foregroundStyle(.secondary)
                     Text(Format.duration(chapter.start)).monospacedDigit()
-                    Text(Format.duration(chapter.duration)).monospacedDigit().foregroundStyle(Theme.muted)
+                    Text(Format.duration(chapter.duration)).monospacedDigit().foregroundStyle(.secondary)
                     CommittingTextField(title: "Title", text: titleBinding(index))
                         .textFieldStyle(.roundedBorder)
                         .accessibilityLabel(Text("Chapter \(index + 1) title"))

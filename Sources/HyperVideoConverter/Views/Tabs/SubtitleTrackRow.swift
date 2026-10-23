@@ -12,7 +12,7 @@ struct RadioToggle: View {
         Button(action: action) {
             HStack(spacing: 4) {
                 Image(systemName: isOn ? "largecircle.fill.circle" : "circle")
-                    .foregroundStyle(isOn ? Theme.accent : Theme.muted)
+                    .foregroundStyle(isOn ? Theme.accent : Color.secondary)
                 Text(title)
             }
         }
@@ -60,7 +60,7 @@ struct SubtitleTrackRow: View {
             .controlSize(.small)
         }
         .padding(12)
-        .card(fill: Theme.panelRaised, radius: 10)
+        .card(.raised)
         .accessibilityElement(children: .contain)
     }
 

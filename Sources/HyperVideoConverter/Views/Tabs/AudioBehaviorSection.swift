@@ -23,14 +23,19 @@ struct AudioBehaviorSection: View {
                     .frame(maxWidth: 220)
             }
             SettingRow(title: "Auto Passthru", help: "Copied as is when the source uses them") {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), alignment: .leading), count: 3), spacing: 6) {
+                // Three fixed columns: wide enough for "DTS-HD", narrow enough to never
+                // widen the inspector (the row stacks the label above when needed).
+                LazyVGrid(columns: Array(repeating: GridItem(.fixed(84), alignment: .leading), count: 3),
+                          alignment: .leading, spacing: Spacing.xs + 2) {
                     ForEach(PassthruCodec.allCases) { codec in
                         Toggle(codec.displayName, isOn: allowed(codec))
                             .toggleStyle(.checkbox)
                             .controlSize(.small)
+                            .lineLimit(1)
+                            .fixedSize()
                     }
                 }
-                .frame(maxWidth: 260)
+                .fixedSize()
             }
             SettingRow(title: "Passthru fallback") {
                 Picker("Passthru fallback", selection: $settings.audioOptions.fallback) {

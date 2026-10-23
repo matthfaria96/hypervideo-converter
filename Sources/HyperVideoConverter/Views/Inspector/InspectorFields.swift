@@ -3,54 +3,56 @@ import SwiftUI
 
 typealias SettingsEdit = @MainActor @Sendable ((inout EncodeSettings) -> Void) -> Void
 
-/// The four quality profile cards; the chosen one has an amber border.
+/// The four quality profile cards; the chosen one is tinted with the accent.
 struct ProfileCards: View {
     let selected: QualityProfile?
     let choose: @MainActor (QualityProfile) -> Void
 
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: Spacing.s) {
             ForEach(QualityProfile.allCases) { profile in
                 card(profile, isSelected: profile == selected)
             }
         }
+        .motion(value: selected)
     }
 
     private func card(_ profile: QualityProfile, isSelected: Bool) -> some View {
         Button {
             choose(profile)
         } label: {
-            HStack(spacing: 10) {
+            HStack(spacing: Spacing.m) {
                 Image(systemName: profile.symbol)
-                    .font(.system(size: 13))
-                    .foregroundStyle(isSelected ? Theme.accentLight : Color(hex: 0xDDDDDD))
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(isSelected ? AnyShapeStyle(Theme.accent) : AnyShapeStyle(.secondary))
                     .frame(width: 30, height: 30)
-                    .background(isSelected ? Color(hex: 0x594421) : Color(hex: 0x39393F), in: .rect(cornerRadius: 8))
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: 6) {
-                        Text(localizing: profile.name).font(.system(size: 11, weight: .semibold))
+                    .background(isSelected ? AnyShapeStyle(Theme.accent.opacity(0.18)) : AnyShapeStyle(.fill.tertiary),
+                                in: .rect(cornerRadius: Radius.s + 2))
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: Spacing.xs + 2) {
+                        Text(localizing: profile.name).font(.body.weight(.medium))
                         if profile == .balanced {
                             Text("Recommended")
-                                .font(.system(size: 9, weight: .semibold))
-                                .foregroundStyle(Theme.accentLight)
-                                .padding(.horizontal, 5).padding(.vertical, 1)
-                                .background(Theme.accentWash, in: .capsule)
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(Theme.accent)
+                                .padding(.horizontal, 6).padding(.vertical, 2)
+                                .background(Theme.accent.opacity(0.14), in: .capsule)
                         }
                     }
-                    Text(localizing: profile.summary).font(.system(size: 10)).foregroundStyle(Theme.muted)
+                    Text(localizing: profile.summary).font(.caption).foregroundStyle(.secondary)
                 }
-                Spacer(minLength: 4)
-                Circle()
-                    .strokeBorder(isSelected ? Theme.accent : Color(hex: 0x777777), lineWidth: 1)
-                    .frame(width: 14, height: 14)
-                    .overlay { if isSelected { Circle().fill(Theme.accent).frame(width: 6, height: 6) } }
+                Spacer(minLength: Spacing.xs)
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .font(.body)
+                    .foregroundStyle(isSelected ? AnyShapeStyle(Theme.accent) : AnyShapeStyle(.tertiary))
+                    .contentTransition(.symbolEffect(.replace))
             }
-            .padding(10)
-            .card(fill: isSelected ? Theme.selectedCard : Color(hex: 0x27272B), radius: 9,
-                  stroke: isSelected ? Color(hex: 0xD9A33A) : Theme.line)
+            .padding(Spacing.m)
+            .card(isSelected ? .selected : .standard)
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
+        .hoverLift()
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text("\(Text(localizing: profile.name)), \(Text(localizing: profile.summary))"))
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
@@ -63,19 +65,17 @@ struct VideoFields: View {
     let edit: SettingsEdit
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .leading, spacing: Spacing.l) {
             FieldLabel(title: "Video Codec")
             MenuField(label: "Video Codec", selection: settings.videoCodec, options: VideoCodec.allCases,
                       title: Self.title) { codec in edit { $0 = $0.choosing(codec: codec) } }
                 .help("H.264 plays everywhere. HEVC (H.265) makes smaller files with the same look on recent devices.")
-                .padding(.bottom, 17)
 
             FieldLabel(title: "Resolution", detail: "Optional")
             MenuField(label: "Resolution", selection: settings.maxResolution, options: MaxResolution.allCases,
                       title: Self.title) { value in edit { $0.maxResolution = value } }
                 .disabled(settings.videoCodec == .passthrough)
                 .help("Videos larger than this are scaled down; smaller ones are never enlarged.")
-                .padding(.bottom, 17)
 
             quality
         }
@@ -85,32 +85,30 @@ struct VideoFields: View {
     private var quality: some View {
         switch (settings.videoCodec.supportsRateControl, settings.rateControl) {
         case (true, .quality(let value)):
-            HStack {
-                Text("Compression Quality").font(.system(size: 11, weight: .semibold))
-                    .help("Higher keeps more detail and makes a bigger file. The file size follows the content.")
-                Spacer()
-                Text(value, format: .percent.precision(.fractionLength(0)))
-                    .font(.system(size: 11)).foregroundStyle(Theme.muted).monospacedDigit()
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                HStack {
+                    Text("Compression Quality")
+                        .help("Higher keeps more detail and makes a bigger file. The file size follows the content.")
+                    Spacer()
+                    Text(value, format: .percent.precision(.fractionLength(0)))
+                        .foregroundStyle(.secondary).monospacedDigit()
+                        .contentTransition(.numericText())
+                }
+                Slider(value: Binding(get: { value }, set: { new in edit { $0.rateControl = .quality(new) } }), in: 0.2...1)
+                HStack {
+                    Text("Smaller file")
+                    Spacer()
+                    Text("More quality")
+                }
+                .font(.footnote)
+                .foregroundStyle(.secondary)
             }
-            Slider(value: Binding(get: { value }, set: { new in edit { $0.rateControl = .quality(new) } }), in: 0.2...1)
-                .tint(Theme.accent)
-                .controlSize(.small)
-                .padding(.vertical, 4)
-            HStack {
-                Text("Smaller file")
-                Spacer()
-                Text("More quality")
-            }
-            .font(.system(size: 10))
-            .foregroundStyle(Theme.muted)
+            .motion(Motion.snappy, value: value)
         case (true, .averageBitrate(let kbps)):
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: Spacing.s) {
                 note("Fixed size: about \(Format.bitrate(Double(kbps) * 1_000)) of video, whatever the content.")
                 Button("Use automatic quality instead") { edit { $0.rateControl = .quality(0.62) } }
-                    .buttonStyle(.plain)
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(Theme.accentLight)
-                    .frame(minHeight: 28)
+                    .buttonStyle(.link)
                     .help("Lets the encoder pick the size that keeps the picture looking right")
             }
         default:
@@ -120,8 +118,8 @@ struct VideoFields: View {
 
     private func note(_ text: LocalizedStringKey) -> some View {
         Text(text)
-            .font(.system(size: 10))
-            .foregroundStyle(Theme.muted)
+            .font(.footnote)
+            .foregroundStyle(.secondary)
             .fixedSize(horizontal: false, vertical: true)
     }
 
@@ -159,31 +157,17 @@ struct InspectorToggles: View {
     let edit: SettingsEdit
 
     var body: some View {
-        VStack(spacing: 13) {
-            row("Keep original audio", "Copies the audio tracks as they are whenever possible.",
-                isOn: settings.audioCodec == .passthrough) { on in
+        VStack(spacing: Spacing.m) {
+            SwitchRow(title: "Keep original audio", detail: "Copies the audio tracks as they are whenever possible.",
+                      isOn: settings.audioCodec == .passthrough) { on in
                 edit { settings in
                     settings.audioCodec = on ? .passthrough : .aac
                     if on { settings.audioTracks = .all }
                     settings = settings.retuningAudioTracks()
                 }
             }
-            row("Remove metadata", "Drops titles, dates, location and chapters from the file.",
-                isOn: !settings.keepMetadata) { on in edit { $0.keepMetadata = !on } }
+            SwitchRow(title: "Remove metadata", detail: "Drops titles, dates, location and chapters from the file.",
+                      isOn: !settings.keepMetadata) { on in edit { $0.keepMetadata = !on } }
         }
-    }
-
-    private func row(_ title: LocalizedStringKey, _ detail: LocalizedStringKey, isOn: Bool,
-                     set: @escaping @MainActor @Sendable (Bool) -> Void) -> some View {
-        Toggle(isOn: Binding(get: { isOn }, set: set)) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title).font(.system(size: 11, weight: .semibold))
-                Text(detail)
-                    .font(.system(size: 10))
-                    .foregroundStyle(Theme.muted)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .toggleStyle(PillSwitchStyle())
     }
 }

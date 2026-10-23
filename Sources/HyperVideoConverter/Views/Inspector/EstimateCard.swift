@@ -8,33 +8,34 @@ struct EstimateCard: View {
 
     var body: some View {
         let estimate = self.estimate ?? model.sizeEstimate
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: Spacing.s) {
             HStack {
-                Text("SIZE ESTIMATE")
+                Eyebrow(text: "Size estimate")
                 Spacer()
                 Text(verbatim: kindLabel(estimate))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
-            .font(.system(size: 11))
-            .foregroundStyle(Theme.muted)
 
             HStack(alignment: .firstTextBaseline) {
                 Text(verbatim: headline(estimate))
-                    .font(.system(size: 21, weight: .semibold))
-                    .kerning(-0.5)
+                    .font(.title2.weight(.semibold))
                     .monospacedDigit()
+                    .contentTransition(.numericText())
                 Spacer()
                 Text(verbatim: badge(estimate))
-                    .font(.system(size: 11))
-                    .foregroundStyle(estimate.savings.map { $0 >= 0 } ?? false ? Color(hex: 0x7BD49A) : Theme.muted)
+                    .font(.callout)
+                    .foregroundStyle(estimate.savings.map { $0 >= 0 } ?? false ? Theme.success : .secondary)
+                    .contentTransition(.numericText())
             }
             Text(verbatim: note(estimate))
-                .font(.system(size: 10))
-                .foregroundStyle(Theme.muted)
-                .lineSpacing(1.5)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(12)
-        .card(fill: Color(hex: 0x262629), radius: 10, stroke: Color(hex: 0x3C3C41))
+        .padding(Spacing.m)
+        .card(.raised)
+        .motion(Motion.snappy, value: estimate)
     }
 
     private func kindLabel(_ estimate: SizeEstimate) -> String {

@@ -24,7 +24,7 @@ struct CropSection: View {
                 .fixedSize()
             }
             SettingRow(title: "Flip horizontally") {
-                Toggle("Flip", isOn: $settings.flipHorizontal).labelsHidden().toggleStyle(.switch)
+                Toggle("Flip", isOn: $settings.flipHorizontal).labelsHidden().toggleStyle(.switch).controlSize(.small)
             }
             SettingRow(title: "Cropping") {
                 Picker("Cropping", selection: $settings.pictureOptions.cropMode) {
@@ -34,7 +34,10 @@ struct CropSection: View {
                 .fixedSize()
             }
             modeDetails
+                .id(mode)
+                .motionTransition(.content)
         }
+        .motion(value: mode)
         .task(id: "\(info.url.path)|\(mode.rawValue)|\(detectRun)") { await detect() }
     }
 
@@ -43,30 +46,34 @@ struct CropSection: View {
         case .custom: customFields
         case .automatic, .conservative: detectedView
         case .none:
-            Text("The picture is kept whole.").font(.caption).foregroundStyle(Theme.muted)
+            Text("The picture is kept whole.").font(.footnote).foregroundStyle(.secondary)
         }
     }
 
     private var detectedView: some View {
-        HStack {
+        HStack(spacing: Spacing.m) {
             if isDetecting {
                 ProgressView().controlSize(.small)
-                Text("Detecting…").foregroundStyle(Theme.muted)
+                Text("Detecting…").foregroundStyle(.secondary)
             } else if let crop = detectedCrop {
                 Text("Top \(crop.top) · Bottom \(crop.bottom) · Left \(crop.left) · Right \(crop.right)")
                     .monospacedDigit()
+                    .contentTransition(.numericText())
             }
             Spacer()
             Button("Detect", systemImage: "arrow.clockwise") { detectRun += 1 }
-                .buttonStyle(.subtle)
+                .compatGlassButtonStyle()
+                .controlSize(.small)
                 .disabled(isDetecting)
                 .help("Analyse 10 frames for black bars again")
         }
+        .motion(Motion.quick, value: isDetecting)
     }
 
+    /// Four labelled fields on one grid, and the shortcuts under them.
     private var customFields: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Grid(alignment: .leading, horizontalSpacing: 18, verticalSpacing: 10) {
+        VStack(alignment: .leading, spacing: Spacing.m) {
+            Grid(alignment: .leading, horizontalSpacing: Spacing.l, verticalSpacing: Spacing.s) {
                 GridRow {
                     cropField("Top", \.top)
                     cropField("Bottom", \.bottom)
@@ -76,30 +83,38 @@ struct CropSection: View {
                     cropField("Right", \.right)
                 }
             }
-            HStack {
-                Button("Reset", systemImage: "arrow.counterclockwise") { settings.crop = .zero }
-                    .buttonStyle(.subtle)
-                    .disabled(settings.crop.isZero)
-                if let size = info.displaySize, size.width > size.height {
-                    Button("Crop to 2.39:1", systemImage: "rectangle.ratio.16.to.9") {
-                        let bar = max(0, Int((size.height - size.width / 2.39) / 2))
-                        settings.crop = Crop(top: bar, bottom: bar)
-                    }
-                    .buttonStyle(.subtle)
-                }
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: Spacing.s) { shortcuts }
+                VStack(alignment: .leading, spacing: Spacing.s) { shortcuts }
             }
+            .compatGlassButtonStyle()
+            .controlSize(.small)
+        }
+    }
+
+    @ViewBuilder private var shortcuts: some View {
+        Button("Reset", systemImage: "arrow.counterclockwise") { settings.crop = .zero }
+            .disabled(settings.crop.isZero)
+        if let size = info.displaySize, size.width > size.height {
+            Button("Crop to 2.39:1", systemImage: "rectangle.ratio.16.to.9") {
+                let bar = max(0, Int((size.height - size.width / 2.39) / 2))
+                settings.crop = Crop(top: bar, bottom: bar)
+            }
+            .fixedSize()
         }
     }
 
     private func cropField(_ title: LocalizedStringKey, _ edge: WritableKeyPath<Crop, Int>) -> some View {
-        // Fits two per row in the 460 pt panel; the unit sits in the field's prompt.
-        HStack(spacing: 6) {
-            Text(title).frame(width: 64, alignment: .leading).lineLimit(1).minimumScaleFactor(0.8)
-            TextField(title, value: $settings.crop[dynamicMember: edge], format: .number, prompt: Text(verbatim: "px"))
-                .textFieldStyle(.roundedBorder)
-                .frame(width: 54)
-                .help("Pixels")
-            Stepper(title, value: $settings.crop[dynamicMember: edge], in: 0...4_000, step: 2).labelsHidden()
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            Text(title).font(.footnote).foregroundStyle(.secondary)
+            HStack(spacing: Spacing.xs) {
+                TextField(title, value: $settings.crop[dynamicMember: edge], format: .number, prompt: Text(verbatim: "px"))
+                    .textFieldStyle(.roundedBorder)
+                    .multilineTextAlignment(.trailing)
+                    .frame(width: 64)
+                    .help("Pixels")
+                Stepper(title, value: $settings.crop[dynamicMember: edge], in: 0...4_000, step: 2).labelsHidden()
+            }
         }
     }
 

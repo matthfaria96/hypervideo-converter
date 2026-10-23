@@ -9,40 +9,49 @@ struct OutputInspector: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                Text("Output Settings").font(.system(size: 14, weight: .bold)).padding(.bottom, 8)
-                ScopeChip().padding(.bottom, 12)
+            VStack(alignment: .leading, spacing: Spacing.l) {
+                Text("Output Settings").font(.title3.weight(.semibold))
+                ScopeChip()
                 // The way into every HandBrake setting stays in view, above the quick fields.
-                AllSettingsHintCard().padding(.bottom, 18)
+                AllSettingsHintCard()
 
-                FieldLabel(title: "Output Format")
-                FormatPicker(settings: settings) { container in model.editTargets { $0 = $0.choosing(container: container) } }
-                    .help("The file type, shown as the file's extension (.mp4, .mov…).")
-                    .padding(.bottom, 17)
-
-                FieldLabel(title: "Quality Profile")
-                ProfileCards(selected: model.inspectorProfile) { model.applyProfile($0) }
-                    .padding(.bottom, 8)
-                if let personalized = model.inspectorPersonalizedProfile {
-                    PersonalizedNote(profile: personalized) { model.applyProfile(personalized) }
-                        .padding(.bottom, 8)
+                group {
+                    FieldLabel(title: "Output Format")
+                    FormatPicker(settings: settings) { container in model.editTargets { $0 = $0.choosing(container: container) } }
+                        .help("The file type, shown as the file's extension (.mp4, .mov…).")
                 }
-                EstimateCard().padding(.top, 4)
 
-                InspectorDivider()
-                VideoFields(settings: settings) { change in model.editTargets(change) }
-                InspectorDivider()
-                InspectorToggles(settings: settings) { change in model.editTargets(change) }
+                group {
+                    FieldLabel(title: "Quality Profile")
+                    ProfileCards(selected: model.inspectorProfile) { model.applyProfile($0) }
+                    if let personalized = model.inspectorPersonalizedProfile {
+                        PersonalizedNote(profile: personalized) { model.applyProfile(personalized) }
+                            .motionTransition(.pop)
+                    }
+                    EstimateCard()
+                }
+                .motion(value: model.inspectorPersonalizedProfile)
+
+                group { VideoFields(settings: settings) { change in model.editTargets(change) } }
+                group { InspectorToggles(settings: settings) { change in model.editTargets(change) } }
 
                 if !settings.validationIssues.isEmpty {
                     StatusBanner(messages: settings.validationIssues.map { String(localized: String.LocalizationValue($0)) })
-                        .padding(.top, 12)
+                        .motionTransition(.pop)
                 }
             }
-            .padding(.horizontal, 18)
-            .padding(.vertical, 22)
+            .padding(Spacing.l)
+            .motion(value: settings.validationIssues)
         }
-        .background(Theme.inspector)
+        .compatSoftScrollEdges()
+    }
+
+    /// One card per group of fields.
+    private func group<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.m) { content() }
+            .padding(Spacing.l)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .card()
     }
 }
 
@@ -52,17 +61,10 @@ struct FieldLabel: View {
 
     var body: some View {
         HStack {
-            Text(title).font(.system(size: 11, weight: .semibold))
+            Text(title).font(.headline)
             Spacer()
-            if let detail { Text(detail).font(.system(size: 11)).foregroundStyle(Theme.muted) }
+            if let detail { Text(detail).font(.footnote).foregroundStyle(.secondary) }
         }
-        .padding(.bottom, 8)
-    }
-}
-
-struct InspectorDivider: View {
-    var body: some View {
-        Color(hex: 0x39393E).frame(height: 1).padding(.vertical, 18)
     }
 }
 

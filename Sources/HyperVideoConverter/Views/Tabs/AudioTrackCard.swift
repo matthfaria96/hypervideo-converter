@@ -107,7 +107,7 @@ struct AudioTrackCard: View {
                 Spacer()
                 Button("Remove Track", systemImage: "xmark", action: remove)
                     .labelStyle(.iconOnly)
-                    .buttonStyle(.subtle)
+                    .compatGlassButtonStyle()
                     .buttonBorderShape(.circle)
                     .help("Remove Track")
                     .accessibilityLabel("Remove Track")
@@ -125,7 +125,7 @@ struct AudioTrackCard: View {
             AudioEncodingFields(encoding: $setting.encoding, codecs: Self.encoders)
         }
         .padding(14)
-        .card(fill: Theme.panelRaised, radius: 10)
+        .card(.raised)
     }
 
     private func label(_ track: AudioTrackInfo, index: Int) -> String { Self.label(track, index: index) }

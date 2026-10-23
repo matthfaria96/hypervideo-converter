@@ -1,8 +1,8 @@
 import HyperVideoCore
 import SwiftUI
 
-/// Every detailed setting of one video (trim, crop, filters, tracks, chapters),
-/// opened from the inspector's Advanced button or a row's context menu.
+/// Every detailed setting of one video in a large sheet (⌘E), for working with the
+/// tabs at full width.
 struct AdvancedSettingsSheet: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
@@ -16,13 +16,16 @@ struct AdvancedSettingsSheet: View {
                 header(source)
                 Divider()
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 16) {
+                    VStack(alignment: .leading, spacing: Spacing.l) {
                         if !source.settings.validationIssues.isEmpty {
                             StatusBanner(messages: source.settings.validationIssues.map { String(localized: String.LocalizationValue($0)) })
                         }
                         SettingsTabContent(source: source, info: info)
+                            .id(tab)
+                            .motionTransition(.content)
                     }
-                    .padding(20)
+                    .padding(Spacing.xl)
+                    .motion(value: tab)
                 }
             } else {
                 ContentUnavailableView("No video selected", systemImage: "film",
@@ -32,15 +35,12 @@ struct AdvancedSettingsSheet: View {
             footer
         }
         .frame(minWidth: 900, idealWidth: 920, minHeight: 600, idealHeight: 700)
-        .background(Theme.background)
-        .environment(\.colorScheme, .dark)
         .environment(\.settingsLabelWidth, 170)
-        .animation(.smooth, value: tab)
     }
 
     private func header(_ source: SourceItem) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 12) {
+        VStack(alignment: .leading, spacing: Spacing.m) {
+            HStack(spacing: Spacing.m) {
                 Thumbnail(image: source.thumbnail, symbol: "film", isLoading: false)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(source.name).font(.headline).lineLimit(1).truncationMode(.middle)
@@ -54,7 +54,7 @@ struct AdvancedSettingsSheet: View {
                 tabPicker(showsTitles: false)
             }
         }
-        .padding(20)
+        .padding(Spacing.xl)
     }
 
     private func tabPicker(showsTitles: Bool) -> some View {
@@ -79,13 +79,13 @@ struct AdvancedSettingsSheet: View {
     private var footer: some View {
         HStack {
             if let source, model.sources.count > 1 {
-                ApplyToAllButton(sourceID: source.id)
+                ApplyToAllButton(sourceID: source.id).compatGlassButtonStyle()
             }
             Spacer()
             Button("Done") { dismiss() }
                 .keyboardShortcut(.defaultAction)
-                .buttonStyle(.primary)
+                .compatGlassProminentButtonStyle()
         }
-        .padding(16)
+        .padding(Spacing.l)
     }
 }

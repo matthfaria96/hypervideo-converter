@@ -25,7 +25,7 @@ struct FiltersSettingsTab: View {
                 }
                 Text("Detelecine and Deblock aren't available on macOS's video engine.")
                     .font(.caption)
-                    .foregroundStyle(Theme.muted)
+                    .foregroundStyle(.secondary)
             }
             .disabled(settings.videoCodec == .passthrough)
         }

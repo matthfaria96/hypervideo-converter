@@ -66,7 +66,7 @@ struct AudioSettingsTab: View {
                 }
                 .disabled(settings.audioOptions.tracks.isEmpty)
             }
-            .buttonStyle(.subtle)
+            .compatGlassButtonStyle()
             .disabled(info.audioTracks.isEmpty)
         }
     }

@@ -6,41 +6,35 @@ struct ScopeChip: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
+        VStack(alignment: .leading, spacing: Spacing.xs + 2) {
+            HStack(spacing: Spacing.s) {
                 Image(systemName: model.inspectsSelection ? "checkmark.circle.fill" : "square.stack.3d.up")
-                    .font(.system(size: 11))
+                    .foregroundStyle(model.inspectsSelection ? AnyShapeStyle(Theme.accent) : AnyShapeStyle(.secondary))
+                    .contentTransition(.symbolEffect(.replace))
                 Text(verbatim: title)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.callout.weight(.medium))
                     .lineLimit(1)
                     .truncationMode(.middle)
-                Spacer(minLength: 4)
+                Spacer(minLength: Spacing.xs)
                 if model.inspectsSelection {
-                    Button {
+                    RowRemoveButton(help: "Stop editing only the selection", label: String(localized: "Deselect All")) {
                         model.selectedIDs = []
-                    } label: {
-                        Image(systemName: "xmark").font(.system(size: 9, weight: .bold))
-                            .frame(width: 28, height: 22)
-                            .contentShape(.rect)
                     }
-                    .buttonStyle(.plain)
-                    .help("Stop editing only the selection")
-                    .accessibilityLabel(Text("Deselect All"))
+                    .motionTransition(.pop)
                 }
             }
-            .foregroundStyle(model.inspectsSelection ? Theme.accentLight : Theme.text)
-            .padding(.leading, 10)
-            .padding(.trailing, model.inspectsSelection ? 0 : 10)
-            .padding(.vertical, model.inspectsSelection ? 2 : 6)
-            .card(fill: model.inspectsSelection ? Theme.selectedCard : Theme.panelRaised, radius: 8,
-                  stroke: model.inspectsSelection ? Color(hex: 0xD9A33A) : Theme.line)
+            .padding(.leading, Spacing.m)
+            .padding(.trailing, model.inspectsSelection ? Spacing.xs : Spacing.m)
+            .padding(.vertical, model.inspectsSelection ? Spacing.xs : Spacing.s)
+            .card(model.inspectsSelection ? .selected : .standard, radius: Radius.s + 2)
             .accessibilityElement(children: .combine)
 
             Text(verbatim: detail)
-                .font(.system(size: 10))
-                .foregroundStyle(Theme.muted)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
+        .motion(value: model.inspectsSelection)
     }
 
     private var title: String {
@@ -75,21 +69,19 @@ struct PersonalizedNote: View {
     let restore: @MainActor () -> Void
 
     var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "slider.horizontal.3").font(.system(size: 10))
+        HStack(spacing: Spacing.s) {
+            Image(systemName: "slider.horizontal.3").foregroundStyle(.secondary)
             Text("\(Text(localizing: profile.name)) (personalized)")
-                .font(.system(size: 10))
-            Spacer(minLength: 4)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+            Spacer(minLength: Spacing.xs)
             Button("Restore") { restore() }
-                .buttonStyle(.plain)
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(Theme.accentLight)
-                .frame(minHeight: 28)
-                .contentShape(.rect)
+                .buttonStyle(.link)
+                .font(.footnote.weight(.medium))
                 .help("Go back to this profile's settings")
         }
-        .foregroundStyle(Theme.muted)
-        .padding(.horizontal, 10)
-        .card(fill: Theme.panel, radius: 8)
+        .padding(.horizontal, Spacing.m)
+        .padding(.vertical, Spacing.s)
+        .card(.raised, radius: Radius.s + 2)
     }
 }

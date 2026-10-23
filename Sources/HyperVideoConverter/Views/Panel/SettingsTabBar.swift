@@ -1,39 +1,39 @@
 import SwiftUI
 
-/// Eight equal-width tabs with an accent wash and underline on the selected one.
+/// The eight tabs as a native segmented control of symbols, with the selected tab's
+/// name and shortcut under it (the way system inspectors label their tab strips).
 struct SettingsTabBar: View {
     @Environment(AppModel.self) private var model
-    @State private var hovered: SettingsTab?
+
+    private var tab: SettingsTab { model.ui.detailTab }
 
     var body: some View {
-        HStack(spacing: 0) {
-            ForEach(SettingsTab.allCases) { tab in
-                button(for: tab)
+        VStack(alignment: .leading, spacing: Spacing.s) {
+            Picker("Settings", selection: Bindable(model.ui).detailTab) {
+                ForEach(SettingsTab.allCases) { tab in
+                    Image(systemName: tab.symbol)
+                        .help(tab.title)
+                        .accessibilityLabel(tab.title)
+                        .tag(tab)
+                }
             }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .controlSize(.large)
+            HStack {
+                Text(tab.title)
+                    .font(.subheadline.weight(.semibold))
+                    .id(tab)
+                    .motionTransition(.content)
+                Spacer()
+                if let digit = SettingsTab.shortcutDigit(at: SettingsTab.allCases.firstIndex(of: tab) ?? 0) {
+                    Text(verbatim: "⌥⌘\(digit)")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                        .monospacedDigit()
+                }
+            }
+            .motion(Motion.quick, value: tab)
         }
-        .animation(.smooth(duration: 0.15), value: model.ui.detailTab)
-    }
-
-    private func button(for tab: SettingsTab) -> some View {
-        let selected = model.ui.detailTab == tab
-        return Button { model.ui.detailTab = tab } label: {
-            VStack(spacing: 3) {
-                Image(systemName: tab.symbol).font(.system(size: 13))
-                Text(tab.title).font(.system(size: 9)).lineLimit(1).minimumScaleFactor(0.8)
-            }
-            .foregroundStyle(selected ? Theme.accentLight : Theme.muted)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 7)
-            .background(selected ? Theme.accentWash : (hovered == tab ? Theme.panelRaised : Color.clear))
-            .overlay(alignment: .bottom) {
-                if selected { Theme.accent.frame(height: 2) }
-            }
-            .contentShape(.rect)
-        }
-        .buttonStyle(.plain)
-        .onHover { hovered = $0 ? tab : (hovered == tab ? nil : hovered) }
-        .help(tab.title)
-        .accessibilityLabel(tab.title)
-        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }

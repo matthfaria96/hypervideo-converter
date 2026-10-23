@@ -76,7 +76,7 @@ struct SubtitlesSettingsTab: View {
             Button("Reload from Behavior", systemImage: "arrow.counterclockwise") {
                 settings = settings.resettingSubtitleTracks()
             }
-            .buttonStyle(.subtle)
+            .compatGlassButtonStyle()
             .disabled(settings.subtitleOptions.tracks.isEmpty)
         }
     }
@@ -87,7 +87,7 @@ struct SubtitlesSettingsTab: View {
                 SubtitleFileRow(file: file, sourceID: sourceID, settings: $settings)
             }
             Button("Add Subtitle File…", systemImage: "plus") { model.chooseSubtitleFiles(for: sourceID) }
-                .buttonStyle(.subtle)
+                .compatGlassButtonStyle()
         }
     }
 }

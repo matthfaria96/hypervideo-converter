@@ -49,7 +49,7 @@ struct TrimTab: View {
                         }
                             .disabled(settings.trim == nil)
                     }
-                    .buttonStyle(.subtle)
+                    .compatGlassButtonStyle()
                 }
             }
         }

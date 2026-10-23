@@ -20,11 +20,11 @@ struct TagsSettingsTab: View {
                     .padding(4)
                     .frame(maxWidth: .infinity)
                     .frame(minHeight: 72)
-                    .background(Theme.control, in: .rect(cornerRadius: 6))
+                    .background(.fill.tertiary, in: .rect(cornerRadius: Radius.s))
             }
             Text("Saved into MP4, MOV and MKV files.")
                 .font(.caption)
-                .foregroundStyle(Theme.muted)
+                .foregroundStyle(.secondary)
         }
     }
 

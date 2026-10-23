@@ -97,7 +97,7 @@ struct DimensionsSettingsTab: View {
 
     private func dimensionRow(_ title: LocalizedStringKey, _ size: CGSize?) -> some View {
         GridRow {
-            Text(title).foregroundStyle(Theme.muted)
+            Text(title).foregroundStyle(.secondary)
             Text(size.map { Format.size($0) } ?? "–").monospacedDigit()
         }
     }

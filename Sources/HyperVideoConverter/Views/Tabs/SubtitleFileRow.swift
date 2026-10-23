@@ -20,7 +20,7 @@ struct SubtitleFileRow: View {
                 Spacer()
                 Button("Remove", systemImage: "xmark") { model.removeSubtitleFile(file, from: sourceID) }
                     .labelStyle(.iconOnly)
-                    .buttonStyle(.subtle)
+                    .compatGlassButtonStyle()
                     .buttonBorderShape(.circle)
                     .help("Remove")
                     .accessibilityLabel("Remove")
@@ -48,7 +48,7 @@ struct SubtitleFileRow: View {
             .controlSize(.small)
         }
         .padding(12)
-        .card(fill: Theme.panelRaised, radius: 10)
+        .card(.raised)
         .accessibilityElement(children: .contain)
     }
 
