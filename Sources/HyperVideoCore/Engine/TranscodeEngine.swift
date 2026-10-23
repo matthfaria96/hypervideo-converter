@@ -107,10 +107,9 @@ public struct TranscodeEngine: Sendable {
         reader.timeRange = range
         let writer = try AVAssetWriter(outputURL: encoded, fileType: OutputSettingsBuilder.fileType(for: settings.container))
         writer.shouldOptimizeForNetworkUse = settings.optimizeForWeb && !remuxes
-        if settings.keepMetadata {
-            writer.metadata = (try? await asset.load(.metadata)) ?? []
-        }
+        writer.metadata = await WriterMetadata.items(source: asset, settings: settings)
 
+        let sessionStart = await AVAlignment.sessionStart(asset: asset, range: range, settings: settings)
         let pumps = try await PipelineFactory(
             asset: asset, reader: reader, writer: writer, settings: settings, subtitleFiles: subtitleFiles
         ).makePumps()
@@ -123,7 +122,7 @@ public struct TranscodeEngine: Sendable {
             reader.cancelReading()
             throw TranscodeError.writerFailed(writer.error?.localizedDescription ?? "unknown error")
         }
-        writer.startSession(atSourceTime: range.start)
+        writer.startSession(atSourceTime: sessionStart)
 
         let cancel = CancelFlag()
         let stalled = CancelFlag()

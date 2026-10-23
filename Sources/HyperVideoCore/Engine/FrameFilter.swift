@@ -8,7 +8,7 @@ enum FrameFilter {
     /// `overlay` (burned-in subtitles) is drawn over the finished picture, in output pixels.
     static func render(
         _ image: CIImage, sourceSize: CGSize, plan: GeometryPlan, filters: VideoFilters, deinterlace: Bool,
-        overlay: CIImage? = nil
+        overlay: CIImage? = nil, canvas: CIColor = .black
     ) -> CIImage {
         var frame = image
         // Field lines run horizontally in the stored frame, so deinterlace before any rotation or scaling.
@@ -20,7 +20,7 @@ enum FrameFilter {
         let output = CGRect(origin: .zero, size: plan.renderSize)
         let picture = frame
             .transformed(by: coreImageTransform(plan.transform, sourceHeight: sourceSize.height, renderHeight: plan.renderSize.height))
-            .composited(over: CIImage(color: .black).cropped(to: output))
+            .composited(over: CIImage(color: canvas).cropped(to: output))
             .cropped(to: output)
         return overlay.map { $0.composited(over: picture).cropped(to: output) } ?? picture
     }

@@ -16,9 +16,11 @@ final class FilterInstruction: NSObject, AVVideoCompositionInstructionProtocol, 
     let filters: VideoFilters
     let deinterlace: Bool
     let subtitles: SubtitleBurner?
+    let canvas: CIColor
 
     init(timeRange: CMTimeRange, trackID: CMPersistentTrackID, sourceSize: CGSize, plan: GeometryPlan,
-         filters: VideoFilters, deinterlace: Bool, subtitles: SubtitleBurner? = nil) {
+         filters: VideoFilters, deinterlace: Bool, subtitles: SubtitleBurner? = nil,
+         canvas: CIColor = .black) {
         self.timeRange = timeRange
         self.requiredSourceTrackIDs = [NSNumber(value: trackID)]
         self.trackID = trackID
@@ -27,6 +29,7 @@ final class FilterInstruction: NSObject, AVVideoCompositionInstructionProtocol, 
         self.filters = filters
         self.deinterlace = deinterlace
         self.subtitles = subtitles
+        self.canvas = canvas
     }
 }
 
@@ -76,7 +79,8 @@ final class FilterCompositor: NSObject, AVVideoCompositing, @unchecked Sendable 
         let image = FrameFilter.render(
             CIImage(cvPixelBuffer: source), sourceSize: instruction.sourceSize, plan: instruction.plan,
             filters: instruction.filters, deinterlace: instruction.deinterlace,
-            overlay: instruction.subtitles?.overlay(at: request.compositionTime.seconds, size: instruction.plan.renderSize)
+            overlay: instruction.subtitles?.overlay(at: request.compositionTime.seconds, size: instruction.plan.renderSize),
+            canvas: instruction.canvas
         )
         Self.tag(output, like: context.videoComposition)
         Self.context.render(image, to: output, bounds: CGRect(origin: .zero, size: instruction.plan.renderSize),
