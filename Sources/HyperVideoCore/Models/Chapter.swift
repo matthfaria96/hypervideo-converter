@@ -24,4 +24,21 @@ public struct Chapter: Codable, Hashable, Sendable {
             return Chapter(title: chapter.title, start: from, duration: to - from)
         }
     }
+
+    /// `chapters` with `titles[i]` replacing chapter i's title; blank titles keep the source's.
+    public static func renamed(_ chapters: [Chapter], titles: [String]) -> [Chapter] {
+        chapters.enumerated().map { index, chapter in
+            guard index < titles.count else { return chapter }
+            let title = titles[index].trimmingCharacters(in: .whitespacesAndNewlines)
+            return title.isEmpty ? chapter : Chapter(title: title, start: chapter.start, duration: chapter.duration)
+        }
+    }
+}
+
+extension TrimRange {
+    /// The trim covering chapters `from...through` (0-based, inclusive), or nil when invalid.
+    public static func chapters(_ chapters: [Chapter], from: Int, through: Int) -> TrimRange? {
+        guard from >= 0, from <= through, through < chapters.count else { return nil }
+        return TrimRange(start: chapters[from].start, end: chapters[through].end)
+    }
 }
