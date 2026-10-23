@@ -621,3 +621,4 @@
 "Chapter %lld title" = "Título do capítulo %lld";
 "Saves this video's output settings as a reusable preset." = "Salva as configurações de saída deste vídeo como um perfil reutilizável.";
 "Unknown language" = "Idioma desconhecido";
+"YYYY-MM-DD" = "AAAA-MM-DD";

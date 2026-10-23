@@ -19,7 +19,8 @@ struct ReviewFixLocalizationTests {
         "Only these tracks are kept, each with its own encoding. Quality profiles and presets set their encoder and bitrate.",
         "Chapter %lld title",
         "Saves this video's output settings as a reusable preset.",
-        "Unknown language"
+        "Unknown language",
+        "YYYY-MM-DD"
     ])
     func isTranslated(key: String) throws {
         let value = try #require(try table()[key], "missing \(key)")
