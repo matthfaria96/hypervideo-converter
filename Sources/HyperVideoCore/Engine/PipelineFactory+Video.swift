@@ -1,4 +1,26 @@
 @preconcurrency import AVFoundation
+import CoreImage
+import Synchronization
+
+/// Everything `composition` needs to build the video composition for one track.
+struct CompositionPlan {
+    let track: AVAssetTrack
+    let naturalSize: CGSize
+    let plan: GeometryPlan
+    let sourceFPS: Double?
+    let color: OutputSettingsBuilder.ColorSpace
+    let deinterlace: Bool
+    let filtered: Bool
+    let subtitles: SubtitleBurner?
+    let canvas: CIColor
+}
+
+/// Keeps a `PeakRateLimiter` usable from a `@Sendable`-agnostic sample transform.
+private final class PeakGate: @unchecked Sendable {
+    private let limiter: Mutex<PeakRateLimiter>
+    init(peak: Double) { limiter = Mutex(PeakRateLimiter(peak: peak)) }
+    func admits(_ time: Double) -> Bool { limiter.withLock { $0.admits(time) } }
+}
 
 extension PipelineFactory {
     func videoPumps() async throws -> [SamplePump] {
@@ -18,81 +40,131 @@ extension PipelineFactory {
         let (natural, transform, fps, formats) = try await track.load(
             .naturalSize, .preferredTransform, .nominalFrameRate, .formatDescriptions
         )
-        let output: AVAssetReaderOutput
-        let input: AVAssetWriterInput
-
-        if settings.videoCodec == .passthrough {
-            output = AVAssetReaderTrackOutput(track: track, outputSettings: nil)
-            input = AVAssetWriterInput(mediaType: .video, outputSettings: nil, sourceFormatHint: formats.first)
+        guard settings.videoCodec != .passthrough else {
+            let output = AVAssetReaderTrackOutput(track: track, outputSettings: nil)
+            let input = AVAssetWriterInput(mediaType: .video, outputSettings: nil, sourceFormatHint: formats.first)
             input.transform = transform
-        } else {
-            let plan = GeometryPlanner.plan(
-                naturalSize: natural, preferredTransform: transform, crop: settings.crop,
-                rotation: settings.rotation, flipHorizontal: settings.flipHorizontal,
-                maxResolution: settings.maxResolution
-            )
-            let sourceColor = formats.first.flatMap(MediaInspector.colorSpace(of:))
-            let color = OutputSettingsBuilder.outputColorSpace(for: settings.videoCodec, source: sourceColor)
-            let sourceFPS = fps > 0 ? Double(fps) : nil
-
-            let compositionOutput = AVAssetReaderVideoCompositionOutput(
-                videoTracks: [track],
-                videoSettings: [
-                    kCVPixelBufferPixelFormatTypeKey as String: OutputSettingsBuilder.readerPixelFormat(for: settings.videoCodec)
-                ]
-            )
-            let interlaced = formats.first.map(MediaInspector.isInterlaced) ?? false
-            compositionOutput.videoComposition = try await composition(
-                track: track, naturalSize: natural, plan: plan, sourceFPS: sourceFPS, color: color,
-                deinterlace: settings.filters.deinterlaces(sourceIsInterlaced: interlaced),
-                filtered: settings.filters.isActive(sourceIsInterlaced: interlaced) || subtitles != nil,
-                subtitles: subtitles
-            )
-            output = compositionOutput
-            input = AVAssetWriterInput(
-                mediaType: .video,
-                outputSettings: OutputSettingsBuilder.video(
-                    settings: settings, renderSize: plan.renderSize, sourceFrameRate: sourceFPS, color: color
-                )
-            )
+            return try attach(output: output, input: input, label: "video", reportsProgress: true)
         }
-        return try attach(output: output, input: input, label: "video", reportsProgress: true)
+        let sourceFPS = fps > 0 ? Double(fps) : nil
+        let crop = await effectiveCrop()
+        let plan = GeometryPlanner.plan(
+            naturalSize: natural, preferredTransform: transform, crop: crop,
+            rotation: settings.rotation, flipHorizontal: settings.flipHorizontal,
+            maxResolution: settings.maxResolution, picture: settings.pictureOptions,
+            sourcePixelAspect: formats.first.flatMap(Self.pixelAspect(of:)) ?? CGSize(width: 1, height: 1)
+        )
+        let sourceColor = formats.first.flatMap(MediaInspector.colorSpace(of:))
+        let color = OutputSettingsBuilder.outputColorSpace(
+            for: settings.videoCodec, source: sourceColor, target: settings.filters.colorspace
+        )
+        let output = AVAssetReaderVideoCompositionOutput(
+            videoTracks: [track],
+            videoSettings: [
+                kCVPixelBufferPixelFormatTypeKey as String: OutputSettingsBuilder.readerPixelFormat(for: settings.videoCodec)
+            ]
+        )
+        let interlaced = formats.first.map(MediaInspector.isInterlaced) ?? false
+        let padding = settings.pictureOptions.padding
+        output.videoComposition = try await composition(CompositionPlan(
+            track: track, naturalSize: natural, plan: plan, sourceFPS: sourceFPS, color: color,
+            deinterlace: settings.filters.deinterlaces(sourceIsInterlaced: interlaced),
+            filtered: settings.filters.isActive(sourceIsInterlaced: interlaced) || subtitles != nil,
+            subtitles: subtitles,
+            canvas: CIColor(red: padding.red, green: padding.green, blue: padding.blue)
+        ))
+        let dictionary = OutputSettingsBuilder.video(
+            settings: settings, renderSize: plan.renderSize, sourceFrameRate: sourceFPS, color: color,
+            pixelAspect: plan.pixelAspect
+        )
+        guard writer.canApply(outputSettings: dictionary, forMediaType: .video) else {
+            throw TranscodeError.cannotConfigure("video encoding with these encoder options in \(settings.container.displayName)")
+        }
+        let input = AVAssetWriterInput(mediaType: .video, outputSettings: dictionary)
+        let timing = Self.frameTiming(settings: settings, sourceFPS: sourceFPS)
+        return try attach(
+            output: output, input: input, label: "video", reportsProgress: true,
+            transform: timing.peak.map(Self.peakTransform(peak:))
+        )
+    }
+
+    /// Borders to remove: detected on sampled frames for automatic/conservative, else the user's crop.
+    func effectiveCrop() async -> Crop {
+        switch settings.pictureOptions.cropMode {
+        case .custom: return settings.crop
+        case .none: return .zero
+        case .automatic, .conservative:
+            let detected = try? await CropDetector.detect(
+                asset: asset, mode: settings.pictureOptions.cropMode, range: reader.timeRange, samples: 10
+            )
+            return detected?.rotated(by: settings.rotation, flipped: settings.flipHorizontal) ?? .zero
+        }
+    }
+
+    /// Output frame timing: constant retimes to `rate`; variable follows the source's own
+    /// timestamps; peak follows the source but drops frames above `peak`.
+    static func frameTiming(settings: EncodeSettings, sourceFPS: Double?) -> (followsSource: Bool, rate: Double, peak: Double?) {
+        let source = sourceFPS ?? 30
+        let chosen = settings.frameRate == .source ? nil : settings.frameRate.rawValue
+        switch settings.videoOptions.frameRateMode {
+        case .constant: return (false, chosen ?? source, nil)
+        case .variable: return (true, source, nil)
+        case .peak: return (true, source, chosen)
+        }
+    }
+
+    private static func peakTransform(peak: Double) -> SampleTransform {
+        let gate = PeakGate(peak: peak)
+        return { buffer in
+            gate.admits(CMSampleBufferGetPresentationTimeStamp(buffer).seconds) ? buffer : nil
+        }
+    }
+
+    /// The pixel aspect ratio the source declares; nil when absent or invalid.
+    static func pixelAspect(of format: CMFormatDescription) -> CGSize? {
+        let value = CMFormatDescriptionGetExtension(format, extensionKey: kCMFormatDescriptionExtension_PixelAspectRatio)
+        guard let dict = value as? [String: Any],
+              let h = dict[kCMFormatDescriptionKey_PixelAspectRatioHorizontalSpacing as String] as? NSNumber,
+              let v = dict[kCMFormatDescriptionKey_PixelAspectRatioVerticalSpacing as String] as? NSNumber,
+              h.doubleValue > 0, v.doubleValue > 0 else { return nil }
+        return CGSize(width: h.doubleValue, height: v.doubleValue)
     }
 
     /// Plain geometry uses AVFoundation's own compositor; picture filters and burned-in
     /// subtitles switch to `FilterCompositor`, which applies them and the same geometry with Core Image.
-    func composition(
-        track: AVAssetTrack, naturalSize: CGSize, plan: GeometryPlan, sourceFPS: Double?,
-        color: OutputSettingsBuilder.ColorSpace, deinterlace: Bool, filtered: Bool, subtitles: SubtitleBurner?
-    ) async throws -> AVVideoComposition {
+    func composition(_ job: CompositionPlan) async throws -> AVVideoComposition {
         let duration = try await asset.load(.duration)
-        let rate = settings.frameRate == .source ? (sourceFPS ?? 30) : settings.frameRate.rawValue
+        let timing = Self.frameTiming(settings: settings, sourceFPS: job.sourceFPS)
         let timeRange = CMTimeRange(start: .zero, duration: duration)
 
         let instruction: any AVVideoCompositionInstructionProtocol
-        if filtered {
+        if job.filtered {
             instruction = FilterInstruction(
-                timeRange: timeRange, trackID: track.trackID, sourceSize: naturalSize, plan: plan,
-                filters: settings.filters, deinterlace: deinterlace, subtitles: subtitles
+                timeRange: timeRange, trackID: job.track.trackID, sourceSize: job.naturalSize, plan: job.plan,
+                filters: settings.filters, deinterlace: job.deinterlace, subtitles: job.subtitles, canvas: job.canvas
             )
         } else {
-            let layer = AVMutableVideoCompositionLayerInstruction(assetTrack: track)
-            layer.setTransform(plan.transform, at: .zero)
+            let layer = AVMutableVideoCompositionLayerInstruction(assetTrack: job.track)
+            layer.setTransform(job.plan.transform, at: .zero)
             let plain = AVMutableVideoCompositionInstruction()
             plain.timeRange = timeRange
             plain.layerInstructions = [layer]
+            if settings.pictureOptions.padding.isActive {
+                plain.backgroundColor = CGColor(srgbRed: job.canvas.red, green: job.canvas.green, blue: job.canvas.blue, alpha: 1)
+            }
             instruction = plain
         }
         // Pre-macOS 26 mutable API (deployment target is macOS 15); same settings as the
         // macOS 26 Configuration initialiser.
         let composition = AVMutableVideoComposition()
-        composition.colorPrimaries = color.primaries
-        composition.colorTransferFunction = color.transfer
-        composition.colorYCbCrMatrix = color.matrix
-        composition.customVideoCompositorClass = filtered ? FilterCompositor.self : nil
-        composition.frameDuration = CMTime(value: 1_000, timescale: CMTimeScale((rate * 1_000).rounded()))
+        composition.colorPrimaries = job.color.primaries
+        composition.colorTransferFunction = job.color.transfer
+        composition.colorYCbCrMatrix = job.color.matrix
+        composition.customVideoCompositorClass = job.filtered ? FilterCompositor.self : nil
+        composition.frameDuration = CMTime(value: 1_000, timescale: CMTimeScale((timing.rate * 1_000).rounded()))
+        if timing.followsSource { composition.sourceTrackIDForFrameTiming = job.track.trackID }
         composition.instructions = [instruction]
-        composition.renderSize = plan.renderSize
+        composition.renderSize = job.plan.renderSize
         guard let immutable = composition.copy() as? AVVideoComposition else { return composition }
         return immutable
     }

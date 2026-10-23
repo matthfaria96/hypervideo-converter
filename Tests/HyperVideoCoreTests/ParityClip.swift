@@ -79,11 +79,15 @@ enum OutputProbe {
         let asset = AVURLAsset(url: url)
         guard let track = try await asset.loadTracks(withMediaType: type).first else { return [] }
         let reader = try AVAssetReader(asset: asset)
-        let output = AVAssetReaderTrackOutput(track: track, outputSettings: nil)
+        let settings: [String: Any]? = type == .video ? [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA] : nil
+        let output = AVAssetReaderTrackOutput(track: track, outputSettings: settings)
         reader.add(output)
         reader.startReading()
         var times: [Double] = []
-        while let sample = output.copyNextSampleBuffer() { times.append(CMSampleBufferGetPresentationTimeStamp(sample).seconds) }
+        while let sample = output.copyNextSampleBuffer() {
+            let time = CMSampleBufferGetPresentationTimeStamp(sample)
+            if time.isNumeric { times.append(time.seconds) }
+        }
         return times.sorted()
     }
 

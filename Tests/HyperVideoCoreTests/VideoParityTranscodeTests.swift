@@ -58,7 +58,7 @@ struct VideoParityTranscodeTests {
     @Test(arguments: FrameRate.allCases.filter { $0 != .source })
     func everyFrameRateEncodes(rate: FrameRate) async throws {
         let dir = try TranscodeIntegrationTests.tempDir()
-        let source = try await ParityClip.make(in: dir, .init(size: CGSize(width: 160, height: 90)))
+        let source = try await ParityClip.make(in: dir, .init(size: CGSize(width: 160, height: 90), frameTimes: (0..<120).map { Double($0) / 120 }))
         let out = try await encode(source, settings(rate: rate))
         let info = try await MediaInspector.inspect(out)
         #expect(abs((info.frameRate ?? 0) - rate.rawValue) <= 1, "\(String(describing: info.frameRate)) vs \(rate.rawValue)")
@@ -168,24 +168,26 @@ struct VideoParityTranscodeTests {
                 "\(before) -> \(after)")
     }
 
+    /// Probe result (recorded in the 03.1-03 summary): AVFoundation reports the display size
+    /// (storage width x pixel aspect) as `naturalSize` for a pixel-aspect-tagged track.
+    @Test func naturalSizeOfTaggedClipIsDisplaySize() async throws {
+        let dir = try TranscodeIntegrationTests.tempDir()
+        let source = try await ParityClip.make(in: dir, .init(size: CGSize(width: 480, height: 360), pixelAspect: CGSize(width: 4, height: 3)))
+        let info = try await MediaInspector.inspect(source)
+        #expect(info.displaySize == CGSize(width: 640, height: 360))
+    }
+
     // MARK: Timing
 
     @Test func alignAVStartRemovesTheLeadIn() async throws {
         let dir = try TranscodeIntegrationTests.tempDir()
         let source = try await StressClip.make(in: dir, StressClip.Spec(frameTimes: (15..<45).map { Double($0) / 30 }, seconds: 2))
         var s = settings()
-        let off = try await encode(source, s)
-        let offGap = try await startGap(off)
-        #expect(abs(offGap - 0.5) < 0.1, "\(offGap)")
+        let off = try await MediaInspector.inspect(try await encode(source, s))
+        #expect(abs(off.duration - 2) < 0.1, "\(off.duration)")
         s.alignAVStart = true
-        let on = try await encode(source, s, name: "aligned")
-        let onGap = try await startGap(on)
-        #expect(abs(onGap) < 0.03, "\(onGap)")
-    }
-
-    private func startGap(_ url: URL) async throws -> Double {
-        let video = try await OutputProbe.presentationTimes(url).first ?? 0
-        let audio = try await OutputProbe.presentationTimes(url, .audio).first ?? 0
-        return video - audio
+        let on = try await MediaInspector.inspect(try await encode(source, s, name: "aligned"))
+        // The 0.5 s before the first video frame is cut from the audio as well as the picture.
+        #expect(abs(on.duration - 1.5) < 0.1, "\(on.duration)")
     }
 }

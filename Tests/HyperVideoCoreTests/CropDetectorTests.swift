@@ -1,3 +1,4 @@
+@preconcurrency import AVFoundation
 import CoreMedia
 import Testing
 @testable import HyperVideoCore
@@ -68,5 +69,20 @@ struct CropDetectorTests {
         #expect(AVAlignment.start(rangeStart: zero, firstVideo: nil) == zero)
         #expect(AVAlignment.start(rangeStart: CMTime(seconds: 1, preferredTimescale: 600),
                                   firstVideo: CMTime(seconds: 0.5, preferredTimescale: 600)).seconds == 1)
+    }
+}
+
+@Suite("AV alignment")
+struct AVAlignmentSourceTests {
+    @Test func sessionStartFollowsFirstVideoFrame() async throws {
+        let dir = try TranscodeIntegrationTests.tempDir()
+        let source = try await StressClip.make(in: dir, StressClip.Spec(frameTimes: (15..<45).map { Double($0) / 30 }, seconds: 2))
+        let asset = AVURLAsset(url: source)
+        var settings = EncodeSettings()
+        let range = CMTimeRange(start: .zero, duration: try await asset.load(.duration))
+        #expect(await AVAlignment.sessionStart(asset: asset, range: range, settings: settings) == .zero)
+        settings.alignAVStart = true
+        let start = await AVAlignment.sessionStart(asset: asset, range: range, settings: settings)
+        #expect(abs(start.seconds - 0.5) < 0.02, "\(start.seconds)")
     }
 }
