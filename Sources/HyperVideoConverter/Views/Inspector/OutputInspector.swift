@@ -2,39 +2,32 @@ import HyperVideoCore
 import SwiftUI
 
 /// Compress mode's panel: shrink by a quality level or to a target size, with the
-/// result's size up front; format and fine video choices below.
+/// result's size up front; format and fine video choices below. Built from the same
+/// sections and rows as every other panel.
 struct OutputInspector: View {
     @Environment(AppModel.self) private var model
 
     private var settings: EncodeSettings { model.inspectorSettings }
+    private var edit: SettingsEdit { { change in model.editTargets(change) } }
 
     var body: some View {
         VStack(spacing: 0) {
-            header
+            PanelHeader { CompressGoalPicker() }
             Divider()
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.l) {
-                    CompressGoalPicker()
                     if model.compressTargetMB != nil {
-                        group { TargetSizeFields() }
+                        SettingsSection(title: "Target Size", symbol: "scalemass") { TargetSizeFields() }
                             .motionTransition(.content)
                     } else {
-                        qualityGroup.motionTransition(.content)
+                        qualitySection.motionTransition(.content)
                     }
                     EstimateCard(estimate: model.compressEstimate)
-
-                    group {
-                        FieldLabel(title: "Output Format", symbol: "shippingbox")
-                        FormatPicker(settings: settings) { container in model.editTargets { $0 = $0.choosing(container: container) } }
-                            .help("The file type, shown as the file's extension (.mp4, .mov…).")
-                    }
-
+                    outputSection
                     // A target size decides codec, bitrate and resolution itself.
                     if model.compressTargetMB == nil {
-                        group { VideoFields(settings: settings) { change in model.editTargets(change) } }
+                        SettingsSection(title: "Video", symbol: "film") { VideoFields(settings: settings, edit: edit) }
                     }
-                    group { InspectorToggles(settings: settings) { change in model.editTargets(change) } }
-
                     if !settings.validationIssues.isEmpty {
                         StatusBanner(messages: settings.validationIssues.map { String(localized: String.LocalizationValue($0)) })
                             .motionTransition(.pop)
@@ -48,9 +41,8 @@ struct OutputInspector: View {
         }
     }
 
-    private var qualityGroup: some View {
-        group {
-            FieldLabel(title: "Quality Profile", symbol: "dial.medium")
+    private var qualitySection: some View {
+        SettingsSection(title: "Quality Profile", symbol: "dial.medium") {
             ProfileCards(selected: model.inspectorProfile) { model.applyProfile($0) }
             if let personalized = model.inspectorPersonalizedProfile {
                 PersonalizedNote(profile: personalized) { model.applyProfile(personalized) }
@@ -60,64 +52,18 @@ struct OutputInspector: View {
         .motion(value: model.inspectorPersonalizedProfile)
     }
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: Spacing.m) {
-            HStack(alignment: .firstTextBaseline) {
-                Label("Output Settings", systemImage: "slider.horizontal.3")
-                    .font(.title3.weight(.semibold))
-                Spacer()
+    private var outputSection: some View {
+        SettingsSection(title: "Output", symbol: "shippingbox") {
+            SettingRow(title: "Format", help: "The file type, shown as the file's extension (.mp4, .mov…).") {
+                Picker("Format", selection: Binding(
+                    get: { settings.container },
+                    set: { container in model.editTargets { $0 = $0.choosing(container: container) } })) {
+                    ForEach(ContainerFormat.allCases.filter { !$0.isAudioOnly }) { Text(localizing: $0.displayName).tag($0) }
+                }
+                .labelsHidden()
+                .fixedSize()
             }
-            ScopeChip()
-        }
-        .padding(Spacing.l)
-    }
-
-    /// One card per group of fields.
-    private func group<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.m) { content() }
-            .padding(Spacing.l)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .card()
-    }
-}
-
-struct FieldLabel: View {
-    let title: LocalizedStringKey
-    var detail: LocalizedStringKey?
-    var symbol: String?
-
-    var body: some View {
-        HStack(spacing: Spacing.s) {
-            if let symbol {
-                Image(systemName: symbol)
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .symbolRenderingMode(.hierarchical)
-                    .frame(width: 18)
-            }
-            Text(title).font(.headline)
-            Spacer()
-            if let detail { Text(detail).font(.footnote).foregroundStyle(.secondary) }
-        }
-    }
-}
-
-private struct FormatPicker: View {
-    let settings: EncodeSettings
-    let choose: @MainActor @Sendable (ContainerFormat) -> Void
-
-    var body: some View {
-        MenuField(label: "Output Format", selection: settings.container, options: ContainerFormat.allCases.filter { !$0.isAudioOnly },
-                  title: Self.title, choose: choose)
-    }
-
-    static func title(_ format: ContainerFormat) -> LocalizedStringKey {
-        switch format {
-        case .mp4: "MP4 — most compatible"
-        case .mov: "MOV — Apple / editing"
-        case .mkv: "MKV — multiple tracks"
-        case .m4v: "M4V — Apple devices"
-        case .m4a: "M4A — audio only"
+            InspectorToggles(settings: settings, edit: edit)
         }
     }
 }

@@ -124,7 +124,7 @@ private struct SettingsColumn: View {
         }
         .motion(value: model.panelSource?.id)
         .motion(value: model.mode)
-        .safeAreaInset(edge: .bottom, spacing: 0) {
+        .compatBottomBar {
             SummaryBox()
                 .padding(Spacing.m + 2)
                 .compatGlass(in: .rect(cornerRadius: Radius.xl))

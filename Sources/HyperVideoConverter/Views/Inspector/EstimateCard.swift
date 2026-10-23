@@ -8,15 +8,7 @@ struct EstimateCard: View {
 
     var body: some View {
         let estimate = self.estimate ?? model.sizeEstimate
-        VStack(alignment: .leading, spacing: Spacing.s) {
-            HStack {
-                Eyebrow(text: "Size estimate")
-                Spacer()
-                Text(verbatim: kindLabel(estimate))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
+        SettingsSection(title: "Size estimate", symbol: "internaldrive") {
             HStack(alignment: .firstTextBaseline) {
                 Text(verbatim: headline(estimate))
                     .font(.title2.weight(.semibold))
@@ -33,18 +25,7 @@ struct EstimateCard: View {
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(Spacing.m)
-        .card(.raised)
         .motion(Motion.snappy, value: estimate)
-    }
-
-    private func kindLabel(_ estimate: SizeEstimate) -> String {
-        guard estimate.estimatedBytes != nil else { return "" }
-        switch estimate.kind {
-        case .exact: return String(localized: "copied as is")
-        case .upTo: return String(localized: "maximum")
-        case .approximate: return String(localized: "≈ estimate")
-        }
     }
 
     private func headline(_ estimate: SizeEstimate) -> String {

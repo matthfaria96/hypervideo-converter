@@ -1,10 +1,10 @@
 import SwiftUI
 
-/// Launch argument `-LaunchState converting|settings|preview` puts the window in that
+/// Launch argument `-LaunchState converting|settings|preview|select|targetSize` puts the window in that
 /// state once the opened videos are analysed, like `-InitialSettingsTab` and
 /// `-InitialSection` (used for screenshots).
 enum LaunchState: String {
-    case converting, settings, preview
+    case converting, settings, preview, select, targetSize
 
     static var requested: LaunchState? {
         UserDefaults.standard.string(forKey: "LaunchState").flatMap(LaunchState.init(rawValue:))
@@ -40,6 +40,8 @@ struct LaunchStateModifier: ViewModifier {
         case .converting: model.convertAll()
         case .settings: openSettings()
         case .preview: model.ui.previewSourceID = model.sources.first?.id
+        case .select: model.selectedIDs = Set(model.sources.prefix(1).map(\.id))
+        case .targetSize: model.compressTargetMB = 25
         }
     }
 }

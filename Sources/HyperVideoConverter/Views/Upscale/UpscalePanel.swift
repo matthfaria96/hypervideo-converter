@@ -29,18 +29,7 @@ struct UpscalePanel: View {
         }
     }
 
-    /// The same header as the Convert and Compress panels: title, then who it applies to.
-    private var header: some View {
-        VStack(alignment: .leading, spacing: Spacing.m) {
-            HStack(alignment: .firstTextBaseline) {
-                Label("AI Upscale", systemImage: "sparkles")
-                    .font(.title3.weight(.semibold))
-                Spacer()
-            }
-            ScopeChip()
-        }
-        .padding(Spacing.l)
-    }
+    private var header: some View { PanelHeader() }
 
     private var scaleSection: some View {
         @Bindable var model = model
@@ -50,8 +39,9 @@ struct UpscalePanel: View {
             }
             .pickerStyle(.segmented)
             .labelsHidden()
-            SwitchRow(title: "Limit to 4K", detail: "Never larger than 3840 × 2160. Bigger files are hard to play and share.",
-                      isOn: model.upscaleSettings.limitTo4K) { model.upscaleSettings.limitTo4K = $0 }
+            SettingRow(title: "Limit to 4K", help: "Never larger than 3840 × 2160. Bigger files are hard to play and share.") {
+                Toggle("Limit to 4K", isOn: $model.upscaleSettings.limitTo4K).labelsHidden().toggleStyle(.switch)
+            }
         }
     }
 

@@ -15,31 +15,19 @@ struct VideoSettingsPanel: View {
             Divider()
             content
         }
-        .environment(\.settingsLabelWidth, 132)
     }
 
+    /// The same header as every mode; the scope card shows this video.
     private var header: some View {
-        VStack(alignment: .leading, spacing: Spacing.m) {
-            HStack(spacing: Spacing.m) {
-                Thumbnail(image: source.thumbnail, symbol: "film", isLoading: source.isLoading)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(source.name).font(.headline)
-                        .lineLimit(1).truncationMode(.middle)
-                    if let info = source.info {
-                        Text(verbatim: RowFacts.meta(url: source.url, info: info))
-                            .font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                    }
-                }
-                Spacer()
-                if model.sources.count > 1 { applyToAll }
-                RowRemoveButton(help: "Back to the settings for all videos", label: String(localized: "Close")) {
-                    model.closePanel()
-                }
+        PanelHeader {
+            if model.sources.count > 1 { applyToAll }
+            RowRemoveButton(help: "Back to the settings for all videos", label: String(localized: "Close")) {
+                model.closePanel()
             }
+        } extra: {
             PresetPicker()
             SettingsTabBar()
         }
-        .padding(Spacing.l)
     }
 
     @ViewBuilder

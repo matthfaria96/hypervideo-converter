@@ -7,7 +7,7 @@ struct SettingsSection<Content: View>: View {
     @ViewBuilder var content: Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.m) {
+        VStack(alignment: .leading, spacing: Spacing.m + 2) {
             Label(title, systemImage: symbol)
                 .font(.headline)
                 .symbolRenderingMode(.hierarchical)
@@ -46,39 +46,20 @@ struct InfoChip: View {
     }
 }
 
-private struct SettingsLabelWidthKey: EnvironmentKey { static let defaultValue: CGFloat = 160 }
-
-extension EnvironmentValues {
-    /// Width of the label column of `SettingRow` (narrower in the inspector).
-    var settingsLabelWidth: CGFloat {
-        get { self[SettingsLabelWidthKey.self] }
-        set { self[SettingsLabelWidthKey.self] = newValue }
-    }
-}
-
-/// Label and control on one line, aligned on a shared label column; the help text
-/// runs under the whole row, so long hints never squeeze the label.
+/// One setting, laid out the way macOS settings are: the label on the left, the control
+/// against the right edge, the explanation under the whole row. A long label wraps beside
+/// the control; only a control too wide to share the line (a grid, a long segmented
+/// picker) goes on its own line under the label.
 struct SettingRow<Control: View>: View {
     let title: LocalizedStringKey
     var help: LocalizedStringKey?
     @ViewBuilder var control: Control
-    @Environment(\.settingsLabelWidth) private var labelWidth
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
-            // Side by side when the control fits next to the label column; otherwise
-            // the label goes above the control, so a wide control never widens its panel.
-            ViewThatFits(in: .horizontal) {
-                HStack(alignment: .firstTextBaseline, spacing: Spacing.l) {
-                    label.frame(width: labelWidth, alignment: .leading)
-                    control
-                    Spacer(minLength: 0)
-                }
-                VStack(alignment: .leading, spacing: Spacing.s) {
-                    label
-                    control
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
+            SettingRowLayout {
+                Text(title)
+                control
             }
             if let help {
                 Text(help)
@@ -88,9 +69,66 @@ struct SettingRow<Control: View>: View {
             }
         }
     }
+}
 
-    private var label: some View {
-        Text(title).fixedSize(horizontal: false, vertical: true)
+/// Places a label and a control side by side, the control at its own width against the
+/// trailing edge, or stacks them when the control leaves the label less than
+/// `minLabelWidth`.
+private struct SettingRowLayout: Layout {
+    var spacing: CGFloat = Spacing.m
+    var stackSpacing: CGFloat = Spacing.s
+    var minLabelWidth: CGFloat = 72
+
+    private struct Arrangement {
+        let label: CGSize
+        let control: CGSize
+        let sideBySide: Bool
+    }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        guard subviews.count == 2 else { return .zero }
+        let width = proposal.width ?? idealWidth(subviews)
+        let row = arrange(width: width, subviews)
+        return row.sideBySide
+            ? CGSize(width: width, height: max(row.label.height, row.control.height))
+            : CGSize(width: width, height: row.label.height + stackSpacing + row.control.height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        guard subviews.count == 2 else { return }
+        let row = arrange(width: bounds.width, subviews)
+        if row.sideBySide {
+            subviews[0].place(at: CGPoint(x: bounds.minX, y: bounds.midY), anchor: .leading,
+                              proposal: ProposedViewSize(row.label))
+            subviews[1].place(at: CGPoint(x: bounds.maxX, y: bounds.midY), anchor: .trailing,
+                              proposal: ProposedViewSize(row.control))
+        } else {
+            subviews[0].place(at: CGPoint(x: bounds.minX, y: bounds.minY), anchor: .topLeading,
+                              proposal: ProposedViewSize(row.label))
+            subviews[1].place(at: CGPoint(x: bounds.minX, y: bounds.minY + row.label.height + stackSpacing),
+                              anchor: .topLeading, proposal: ProposedViewSize(row.control))
+        }
+    }
+
+    private func idealWidth(_ subviews: Subviews) -> CGFloat {
+        subviews[0].sizeThatFits(.unspecified).width + spacing + subviews[1].sizeThatFits(.unspecified).width
+    }
+
+    /// The control first gets the width the label can spare; a control that needs more
+    /// than that moves under the label at the full width.
+    private func arrange(width: CGFloat, _ subviews: Subviews) -> Arrangement {
+        let labelIdeal = subviews[0].sizeThatFits(.unspecified).width
+        let room = width - spacing - min(labelIdeal, minLabelWidth)
+        let control = subviews[1].sizeThatFits(ProposedViewSize(width: room, height: nil))
+        if control.width <= room + 0.5 {
+            let labelWidth = max(0, width - spacing - control.width)
+            let label = subviews[0].sizeThatFits(ProposedViewSize(width: labelWidth, height: nil))
+            return Arrangement(label: CGSize(width: labelWidth, height: label.height), control: control, sideBySide: true)
+        }
+        let label = subviews[0].sizeThatFits(ProposedViewSize(width: width, height: nil))
+        let stacked = subviews[1].sizeThatFits(ProposedViewSize(width: width, height: nil))
+        return Arrangement(label: label, control: CGSize(width: min(stacked.width, width), height: stacked.height),
+                           sideBySide: false)
     }
 }
 

@@ -32,18 +32,25 @@ struct VideoFields: View {
     let edit: SettingsEdit
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.l) {
-            FieldLabel(title: "Video Codec", symbol: "film")
-            MenuField(label: "Video Codec", selection: settings.videoCodec, options: VideoCodec.allCases,
-                      title: Self.title) { codec in edit { $0 = $0.choosing(codec: codec) } }
-                .help("H.264 plays everywhere. HEVC (H.265) makes smaller files with the same look on recent devices.")
-
-            FieldLabel(title: "Resolution", detail: "Optional", symbol: "aspectratio")
-            MenuField(label: "Resolution", selection: settings.maxResolution, options: MaxResolution.allCases,
-                      title: Self.title) { value in edit { $0.maxResolution = value } }
-                .disabled(settings.videoCodec == .passthrough)
-                .help("Videos larger than this are scaled down; smaller ones are never enlarged.")
-
+        VStack(alignment: .leading, spacing: Spacing.m + 2) {
+            SettingRow(title: "Video Codec",
+                       help: "H.264 plays everywhere. HEVC (H.265) makes smaller files with the same look on recent devices.") {
+                Picker("Video Codec", selection: Binding(get: { settings.videoCodec },
+                                                          set: { codec in edit { $0 = $0.choosing(codec: codec) } })) {
+                    ForEach(VideoCodec.allCases) { Text(localizing: $0.displayName).tag($0) }
+                }
+                .labelsHidden()
+                .fixedSize()
+            }
+            SettingRow(title: "Resolution", help: "Videos larger than this are scaled down; smaller ones are never enlarged.") {
+                Picker("Resolution", selection: Binding(get: { settings.maxResolution },
+                                                         set: { value in edit { $0.maxResolution = value } })) {
+                    ForEach(MaxResolution.allCases) { Text(localizing: $0.displayName).tag($0) }
+                }
+                .labelsHidden()
+                .fixedSize()
+            }
+            .disabled(settings.videoCodec == .passthrough)
             quality
         }
     }
@@ -124,17 +131,21 @@ struct InspectorToggles: View {
     let edit: SettingsEdit
 
     var body: some View {
-        VStack(spacing: Spacing.m) {
-            SwitchRow(title: "Keep original audio", detail: "Copies the audio tracks as they are whenever possible.",
-                      isOn: settings.audioCodec == .passthrough) { on in
-                edit { settings in
-                    settings.audioCodec = on ? .passthrough : .aac
-                    if on { settings.audioTracks = .all }
-                    settings = settings.retuningAudioTracks()
-                }
+        VStack(alignment: .leading, spacing: Spacing.m + 2) {
+            SettingRow(title: "Keep original audio", help: "Copies the audio tracks as they are whenever possible.") {
+                Toggle("Keep original audio", isOn: Binding(get: { settings.audioCodec == .passthrough }, set: { on in
+                    edit { settings in
+                        settings.audioCodec = on ? .passthrough : .aac
+                        if on { settings.audioTracks = .all }
+                        settings = settings.retuningAudioTracks()
+                    }
+                }))
+                .labelsHidden().toggleStyle(.switch)
             }
-            SwitchRow(title: "Remove metadata", detail: "Drops titles, dates, location and chapters from the file.",
-                      isOn: !settings.keepMetadata) { on in edit { $0.keepMetadata = !on } }
+            SettingRow(title: "Remove metadata", help: "Drops titles, dates, location and chapters from the file.") {
+                Toggle("Remove metadata", isOn: Binding(get: { !settings.keepMetadata }, set: { on in edit { $0.keepMetadata = !on } }))
+                    .labelsHidden().toggleStyle(.switch)
+            }
         }
     }
 }

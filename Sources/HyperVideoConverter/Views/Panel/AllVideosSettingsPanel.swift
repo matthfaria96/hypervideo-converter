@@ -36,16 +36,9 @@ struct AllVideosSettingsPanel: View {
     static let perVideoTabs: Set<SettingsTab> = [.dimensions, .audio, .subtitles, .chapters]
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: Spacing.m) {
-            HStack(alignment: .firstTextBaseline) {
-                Label("Output Settings", systemImage: "slider.horizontal.3")
-                    .font(.title3.weight(.semibold))
-                Spacer()
-            }
-            ScopeChip()
+        PanelHeader {
             PresetPicker()
             SettingsTabBar()
         }
-        .padding(Spacing.l)
     }
 }

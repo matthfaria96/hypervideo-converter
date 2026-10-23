@@ -74,7 +74,7 @@ struct LocalizationTableTests {
         "%@ (personalized)", "Editing: all %lld videos", "Editing: %@", "Convert %lld Videos", "Convert 1 Video",
         "Compress %lld Videos", "1 video in the list", "%lld videos in the list", "Removes %@. Your original files aren't deleted.",
         "Unsupported format or damaged file", "Queue finished", "1 video converted", "%lld videos converted",
-        "Import “%@”", "Import %lld Folders", "≈ estimate", "up to ~%@", "Balanced Compression",
+        "Import “%@”", "Import %lld Folders", "up to ~%@", "Balanced Compression",
         "Fast 1080p30", "HQ 1080p30 Surround", "HEVC 10-bit · 2160p · 60 fps · HDR preserved", "Video List"
     ])
     func newKeysAreTranslated(key: String) throws {

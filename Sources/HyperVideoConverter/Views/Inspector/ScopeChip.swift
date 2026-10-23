@@ -5,38 +5,47 @@ import SwiftUI
 struct ScopeChip: View {
     @Environment(AppModel.self) private var model
 
+    /// One line: what the settings apply to. The longer explanation is the tooltip.
     var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.xs + 2) {
-            HStack(spacing: Spacing.s) {
-                Image(systemName: model.inspectsSelection ? "checkmark.circle.fill" : "square.stack.3d.up")
-                    .foregroundStyle(model.inspectsSelection ? AnyShapeStyle(Theme.accent) : AnyShapeStyle(.secondary))
-                    .contentTransition(.symbolEffect(.replace))
-                Text(verbatim: title)
-                    .font(.callout.weight(.medium))
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                Spacer(minLength: Spacing.xs)
-                if model.inspectsSelection {
-                    RowRemoveButton(help: "Stop editing only the selection", label: String(localized: "Deselect All")) {
-                        model.selectedIDs = []
-                    }
-                    .motionTransition(.pop)
+        HStack(spacing: Spacing.s) {
+            leading
+            Text(verbatim: title)
+                .font(.callout.weight(.medium))
+                .lineLimit(1)
+                .truncationMode(.middle)
+            Spacer(minLength: Spacing.xs)
+            if model.inspectsSelection {
+                RowRemoveButton(help: "Stop editing only the selection", label: String(localized: "Deselect All")) {
+                    model.selectedIDs = []
                 }
+                .motionTransition(.pop)
+            } else {
+                Image(systemName: "info.circle").foregroundStyle(.tertiary)
             }
-            .padding(.leading, Spacing.m)
-            .padding(.trailing, model.inspectsSelection ? Spacing.xs : Spacing.m)
-            .padding(.vertical, model.inspectsSelection ? Spacing.xs : Spacing.s)
-            .card(model.inspectsSelection ? .selected : .standard, radius: Radius.s + 2)
-            .accessibilityElement(children: .combine)
-
-            // A line limit, not fixedSize: this sits outside a scroll view, where a
-            // vertical fixedSize at zero width would demand a very tall window.
-            Text(verbatim: detail)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .lineLimit(3)
         }
+        .padding(.leading, Spacing.s)
+        .padding(.trailing, Spacing.s)
+        .frame(minHeight: 34)
+        .card(model.inspectsSelection ? .selected : .standard, radius: Radius.s + 2)
+        .help(Text(verbatim: detail))
+        .accessibilityElement(children: .combine)
         .motion(value: model.inspectsSelection)
+    }
+
+    /// The video's picture when the settings are for one video, a stack icon otherwise.
+    @ViewBuilder
+    private var leading: some View {
+        if let source = model.panelSource, model.inspectorTargetIDs.count <= 1 {
+            Thumbnail(image: source.thumbnail, symbol: "film", isLoading: source.isLoading)
+                .frame(width: 32, height: 24)
+                .scaleEffect(0.66)
+                .frame(width: 32, height: 24)
+        } else {
+            Image(systemName: model.inspectsSelection ? "checkmark.circle.fill" : "square.stack.3d.up")
+                .foregroundStyle(model.inspectsSelection ? AnyShapeStyle(Theme.accent) : AnyShapeStyle(.secondary))
+                .contentTransition(.symbolEffect(.replace))
+                .frame(width: 32)
+        }
     }
 
     private var title: String {

@@ -22,7 +22,11 @@ struct TargetSizePlan: Equatable {
 
     init(bytes: Int64, info: MediaInfo, settings base: EncodeSettings) {
         let duration = max(1, base.outputDuration(sourceDuration: info.duration))
-        let totalKbps = Double(bytes) * 8 * Self.margin / duration / 1000
+        // Compressing never makes a file bigger: the target stops at the original's size
+        // (its share of it when trimmed).
+        let original = Double(info.fileBytes) * min(1, duration / max(1, info.duration))
+        let budget = info.fileBytes > 0 ? min(Double(bytes), original) : Double(bytes)
+        let totalKbps = budget * 8 * Self.margin / duration / 1000
         let tracks = max(1, min(info.audioTracks.count, base.audioTracks == .all ? info.audioTracks.count : 1))
         let audio = info.audioTracks.isEmpty ? 0 : (totalKbps > 2_000 ? 128 : totalKbps > 600 ? 96 : 64)
         let rawVideo = Int(totalKbps) - audio * tracks

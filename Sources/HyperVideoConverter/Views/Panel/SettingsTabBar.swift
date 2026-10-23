@@ -24,9 +24,9 @@ struct SettingsTabBar: View {
     private func button(_ tab: SettingsTab) -> some View {
         let selected = tab == current
         return Button { model.ui.detailTab = tab } label: {
-            VStack(spacing: 3) {
+            VStack(spacing: 2) {
                 Image(systemName: tab.symbol)
-                    .font(.system(size: 15, weight: selected ? .semibold : .regular))
+                    .font(.system(size: 14, weight: selected ? .semibold : .regular))
                     .symbolEffect(.bounce, value: selected)
                 Text(tab.title)
                     .font(.caption.weight(selected ? .semibold : .regular))
@@ -35,7 +35,7 @@ struct SettingsTabBar: View {
             }
             .foregroundStyle(selected ? AnyShapeStyle(Color.black.opacity(0.85)) : AnyShapeStyle(.secondary))
             .frame(maxWidth: .infinity)
-            .padding(.vertical, Spacing.s - 1)
+            .padding(.vertical, Spacing.xs + 1)
             .background {
                 if selected {
                     RoundedRectangle(cornerRadius: Radius.m)

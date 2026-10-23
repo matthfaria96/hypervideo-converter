@@ -34,7 +34,6 @@ struct TargetSizeFields: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.m) {
-            FieldLabel(title: "Target Size", symbol: "scalemass")
             HStack(spacing: Spacing.s) {
                 Text("At most")
                 TextField("MB", value: mb, format: .number.precision(.fractionLength(0...1)))

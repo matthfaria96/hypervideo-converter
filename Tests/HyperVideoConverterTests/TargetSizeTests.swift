@@ -25,6 +25,13 @@ struct TargetSizeTests {
         #expect(plan.fits)
     }
 
+    @Test func targetsAboveTheOriginalNeverMakeTheFileBigger() {
+        // The original is 80 MB; asking for 200 MB plans for the original's size at most.
+        let plan = TargetSizePlan(bytes: 200_000_000, info: Self.info(), settings: EncodeSettings())
+        let total = Double(plan.videoKbps + plan.audioKbps) * 1000 * 60 / 8
+        #expect(total <= 80_000_000)
+    }
+
     @Test func smallTargetsLowerTheResolutionInsteadOfBlurring() {
         let roomy = TargetSizePlan(bytes: 60_000_000, info: Self.info(), settings: EncodeSettings())
         #expect(roomy.settings.maxResolution == .source)

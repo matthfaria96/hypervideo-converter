@@ -462,11 +462,8 @@
 "Videos larger than this are scaled down; smaller ones are never enlarged." = "Vídeos maiores que isso são reduzidos; os menores nunca são ampliados.";
 "With a fixed bitrate the file usually ends up at or below this size." = "Com taxa fixa, o arquivo costuma ficar neste tamanho ou abaixo.";
 "YouTube 1080p60" = "YouTube 1080p60";
-"copied as is" = "copiado como está";
-"maximum" = "no máximo";
 "up to ~%@" = "até ~%@";
 "≈ 2.5 Mbit/s H.264 720p, fits upload limits" = "≈ 2,5 Mbit/s H.264 720p, cabe nos limites de envio";
-"≈ estimate" = "≈ estimativa";
 "Custom Profile" = "Predefinição personalizada";
 
 /* About */
