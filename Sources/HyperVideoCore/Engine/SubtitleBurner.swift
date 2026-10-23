@@ -38,7 +38,9 @@ final class SubtitleBurner: @unchecked Sendable {
         let font = CTFontCreateWithName("Helvetica-Bold" as CFString, fontSize, nil)
         var alignment = CTTextAlignment.center
         let paragraph = withUnsafeBytes(of: &alignment) { bytes in
-            [CTParagraphStyleSetting(spec: .alignment, valueSize: MemoryLayout<CTTextAlignment>.size, value: bytes.baseAddress!)]
+            bytes.baseAddress.map {
+                [CTParagraphStyleSetting(spec: .alignment, valueSize: MemoryLayout<CTTextAlignment>.size, value: $0)]
+            } ?? []
         }.withUnsafeBufferPointer { CTParagraphStyleCreate($0.baseAddress, $0.count) }
         let base: [NSAttributedString.Key: Any] = [
             NSAttributedString.Key(kCTFontAttributeName as String): font,

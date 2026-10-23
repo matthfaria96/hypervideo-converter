@@ -45,8 +45,9 @@ enum TimedText {
             allocator: nil, memoryBlock: nil, blockLength: bytes.count, blockAllocator: nil, customBlockSource: nil,
             offsetToData: 0, dataLength: bytes.count, flags: 0, blockBufferOut: &block
         ) == noErr, let block else { return nil }
-        let copied = bytes.withUnsafeBytes {
-            CMBlockBufferReplaceDataBytes(with: $0.baseAddress!, blockBuffer: block, offsetIntoDestination: 0, dataLength: bytes.count)
+        let copied = bytes.withUnsafeBytes { buffer in
+            guard let base = buffer.baseAddress else { return kCMBlockBufferBadPointerParameterErr }
+            return CMBlockBufferReplaceDataBytes(with: base, blockBuffer: block, offsetIntoDestination: 0, dataLength: bytes.count)
         }
         guard copied == noErr else { return nil }
 

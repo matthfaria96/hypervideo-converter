@@ -12,7 +12,7 @@ public enum QualityProfile: String, CaseIterable, Identifiable, Sendable {
     /// Stable identifiers (60…63) next to the other built-in presets.
     public var presetID: UUID {
         let number = 60 + (Self.allCases.firstIndex(of: self) ?? 0)
-        return UUID(uuidString: String(format: "00000000-0000-0000-0000-%012d", number))!
+        return BuiltInPresets.stableID(number)
     }
 
     public var name: String {
@@ -85,7 +85,7 @@ public enum QualityProfile: String, CaseIterable, Identifiable, Sendable {
     /// Stable identifiers (70…73) of the Compress-mode versions.
     public var compressPresetID: UUID {
         let number = 70 + (Self.allCases.firstIndex(of: self) ?? 0)
-        return UUID(uuidString: String(format: "00000000-0000-0000-0000-%012d", number))!
+        return BuiltInPresets.stableID(number)
     }
 
     public func presetID(compress: Bool) -> UUID { compress ? compressPresetID : presetID }

@@ -30,8 +30,15 @@ public struct Preset: Codable, Hashable, Identifiable, Sendable {
 
 public enum BuiltInPresets {
     /// Stable identifiers so selections survive relaunches.
-    private static func id(_ n: Int) -> UUID {
-        UUID(uuidString: String(format: "00000000-0000-0000-0000-%012d", n))!
+    private static func id(_ n: Int) -> UUID { stableID(n) }
+
+    /// `00000000-0000-0000-0000-` followed by `n` as twelve decimal digits, built from bytes
+    /// so no string parsing (and no force unwrap) is involved.
+    static func stableID(_ n: Int) -> UUID {
+        let text = String(max(0, min(n, 999_999_999_999)))
+        let digits = (String(repeating: "0", count: 12 - text.count) + text).compactMap(\.wholeNumberValue)
+        let tail = (0..<6).map { UInt8(digits[2 * $0] << 4 | digits[2 * $0 + 1]) }
+        return UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, tail[0], tail[1], tail[2], tail[3], tail[4], tail[5]))
     }
 
     private static func make(
