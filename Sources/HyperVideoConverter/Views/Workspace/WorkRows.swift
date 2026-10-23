@@ -8,59 +8,50 @@ struct SourceRowView: View {
     let isSelected: Bool
 
     var body: some View {
-        HStack(spacing: 11) {
+        HStack(spacing: Spacing.m) {
             Thumbnail(image: source.thumbnail, symbol: source.errorMessage == nil ? "play.fill" : "exclamationmark.triangle",
                       isLoading: source.isLoading)
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: Spacing.xs) {
                 Text(source.name)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.body.weight(.medium))
                     .lineLimit(1)
                     .truncationMode(.middle)
                 meta
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             sizes
-            if source.errorMessage != nil {
-                Button("Remove") { model.removeSource(source.id) }
-                    .buttonStyle(.subtle)
-            }
-            Button {
-                model.removeSource(source.id)
-            } label: {
-                Image(systemName: "xmark").font(.system(size: 11, weight: .semibold))
-            }
-            .buttonStyle(RemoveButtonStyle())
-            .help("Remove from the list (the file stays on your Mac)")
-            .accessibilityLabel(Text("Remove \(source.name)"))
+            RowRemoveButton(help: "Remove from the list (the file stays on your Mac)",
+                            label: "Remove \(source.name)") { model.removeSource(source.id) }
         }
+        .padding(.vertical, Spacing.xs)
     }
 
     @ViewBuilder
     private var meta: some View {
         if let error = source.errorMessage {
             Text("Unsupported format or damaged file")
-                .font(.system(size: 10)).foregroundStyle(Theme.red).lineLimit(1)
+                .font(.caption).foregroundStyle(Theme.danger).lineLimit(1)
                 .help(error)
         } else if let info = source.info {
             HStack(spacing: 6) {
                 Text(verbatim: RowFacts.meta(url: source.url, info: info))
-                    .foregroundStyle(Theme.muted)
+                    .foregroundStyle(.secondary)
                     .lineLimit(1)
                 if !source.settings.isValid {
-                    Text("Check settings").foregroundStyle(Theme.accent)
+                    Text("Check settings").foregroundStyle(Theme.warning)
                 }
             }
-            .font(.system(size: 10))
+            .font(.caption)
         } else {
-            Text("Analyzing…").font(.system(size: 10)).foregroundStyle(Theme.muted)
+            Text("Analyzing…").font(.caption).foregroundStyle(.secondary)
         }
     }
 
     @ViewBuilder
     private var sizes: some View {
         if let info = source.info {
-            VStack(alignment: .trailing, spacing: 4) {
-                Text(Format.bytes(info.fileBytes)).font(.system(size: 11)).foregroundStyle(Color(hex: 0xDDDDDD))
+            VStack(alignment: .trailing, spacing: Spacing.xs) {
+                Text(Format.bytes(info.fileBytes)).font(.callout).monospacedDigit()
                 Group {
                     if let estimate = OutputEstimate.prediction(info: info, settings: source.settings) {
                         Text(verbatim: String(localized: "\(SizeEstimate.label(bytes: estimate.bytes, kind: estimate.kind)) output"))
@@ -69,11 +60,13 @@ struct SourceRowView: View {
                         Text(verbatim: model.presetName(for: source))
                     }
                 }
-                .font(.system(size: 10))
-                .foregroundStyle(Theme.muted)
+                .font(.caption)
+                .foregroundStyle(.secondary)
                 .lineLimit(1)
+                .contentTransition(.numericText())
             }
             .fixedSize()
+            .motion(Motion.snappy, value: source.settings)
         }
     }
 }
@@ -84,42 +77,40 @@ struct JobRowView: View {
     let job: EncodeJob
 
     var body: some View {
-        HStack(spacing: 11) {
+        HStack(spacing: Spacing.m) {
             Thumbnail(image: model.ui.thumbnails[job.source], symbol: "clock", isLoading: false)
-            VStack(alignment: .leading, spacing: 5) {
+            VStack(alignment: .leading, spacing: Spacing.xs) {
                 Text(job.source.lastPathComponent)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.body.weight(.medium))
                     .lineLimit(1)
                     .truncationMode(.middle)
                 Text(verbatim: "\(model.presetName(for: job)) → \(job.destination.lastPathComponent)")
-                    .font(.system(size: 10))
-                    .foregroundStyle(Theme.muted)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .truncationMode(.middle)
                 if job.state.isRunning {
                     JobProgressBar(progress: model.queue.progress(for: job.id))
+                        .motionTransition(.opacity)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             status.fixedSize()
-            Button {
+            RowRemoveButton(help: "Cancel this conversion", label: "Cancel \(job.source.lastPathComponent)") {
                 model.queue.cancel(job.id)
-            } label: {
-                Image(systemName: "xmark").font(.system(size: 11, weight: .semibold))
             }
-            .buttonStyle(RemoveButtonStyle())
-            .help("Cancel this conversion")
-            .accessibilityLabel(Text("Cancel \(job.source.lastPathComponent)"))
         }
+        .padding(.vertical, Spacing.xs)
+        .motion(value: job.state.isRunning)
     }
 
     @ViewBuilder
     private var status: some View {
-        VStack(alignment: .trailing, spacing: 4) {
+        VStack(alignment: .trailing, spacing: Spacing.xs) {
             if job.state.isRunning {
                 JobProgressStatus(job: job, progress: model.queue.progress(for: job.id))
             } else {
-                Text("Waiting").font(.system(size: 11)).foregroundStyle(Theme.muted)
+                Text("Waiting").font(.callout).foregroundStyle(.secondary)
             }
         }
         .monospacedDigit()
@@ -134,8 +125,8 @@ private struct JobProgressBar: View {
     var body: some View {
         ProgressView(value: progress.fraction)
             .progressViewStyle(.linear)
-            .tint(Theme.accent)
             .controlSize(.small)
+            .motion(Motion.snappy, value: progress.fraction)
     }
 }
 
@@ -147,11 +138,13 @@ private struct JobProgressStatus: View {
 
     var body: some View {
         Text(progress.fraction, format: .percent.precision(.fractionLength(0)))
-            .font(.system(size: 11, weight: .semibold))
-            .foregroundStyle(Theme.accentLight)
+            .font(.callout.weight(.semibold))
+            .foregroundStyle(Theme.accent)
+            .contentTransition(.numericText())
+            .motion(Motion.snappy, value: progress.fraction)
         Text(verbatim: rate)
-            .font(.system(size: 10))
-            .foregroundStyle(Theme.muted)
+            .font(.caption)
+            .foregroundStyle(.secondary)
     }
 
     private var rate: String {
@@ -163,39 +156,52 @@ private struct JobProgressStatus: View {
     }
 }
 
-/// The small picture at the start of a row.
+/// The small picture at the start of a row; the real frame fades in over the placeholder.
 struct Thumbnail: View {
     let image: NSImage?
     let symbol: String
     let isLoading: Bool
 
     var body: some View {
-        Group {
+        ZStack {
+            LinearGradient(colors: [Color(hex: 0x3B5765), Color(hex: 0x16232D)],
+                           startPoint: .topLeading, endPoint: .bottomTrailing)
+            Image(systemName: isLoading ? "rays" : symbol)
+                .font(.system(size: 13))
+                .foregroundStyle(Color(hex: 0xC7E7F7))
+                .symbolEffect(.rotate, isActive: isLoading)
             if let image {
                 Image(nsImage: image).resizable().aspectRatio(contentMode: .fill)
-            } else {
-                LinearGradient(colors: [Color(hex: 0x3B5765), Color(hex: 0x16232D)],
-                               startPoint: .topLeading, endPoint: .bottomTrailing)
-                    .overlay {
-                        Image(systemName: isLoading ? "rays" : symbol)
-                            .font(.system(size: 13))
-                            .foregroundStyle(Color(hex: 0xC7E7F7))
-                            .symbolEffect(.rotate, isActive: isLoading)
-                    }
+                    .motionTransition(.opacity)
             }
         }
-        .frame(width: 46, height: 34)
-        .clipShape(.rect(cornerRadius: 6))
+        .frame(width: 48, height: 36)
+        .clipShape(.rect(cornerRadius: Radius.s))
+        .motion(Motion.quick, value: image != nil)
     }
 }
 
-struct RemoveButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .foregroundStyle(configuration.isPressed ? Theme.red : Color(hex: 0xA6A6AD))
-            .frame(width: 28, height: 28)
-            .background(Color.white.opacity(configuration.isPressed ? 0.12 : 0.05), in: .circle)
-            .contentShape(.rect)
+/// The quiet ✕ at the end of a row: tertiary until hovered, red while pressed.
+struct RowRemoveButton: View {
+    let help: LocalizedStringKey
+    let label: String
+    let action: () -> Void
+    @State private var hovered = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "xmark.circle.fill")
+                .font(.body)
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(hovered ? AnyShapeStyle(.primary) : AnyShapeStyle(.tertiary))
+                .frame(width: 24, height: 24)
+                .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .onHover { hovered = $0 }
+        .motion(Motion.quick, value: hovered)
+        .help(help)
+        .accessibilityLabel(Text(verbatim: label))
     }
 }
 

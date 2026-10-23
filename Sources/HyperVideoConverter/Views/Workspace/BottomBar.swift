@@ -1,58 +1,73 @@
 import SwiftUI
 
-/// Destination folder, run progress and the Convert / Stop buttons.
+/// Destination folder, run progress and the Convert / Stop buttons, on the window's
+/// bar material.
 struct BottomBar: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
         let progress = model.progress
-        VStack(spacing: 12) {
-            if progress.isActive || model.queue.isProcessing && progress.total > 0 {
-                ProgressRow(progress: progress)
+        let showsProgress = progress.isActive || model.queue.isProcessing && progress.total > 0
+        VStack(spacing: Spacing.m) {
+            if showsProgress {
+                ProgressRow(progress: progress).motionTransition(.banner)
             }
-            HStack(spacing: 12) {
+            HStack(spacing: Spacing.m) {
                 destination
-                Spacer(minLength: 8)
+                Spacer(minLength: Spacing.s)
+                // With an empty list the page itself says to add videos.
+                if let reason = model.convertBlockedReason, !model.sources.isEmpty {
+                    Text(verbatim: reason)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.trailing)
+                        .layoutPriority(1)
+                        .motionTransition(.opacity)
+                }
                 if model.queue.runningCount > 0 || model.queue.isProcessing {
                     Button {
                         model.queue.cancelAll()
                     } label: {
                         Label("Stop", systemImage: "stop.fill")
                     }
-                    .buttonStyle(.subtle)
+                    .compatGlassButtonStyle()
                     .help("Cancel every running and waiting conversion")
+                    .motionTransition(.pop)
                 }
                 convertButton
             }
         }
+        .padding(.horizontal, Spacing.xl)
+        .padding(.vertical, Spacing.m)
+        .motion(value: showsProgress)
+        .motion(value: model.convertBlockedReason)
+        .motion(value: model.queue.isProcessing)
+        .overlay(alignment: .top) { Divider() }
+        .compatBarBackground()
     }
 
+    /// "Save to  [📁 Movies ▾]": a pop-up with the folder's name, like a save panel's.
     private var destination: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text("Save to").font(.system(size: 11, weight: .semibold)).foregroundStyle(Color(hex: 0xDDDDDD))
-            HStack(spacing: 4) {
-                Button {
-                    NSWorkspace.shared.open(model.destinationFolder)
-                } label: {
-                    Text(verbatim: abbreviated(model.destinationFolder))
-                        .underline(color: Theme.muted.opacity(0.5))
+        HStack(spacing: Spacing.s) {
+            Text("Save to").foregroundStyle(.secondary).fixedSize()
+            Menu {
+                Button("Change Folder…", systemImage: "folder.badge.gearshape") { model.chooseDestination() }
+                Button("Show in Finder", systemImage: "folder") { NSWorkspace.shared.open(model.destinationFolder) }
+            } label: {
+                Label {
+                    Text(verbatim: model.destinationFolder.lastPathComponent)
                         .lineLimit(1)
-                        .truncationMode(.head)
-                        .frame(minHeight: 22)
-                        .contentShape(.rect)
+                        .truncationMode(.middle)
+                        .frame(maxWidth: 200)
+                } icon: {
+                    Image(systemName: "folder")
                 }
-                .buttonStyle(.plain)
-                .foregroundStyle(Theme.muted)
-                .help("Open \(model.destinationFolder.path) in Finder")
-                Text(verbatim: "·").foregroundStyle(Theme.muted)
-                Button("Change") { model.chooseDestination() }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(Color(hex: 0xE8B54B))
-                    .frame(minHeight: 22)
-                    .contentShape(.rect)
-                    .help("Choose where converted videos are saved")
             }
-            .font(.system(size: 10))
+            .menuStyle(.button)
+            .compatGlassButtonStyle()
+            .fixedSize()
+            .help(model.destinationFolder.path)
         }
     }
 
@@ -61,32 +76,26 @@ struct BottomBar: View {
         let ready = model.readySourceCount
         let working = model.queue.runningCount > 0
         let reason = model.convertBlockedReason
-        HStack(spacing: 10) {
-            if let reason {
-                Text(verbatim: reason).font(.system(size: 11)).foregroundStyle(Theme.muted)
-            }
-            Button {
-                model.convertAll()
-            } label: {
-                HStack(spacing: 7) {
-                    if working && ready == 0 {
-                        Text("Processing…")
-                    } else {
-                        Text(verbatim: model.convertButtonTitle)
-                        Image(systemName: "arrow.right")
-                    }
+        Button {
+            model.convertAll()
+        } label: {
+            HStack(spacing: Spacing.s) {
+                if working && ready == 0 {
+                    Text("Processing…")
+                } else {
+                    Text(verbatim: model.convertButtonTitle).contentTransition(.numericText())
+                    Image(systemName: "arrow.right")
                 }
-                .frame(minWidth: 140)
             }
-            .buttonStyle(.primary)
-            .disabled(reason != nil || (working && ready == 0))
-            .keyboardShortcut(.return, modifiers: .command)
-            .help(reason.map { Text(verbatim: $0) } ?? Text("Queue every ready video and start (⌘↩)"))
+            .fontWeight(.semibold)
+            .frame(minWidth: 150)
         }
-    }
-
-    private func abbreviated(_ url: URL) -> String {
-        Format.path(url)
+        .compatGlassProminentButtonStyle()
+        .controlSize(.large)
+        .disabled(reason != nil || (working && ready == 0))
+        .keyboardShortcut(.return, modifiers: .command)
+        .help(reason.map { Text(verbatim: $0) } ?? Text("Queue every ready video and start (⌘↩)"))
+        .motion(Motion.snappy, value: model.convertButtonTitle)
     }
 }
 
@@ -94,18 +103,20 @@ private struct ProgressRow: View {
     let progress: QueueProgress
 
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: Spacing.xs) {
             ProgressView(value: progress.fraction)
                 .progressViewStyle(.linear)
-                .tint(Theme.accent)
+                .motion(Motion.snappy, value: progress.fraction)
             HStack {
                 Text("File \(progress.current) of \(progress.total)")
                 Spacer()
                 Text(progress.fraction, format: .percent.precision(.fractionLength(0)))
+                    .contentTransition(.numericText())
             }
-            .font(.system(size: 10))
-            .foregroundStyle(Theme.muted)
+            .font(.caption)
+            .foregroundStyle(.secondary)
             .monospacedDigit()
+            .motion(Motion.snappy, value: progress.fraction)
         }
     }
 }

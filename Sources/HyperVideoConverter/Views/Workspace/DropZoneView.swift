@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// The dashed drop target. Drops land anywhere in the window; this shows where
-/// and lights up while a drag hovers. It shrinks to a strip once the list has items.
+/// The drop target. Drops land anywhere in the window; this shows where and lights
+/// up while a drag hovers. The full version fills the empty page; the compact strip
+/// sits above the list once it has items.
 struct DropZoneView: View {
     @Environment(AppModel.self) private var model
     let compact: Bool
@@ -13,62 +14,62 @@ struct DropZoneView: View {
             if compact { strip } else { full }
         }
         .frame(maxWidth: .infinity)
-        .background(background, in: .rect(cornerRadius: 14))
+        .background(fill, in: .rect(cornerRadius: Radius.l))
         .overlay {
-            RoundedRectangle(cornerRadius: 14)
-                .strokeBorder(targeted ? Theme.accent : Color(hex: 0x595960), style: StrokeStyle(lineWidth: 1, dash: [5, 4]))
+            RoundedRectangle(cornerRadius: Radius.l)
+                .strokeBorder(targeted ? AnyShapeStyle(Theme.accent) : AnyShapeStyle(.separator),
+                              style: StrokeStyle(lineWidth: 1, dash: [6, 5]))
         }
-        .animation(.smooth(duration: 0.2), value: targeted)
-        .animation(.smooth(duration: 0.25), value: compact)
+        .scaleEffect(targeted ? 1.01 : 1)
+        .motion(Motion.quick, value: targeted)
+        .motion(value: compact)
     }
 
-    private var background: AnyShapeStyle {
-        if targeted { return AnyShapeStyle(Color(hex: 0x342B1B)) }
-        return AnyShapeStyle(EllipticalGradient(colors: [Color(hex: 0x292621), Theme.panel], center: .center,
-                                                startRadiusFraction: 0, endRadiusFraction: 0.7))
+    private var fill: AnyShapeStyle {
+        targeted ? AnyShapeStyle(Theme.accent.opacity(0.1)) : AnyShapeStyle(.fill.quaternary)
     }
 
     private var full: some View {
-        VStack(spacing: 0) {
-            icon(size: 43, font: 22).padding(.bottom, 12)
-            Text("Add your videos").font(.system(size: 15, weight: .semibold)).padding(.bottom, 6)
+        VStack(spacing: Spacing.s) {
+            icon(size: 64, font: 28).padding(.bottom, Spacing.s)
+            Text("Add your videos").font(.title3.weight(.semibold))
             Text("Drag files or folders here, or choose them on your Mac.")
-                .font(.system(size: 12))
-                .foregroundStyle(Theme.muted)
-                .padding(.bottom, 13)
-            chooseButton
+                .foregroundStyle(.secondary)
+                .padding(.bottom, Spacing.s)
+            chooseButton.controlSize(.large)
             Text("MP4, MOV, M4V, MKV and other formats macOS can read")
-                .font(.system(size: 10))
-                .foregroundStyle(Theme.faint)
-                .padding(.top, 9)
+                .font(.footnote)
+                .foregroundStyle(.tertiary)
+                .padding(.top, Spacing.xs)
         }
         .multilineTextAlignment(.center)
-        .padding(24)
-        .frame(minHeight: 170)
+        .padding(Spacing.xxl)
+        .frame(minHeight: 260)
     }
 
     private var strip: some View {
-        HStack(spacing: 12) {
-            icon(size: 30, font: 15)
+        HStack(spacing: Spacing.m) {
+            icon(size: 28, font: 13)
             VStack(alignment: .leading, spacing: 2) {
-                Text("Add more videos").font(.system(size: 12, weight: .semibold))
+                Text("Add more videos").font(.callout.weight(.medium))
                 Text("Drop files or folders anywhere in the window.")
-                    .font(.system(size: 11))
-                    .foregroundStyle(Theme.muted)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
-            Spacer(minLength: 8)
-            chooseButton
+            Spacer(minLength: Spacing.s)
+            chooseButton.controlSize(.small)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.horizontal, Spacing.l)
+        .padding(.vertical, Spacing.m)
     }
 
     private func icon(size: CGFloat, font: CGFloat) -> some View {
-        Image(systemName: "plus")
+        Image(systemName: "arrow.down.document.fill")
             .font(.system(size: font, weight: .medium))
-            .foregroundStyle(Color(hex: 0xFFBF49))
+            .foregroundStyle(Theme.accent)
+            .symbolEffect(.bounce, value: targeted)
             .frame(width: size, height: size)
-            .background(Color(hex: 0x39332A), in: .rect(cornerRadius: size * 0.3))
+            .background(Theme.accent.opacity(0.14), in: .rect(cornerRadius: size * 0.28))
     }
 
     private var chooseButton: some View {
@@ -77,6 +78,6 @@ struct DropZoneView: View {
         } label: {
             Label("Choose Videos…", systemImage: "plus")
         }
-        .buttonStyle(.primary)
+        .compatGlassProminentButtonStyle()
     }
 }

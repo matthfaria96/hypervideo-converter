@@ -7,32 +7,26 @@ struct FinishedBanner: View {
     let folder: URL
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: Spacing.m) {
             Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 18))
-                .foregroundStyle(Theme.green)
+                .font(.title2)
+                .foregroundStyle(Theme.success)
+                .symbolEffect(.bounce, value: count)
             VStack(alignment: .leading, spacing: 2) {
                 Text(verbatim: count == 1 ? String(localized: "1 video ready") : String(localized: "\(count) videos ready"))
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.body.weight(.semibold))
                 Text(verbatim: String(localized: "Saved in \(Format.path(folder))"))
-                    .font(.system(size: 11))
-                    .foregroundStyle(Theme.muted)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .truncationMode(.head)
             }
-            Spacer(minLength: 8)
+            Spacer(minLength: Spacing.s)
             Button("Open Folder", systemImage: "folder") { NSWorkspace.shared.open(folder) }
-                .buttonStyle(.subtle)
-            Button {
-                model.dismissFinishedBatch()
-            } label: {
-                Image(systemName: "xmark").font(.system(size: 10, weight: .semibold))
-            }
-            .buttonStyle(RemoveButtonStyle())
-            .help("Dismiss")
-            .accessibilityLabel(Text("Dismiss"))
+                .compatGlassButtonStyle()
+            RowRemoveButton(help: "Dismiss", label: String(localized: "Dismiss")) { model.dismissFinishedBatch() }
         }
-        .padding(12)
-        .card(fill: Color(hex: 0x1F2A22), radius: 11, stroke: Color(hex: 0x2F5A3C))
+        .padding(Spacing.m)
+        .card(.raised, radius: Radius.l)
     }
 }
