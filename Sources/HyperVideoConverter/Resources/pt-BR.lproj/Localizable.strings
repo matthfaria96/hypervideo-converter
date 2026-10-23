@@ -725,3 +725,15 @@
 "Manage Presets…" = "Gerenciar predefinições…";
 "Choose a preset for these videos" = "Escolha uma predefinição para estes vídeos";
 "Saves these output settings as a reusable preset." = "Salva estas configurações de saída como uma predefinição reutilizável.";
+
+/* Compress to a target size */
+"By Quality" = "Por qualidade";
+"By Size" = "Por tamanho";
+"Target Size" = "Tamanho-alvo";
+"At most" = "No máximo";
+"MB per video" = "MB por vídeo";
+"E-mail" = "E-mail";
+"%lld video(s) can't get this small; they'll come out as small as possible." = "%lld vídeo(s) não cabem nesse tamanho; vão sair o menor possível.";
+"To stay sharp at this size, %lld video(s) get a smaller resolution." = "Para continuar nítido nesse tamanho, %lld vídeo(s) terão uma resolução menor.";
+"The audio becomes AAC and the video HEVC, at the bitrate that fills the target." = "O áudio vira AAC e o vídeo HEVC, com a taxa de bits que preenche o tamanho-alvo.";
+"%lld MB" = "%lld MB";

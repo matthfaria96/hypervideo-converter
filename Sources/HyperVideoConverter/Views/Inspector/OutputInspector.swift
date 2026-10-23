@@ -1,9 +1,8 @@
 import HyperVideoCore
 import SwiftUI
 
-/// "Output settings": the everyday choices, applied to the selected videos or to all of them.
-/// A fixed header (title, scope, the way into every setting) over the scrolling fields,
-/// laid out like the single-video panel so switching between them doesn't jump.
+/// Compress mode's panel: shrink by a quality level or to a target size, with the
+/// result's size up front; format and fine video choices below.
 struct OutputInspector: View {
     @Environment(AppModel.self) private var model
 
@@ -15,24 +14,25 @@ struct OutputInspector: View {
             Divider()
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.l) {
+                    CompressGoalPicker()
+                    if model.compressTargetMB != nil {
+                        group { TargetSizeFields() }
+                            .motionTransition(.content)
+                    } else {
+                        qualityGroup.motionTransition(.content)
+                    }
+                    EstimateCard(estimate: model.compressEstimate)
+
                     group {
                         FieldLabel(title: "Output Format", symbol: "shippingbox")
                         FormatPicker(settings: settings) { container in model.editTargets { $0 = $0.choosing(container: container) } }
                             .help("The file type, shown as the file's extension (.mp4, .mov…).")
                     }
 
-                    group {
-                        FieldLabel(title: "Quality Profile", symbol: "dial.medium")
-                        ProfileCards(selected: model.inspectorProfile) { model.applyProfile($0) }
-                        if let personalized = model.inspectorPersonalizedProfile {
-                            PersonalizedNote(profile: personalized) { model.applyProfile(personalized) }
-                                .motionTransition(.pop)
-                        }
-                        EstimateCard()
+                    // A target size decides codec, bitrate and resolution itself.
+                    if model.compressTargetMB == nil {
+                        group { VideoFields(settings: settings) { change in model.editTargets(change) } }
                     }
-                    .motion(value: model.inspectorPersonalizedProfile)
-
-                    group { VideoFields(settings: settings) { change in model.editTargets(change) } }
                     group { InspectorToggles(settings: settings) { change in model.editTargets(change) } }
 
                     if !settings.validationIssues.isEmpty {
@@ -42,9 +42,22 @@ struct OutputInspector: View {
                 }
                 .padding(Spacing.l)
                 .motion(value: settings.validationIssues)
+                .motion(value: model.compressTargetMB == nil)
             }
             .compatSoftScrollEdges()
         }
+    }
+
+    private var qualityGroup: some View {
+        group {
+            FieldLabel(title: "Quality Profile", symbol: "dial.medium")
+            ProfileCards(selected: model.inspectorProfile) { model.applyProfile($0) }
+            if let personalized = model.inspectorPersonalizedProfile {
+                PersonalizedNote(profile: personalized) { model.applyProfile(personalized) }
+                    .motionTransition(.pop)
+            }
+        }
+        .motion(value: model.inspectorPersonalizedProfile)
     }
 
     private var header: some View {

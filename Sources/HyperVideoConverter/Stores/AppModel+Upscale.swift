@@ -56,8 +56,9 @@ extension AppModel {
     }
 
     /// A video's settings as queued: in AI Upscale mode they carry the upscale choices
-    /// and go to MP4 or MOV.
+    /// and go to MP4 or MOV; in Compress mode with a target size, the target's bitrate.
     func jobSettings(for item: SourceItem) -> EncodeSettings {
+        if let plan = targetPlan(for: item) { return plan.settings }
         guard mode == .upscale else { return item.settings }
         var settings = item.settings
         settings.upscale = upscaleSettings

@@ -30,6 +30,8 @@ final class UIState {
     var batchStartedAt: Date?
     /// When the last run started; History marks its results "New" even after the banner is dismissed.
     var lastRunStartedAt: Date?
+    /// Compress mode's target, in MB per video (stored by AppModel).
+    var compressTargetMB: Double?
     /// A run finished since History was last opened (the footer's badge turns green).
     var hasUnseenResults = false
     /// Confirmations of destructive actions.

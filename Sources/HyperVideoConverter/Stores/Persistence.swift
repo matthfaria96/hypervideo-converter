@@ -52,4 +52,5 @@ enum PreferenceKey {
     static let defaultPresetID = "defaultPresetID"
     static let autoStartQueue = "autoStartQueue"
     static let upscaleSettings = "upscaleSettings"
+    static let compressTargetMB = "compressTargetMB"
 }

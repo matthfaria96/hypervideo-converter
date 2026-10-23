@@ -45,7 +45,7 @@ enum WorkMode: Hashable {
 final class AppModel {
     let presets: PresetStore
     let queue: QueueStore
-    private let defaults: UserDefaults
+    let defaults: UserDefaults
     let ui = UIState()
 
     private(set) var sources: [SourceItem] = []
@@ -84,6 +84,7 @@ final class AppModel {
         queue = QueueStore(directory: directory, defaults: defaults, notifier: notifier, saveDelay: saveDelay,
                            resolvesInBackground: resolvesInBackground)
         self.defaults = defaults
+        ui.compressTargetMB = defaults.object(forKey: PreferenceKey.compressTargetMB) as? Double
         upscaleSettings = defaults.data(forKey: PreferenceKey.upscaleSettings)
             .flatMap { try? JSONDecoder().decode(UpscaleSettings.self, from: $0) } ?? UpscaleSettings()
         let saved = defaults.string(forKey: PreferenceKey.destinationPath)
