@@ -78,7 +78,13 @@ struct JobRowView: View {
     var body: some View {
         HStack(spacing: Spacing.m) {
             Thumbnail(image: model.ui.thumbnails[job.source], symbol: "clock", isLoading: false,
-                      duration: job.mediaDuration, size: .large)
+                      duration: job.state.isRunning ? nil : job.mediaDuration, size: .large)
+                .overlay {
+                    if job.state.isRunning {
+                        ThumbnailProgress(progress: model.queue.progress(for: job.id))
+                            .motionTransition(.opacity)
+                    }
+                }
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 Text(job.source.lastPathComponent)
                     .font(.body.weight(.medium))
@@ -200,6 +206,34 @@ struct Thumbnail: View {
         .overlay { RoundedRectangle(cornerRadius: Radius.s).strokeBorder(.separator.opacity(0.5), lineWidth: 0.5) }
         .shadow(color: .black.opacity(0.15), radius: 2, y: 1)
         .motion(Motion.quick, value: image != nil)
+    }
+}
+
+/// A running job's progress drawn over its thumbnail: the picture dims and a ring
+/// fills around the percentage, like a download in Finder.
+private struct ThumbnailProgress: View {
+    let progress: JobProgress
+
+    var body: some View {
+        ZStack {
+            Rectangle().fill(.black.opacity(0.45))
+            Circle()
+                .stroke(.white.opacity(0.25), lineWidth: 3)
+                .frame(width: 26, height: 26)
+            Circle()
+                .trim(from: 0, to: max(0.02, progress.fraction))
+                .stroke(Theme.accent, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+                .frame(width: 26, height: 26)
+                .motion(Motion.snappy, value: progress.fraction)
+            Text(progress.fraction, format: .percent.precision(.fractionLength(0)))
+                .font(.system(size: 8, weight: .bold))
+                .monospacedDigit()
+                .foregroundStyle(.white)
+                .contentTransition(.numericText())
+        }
+        .clipShape(.rect(cornerRadius: Radius.s))
+        .accessibilityHidden(true)
     }
 }
 

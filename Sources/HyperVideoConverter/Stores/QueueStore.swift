@@ -22,9 +22,12 @@ final class QueueStore {
     @ObservationIgnored private var tasks: [UUID: Task<Void, Never>] = [:]
     /// Running jobs the user removed; they leave the list once their encode stops.
     @ObservationIgnored private var pendingRemoval: Set<UUID> = []
-    @ObservationIgnored private var startTimes: [UUID: Date] = [:]
+    /// Observed, so the rate line refreshes once a job's start time is known.
+    private var startTimes: [UUID: Date] = [:]
     /// Progress of the running jobs, outside `jobs` so ticks don't redraw the whole list.
-    @ObservationIgnored private var progressBoxes: [UUID: JobProgress] = [:]
+    /// The dictionary itself is observed (it only changes when a job starts or stops), so a
+    /// view that read a job's progress before its box existed picks up the real box.
+    private var progressBoxes: [UUID: JobProgress] = [:]
     @ObservationIgnored private let engine = TranscodeEngine()
     @ObservationIgnored private let saver: CoalescingSaver<[EncodeJob]>
     @ObservationIgnored private let defaults: UserDefaults

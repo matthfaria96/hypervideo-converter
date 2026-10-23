@@ -36,6 +36,8 @@ struct AudioBehaviorSection: View {
                     }
                 }
                 .fixedSize()
+                // Lines the row's label up with the first row of checkboxes, not the last.
+                .alignmentGuide(.firstTextBaseline) { $0[.top] + 12 }
             }
             SettingRow(title: "Passthru fallback") {
                 Picker("Passthru fallback", selection: $settings.audioOptions.fallback) {

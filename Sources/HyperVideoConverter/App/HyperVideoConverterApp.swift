@@ -25,7 +25,6 @@ struct HyperVideoConverterApp: App {
             ContentView()
                 .environment(model)
                 .frame(minWidth: 1000, minHeight: 640)
-                .tint(Theme.accent)
                 .onAppear { appDelegate.model = model }
                 .modifier(WindowOpener(delegate: appDelegate))
         }

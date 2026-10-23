@@ -61,6 +61,26 @@ struct SidebarNavigationTests {
     }
 }
 
+@Suite("Launch state")
+@MainActor
+struct LaunchStateTests {
+    @Test func settingsNeedNoVideoOthersNeedAnAnalysedOne() throws {
+        let model = try TestEnvironment().makeModel()
+        #expect(LaunchState.isReady(.settings, model: model))
+        #expect(!LaunchState.isReady(.advanced, model: model))
+        model.setSources([WorkspaceTests.source("a.mov")])
+        #expect(LaunchState.isReady(.advanced, model: model) && LaunchState.isReady(.converting, model: model))
+    }
+
+    @Test func parsesTheLaunchArgument() {
+        UserDefaults.standard.set("converting", forKey: "LaunchState")
+        #expect(LaunchState.requested == .converting)
+        UserDefaults.standard.set("nope", forKey: "LaunchState")
+        #expect(LaunchState.requested == nil)
+        UserDefaults.standard.removeObject(forKey: "LaunchState")
+    }
+}
+
 @Suite("Row facts")
 struct RowFactsTests {
     @Test func tagsAreContainerCodecAndSizeWithoutTheDuration() {

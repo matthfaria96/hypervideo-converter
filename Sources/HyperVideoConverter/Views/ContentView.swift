@@ -25,6 +25,7 @@ struct ContentView: View {
                 .toolbar { WindowToolbar() }
         }
         .navigationSplitViewStyle(.balanced)
+        .modifier(LaunchStateModifier())
         .fileImporter(isPresented: $model.isImporting, allowedContentTypes: [.audiovisualContent, .folder],
                       allowsMultipleSelection: true) { result in
             if case .success(let urls) = result { Task { await model.addSources(urls) } }

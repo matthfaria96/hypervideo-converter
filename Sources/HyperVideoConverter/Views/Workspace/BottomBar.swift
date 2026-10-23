@@ -32,6 +32,7 @@ struct BottomBar: View {
                         Label("Stop", systemImage: "stop.fill")
                     }
                     .compatGlassButtonStyle()
+                    .fixedSize()
                     .help("Cancel every running and waiting conversion")
                     .motionTransition(.pop)
                 }
@@ -88,7 +89,8 @@ struct BottomBar: View {
                 }
             }
             .fontWeight(.semibold)
-            .frame(minWidth: 150)
+            .frame(minWidth: 130)
+            .fixedSize()
         }
         .compatGlassProminentButtonStyle()
         .controlSize(.large)
