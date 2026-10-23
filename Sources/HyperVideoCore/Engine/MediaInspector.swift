@@ -84,9 +84,23 @@ public enum MediaInspector {
         for (track, kind) in try await subtitleTracks(in: asset) {
             let (formats, language, code) = try await track.load(.formatDescriptions, .extendedLanguageTag, .languageCode)
             let format = formats.first.map { FourCC.string(CMFormatDescriptionGetMediaSubType($0)) } ?? "Text"
-            infos.append(SubtitleTrackInfo(id: Int(track.trackID), kind: kind, format: format, language: language ?? code))
+            infos.append(SubtitleTrackInfo(
+                id: Int(track.trackID), kind: kind, format: format, language: language ?? code,
+                name: await TrackNames.name(of: track),
+                forcedOnly: await isForcedOnly(track: track, format: formats.first)))
         }
         return infos
+    }
+
+    /// True when the track is flagged as holding only forced subtitles.
+    static func isForcedOnly(track: AVAssetTrack, format: CMFormatDescription?) async -> Bool {
+        if let characteristics = try? await track.load(.mediaCharacteristics),
+           characteristics.contains(.containsOnlyForcedSubtitles) {
+            return true
+        }
+        guard let format else { return false }
+        let flags = CMFormatDescriptionGetExtension(format, extensionKey: kCMTextFormatDescriptionExtension_DisplayFlags)
+        return ((flags as? NSNumber)?.uint32Value ?? 0) & UInt32(kCMTextDisplayFlag_allSubtitlesForced) != 0
     }
 
     public static func colorSpace(of format: CMFormatDescription) -> OutputSettingsBuilder.ColorSpace? {
@@ -127,7 +141,8 @@ public enum MediaInspector {
             }
         }
         return AudioTrackInfo(id: Int(track.trackID), codec: codec, channels: channels,
-                              sampleRate: sampleRate, language: language, bitrate: rate > 0 ? Double(rate) : nil)
+                              sampleRate: sampleRate, language: language, bitrate: rate > 0 ? Double(rate) : nil,
+                              name: await TrackNames.name(of: track))
     }
 
     private static func fileSize(_ url: URL) -> Int64 {
