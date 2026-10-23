@@ -78,6 +78,20 @@ struct ParityMergingTests {
         #expect(result.chapterOptions.markers == false && result.tags.director == "Mine" && result.alignAVStart)
     }
 
+    @Test func adoptingADefaultTemplateKeepsEveryEncoderOption() {
+        var video = EncodeSettings()
+        video.videoOptions.frameRateMode = .peak
+        video.videoOptions.speed = .speed
+        video.videoOptions.profile = .high
+        video.videoOptions.level = .l42
+        // Every field must differ from its default, so a new field can't be missed here.
+        let fields = zip(Mirror(reflecting: video.videoOptions).children, Mirror(reflecting: VideoEncoderOptions()).children)
+        for (set, standard) in fields {
+            #expect("\(set.value)" != "\(standard.value)", "set \(set.label ?? "?") in this test")
+        }
+        #expect(video.adopting(EncodeSettings()).videoOptions == video.videoOptions)
+    }
+
     @Test func copyingAllKeepsPerVideoData() {
         let video = Self.perVideo()
         var template = Self.generic()

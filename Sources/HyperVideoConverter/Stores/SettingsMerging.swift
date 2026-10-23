@@ -80,6 +80,7 @@ extension EncodeSettings {
         if video.frameRateMode == defaults.videoOptions.frameRateMode {
             settings.videoOptions.frameRateMode = current.videoOptions.frameRateMode
         }
+        if video.speed == defaults.videoOptions.speed { settings.videoOptions.speed = current.videoOptions.speed }
         if video.profile == defaults.videoOptions.profile { settings.videoOptions.profile = current.videoOptions.profile }
         if video.level == defaults.videoOptions.level { settings.videoOptions.level = current.videoOptions.level }
         keepGeneric(from: current, template: template, defaults: defaults, into: &settings)
