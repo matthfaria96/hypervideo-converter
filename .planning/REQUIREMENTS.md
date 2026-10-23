@@ -23,11 +23,11 @@
 - [ ] **CMP-03**: Built binary has no unguarded macOS 26/27-only symbols; app launches and converts a video in the macOS 15 VM
 
 ### HandBrake parity (HBP)
-- [ ] **HBP-01**: Inventory of HandBrake.app settings vs the app (REA, UI strings, presets) in .planning/phases/03.1-*/HANDBRAKE-PARITY.md
-- [ ] **HBP-02**: All per-video settings visible inline in the new layout, organized like HandBrake's tabs, in the new dark theme
-- [ ] **HBP-03**: Missing feasible video/dimension/filter settings implemented (e.g. framerate mode, encoder preset/profile/level, anamorphic/padding, extra filters supported by Core Image)
-- [ ] **HBP-04**: Missing feasible audio/subtitle/chapter/tag settings implemented (per-track audio list with encoder/mixdown/samplerate/bitrate/gain, subtitle forced/default flags, editable chapter names, metadata tags)
-- [ ] **HBP-05**: HandBrake preset import maps the newly supported keys
+- [x] **HBP-01**: Inventory of HandBrake.app settings vs the app (REA, UI strings, presets) in .planning/phases/03.1-*/HANDBRAKE-PARITY.md
+- [x] **HBP-02**: All per-video settings visible inline in the new layout, organized like HandBrake's tabs, in the new dark theme
+- [x] **HBP-03**: Missing feasible video/dimension/filter settings implemented (e.g. framerate mode, encoder preset/profile/level, anamorphic/padding, extra filters supported by Core Image)
+- [x] **HBP-04**: Missing feasible audio/subtitle/chapter/tag settings implemented (per-track audio list with encoder/mixdown/samplerate/bitrate/gain, subtitle forced/default flags, editable chapter names, metadata tags)
+- [x] **HBP-05**: HandBrake preset import maps the newly supported keys
 
 ### Release (REL)
 - [ ] **REL-01**: README and site say macOS 15+; version bumped

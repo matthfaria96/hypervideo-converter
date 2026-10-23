@@ -4,6 +4,7 @@
 - [x] **Phase 1: Engine robustness** — no crashes, no failed final moves, no leaked threads, disk-space check (completed 2026-10-20)
 - [x] **Phase 2: Queue & responsiveness** — correct remove/sweep, nothing blocking the main thread
 - [ ] **Phase 3: macOS 15 support** — deployment target 15.0 with compat helpers, verified in VM
+- [x] **Phase 03.1: HandBrake parity in the new layout** (INSERTED) — every feasible HandBrake setting inline in the new window (completed 2026-10-23; human UAT pending in 03.1-HUMAN-UAT.md)
 - [ ] **Phase 4: Release** — docs, DMG, GitHub release, site link
 
 ## Phase Details
@@ -90,4 +91,5 @@ Plans:
 | 1 | 0/0 | Not started |
 | 2 | 0/0 | Not started |
 | 3 | 0/0 | Not started |
+| 03.1 | 14/14 | Complete (2026-10-23, human UAT pending) |
 | 4 | 0/0 | Not started |
