@@ -8,11 +8,18 @@ let package = Package(
     products: [
         .executable(name: "HyperVideoConverter", targets: ["HyperVideoConverter"])
     ],
+    dependencies: [
+        // In-app updates (MIT), like the other witchmymac apps.
+        .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.10.0")
+    ],
     targets: [
         .target(name: "HyperVideoCore"),
         .executableTarget(
             name: "HyperVideoConverter",
-            dependencies: ["HyperVideoCore"],
+            dependencies: [
+                "HyperVideoCore",
+                .product(name: "Sparkle", package: "Sparkle")
+            ],
             resources: [.process("Resources")]
         ),
         .testTarget(

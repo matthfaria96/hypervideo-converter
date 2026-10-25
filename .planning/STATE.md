@@ -5,7 +5,7 @@ milestone_name: milestone
 status: completed
 stopped_at: Initialization complete
 last_updated: "2026-10-23T12:35:15.781Z"
-last_activity: 2026-10-24 — Release 1.0.0 prepared on master (panel pass, icon, universal build, READMEs, tag v1.0.0)
+last_activity: 2026-10-25 — Release 1.0.1: in-app updates (Sparkle 2), tag v1.0.1
 progress:
   total_phases: 7
   completed_phases: 3
@@ -48,6 +48,15 @@ Progress: [█████░░░░░] 50%
 
 - Phase 3 (macOS 15): plans 03-01/03-02 done, 03-03 (VM verification) and VERIFICATION still open
 - Phase 03.1: human UAT pending (03.1-HUMAN-UAT.md); not feasible / deferred HandBrake items are listed in HANDBRAKE-PARITY.md
+
+## Release 1.0.1 (2026-10-25)
+
+- In-app updates with Sparkle 2.10 (SwiftPM): `Updates/AppUpdater.swift`, "Check for Updates…" in the app menu and
+  in Settings → About; feed `https://witchmymac.com/appcast/hypervideo.xml`, SU* keys in `Resources/Info.plist`.
+  Test copies with another bundle id only check with `HYPERVIDEO_UPDATES=1`.
+- `Scripts/build-app.sh` embeds `Sparkle.framework` in Contents/Frameworks (+ rpath) and its MIT licence.
+- Released as v1.0.1 (DMG `HyperVideo-1.0.1.dmg`, signed with sign-app.sh); 1.0.0 release removed. Appcast item handed
+  to the site coordinator. Users on 1.0.0 install 1.0.1 by hand once.
 
 ## Session Continuity
 

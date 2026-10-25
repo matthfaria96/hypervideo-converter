@@ -44,6 +44,10 @@ struct AboutView: View {
                         .font(.system(size: 12))
                 }
                 .padding(.top, 10)
+
+                CheckForUpdatesButton()
+                    .controlSize(.small)
+                    .padding(.top, 14)
             }
             .frame(maxWidth: .infinity)
             .padding(.top, 36)
@@ -89,6 +93,15 @@ struct OpenSourceLicensesView: View {
     Real-ESRGAN: Copyright (c) 2021, Xintao Wang, BSD 3-Clause License.
     """
 
+    /// In-app updates (Contents/Frameworks/Sparkle.framework).
+    private static let sparkle = """
+    In-app updates use Sparkle (sparkle-project.org). \
+    Copyright (c) 2006-2013 Andy Matuschak; Copyright (c) 2009-2013 Elgato Systems GmbH; \
+    Copyright (c) 2011-2014 Kornel Lesiński; Copyright (c) 2015-2017 Mayur Pawashe; \
+    Copyright (c) 2014 C.W. Betts; Copyright (c) 2014 Petroules Corporation; \
+    Copyright (c) 2014 Big Nerd Ranch. MIT License.
+    """
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
@@ -126,6 +139,17 @@ struct OpenSourceLicensesView: View {
                             .foregroundStyle(.secondary)
                         Text("AI Upscale runs Upscayl as a separate program. Its licence is in the app (Contents/Resources/Licenses) and its source code is at github.com/upscayl/upscayl-ncnn.")
                             .font(.system(size: 11.5))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(verbatim: "Sparkle")
+                            .font(.system(size: 13, weight: .semibold))
+                        Text(verbatim: "MIT License")
+                            .font(.system(size: 11.5))
+                            .foregroundStyle(.secondary)
+                        Text(verbatim: Self.sparkle)
+                            .font(.system(size: 11.5))
+                            .textSelection(.enabled)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     VStack(alignment: .leading, spacing: 6) {

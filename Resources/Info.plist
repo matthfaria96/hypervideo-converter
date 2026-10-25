@@ -23,6 +23,11 @@
 	<key>NSAccentColorName</key><string>AccentColor</string>
 	<key>NSHighResolutionCapable</key><true/>
 	<key>NSPrincipalClass</key><string>NSApplication</string>
+	<key>SUFeedURL</key><string>https://witchmymac.com/appcast/hypervideo.xml</string>
+	<key>SUPublicEDKey</key><string>yhoDaYLDki5BV0c44pefouDhxbliuGqLKxXKXXK1Pb0=</string>
+	<key>SUEnableAutomaticChecks</key><true/>
+	<key>SUScheduledCheckInterval</key><integer>86400</integer>
+	<key>SUAutomaticallyUpdate</key><false/>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>

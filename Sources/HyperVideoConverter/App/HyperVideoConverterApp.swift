@@ -126,6 +126,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Start watching for logout/shutdown before any quit can arrive.
         MainActor.assumeIsolated { _ = sessionEnd }
+        // In-app updates (Sparkle): daily check and the Check for Updates… item.
+        MainActor.assumeIsolated { AppUpdater.shared.start() }
         // Needed when launched as a bare SwiftPM executable rather than an .app bundle. A bundled app
         // is activated by the system when the user opens it, and stays behind on `open -g`.
         guard Bundle.main.bundleIdentifier == nil else { return }
@@ -138,6 +140,9 @@ struct AppCommands: Commands {
     let model: AppModel
 
     var body: some Commands {
+        CommandGroup(after: .appInfo) {
+            CheckForUpdatesButton()
+        }
         CommandGroup(replacing: .newItem) {
             Button("Choose Videos…") {
                 model.section = .conversion

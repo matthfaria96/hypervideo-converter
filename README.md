@@ -97,6 +97,7 @@ HyperVideo Converter is free software under the [GNU General Public License v3.0
 
 Third-party components shipped in the app (texts in `Contents/Resources/Licenses/` and in Settings → About → Open-source licenses):
 
+- **Sparkle** ([sparkle-project/Sparkle](https://github.com/sparkle-project/Sparkle)): MIT. In-app updates (HyperVideo Converter → Check for Updates…).
 - **Upscayl engine** (`upscayl-bin`, from [upscayl-ncnn](https://github.com/upscayl/upscayl-ncnn)): GNU AGPL v3.0. It runs as a separate program that the app starts; its source code is at the link above. It builds on [Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN) (Copyright (c) 2021, Xintao Wang, BSD 3-Clause) and Tencent's ncnn (BSD 3-Clause).
 - **AI models:** Upscayl Standard, Upscayl Lite and Digital Art from the [Upscayl](https://github.com/upscayl/upscayl) project (AGPL v3.0); High Fidelity is [4xHFA2k](https://openmodeldb.info/models/4x-HFA2k) by Helaman (Philip Hofmann), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Models whose licenses forbid commercial use (Remacri, UltraSharp, Ultramix) are not included.
 

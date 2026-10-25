@@ -55,6 +55,13 @@ if [[ -n "$SDK_VERSION" && -n "$MIN_FOR_STAMP" ]]; then
     -output "$APP/Contents/MacOS/$EXE" "$APP/Contents/MacOS/$EXE"
 fi
 
+# Sparkle (in-app updates, MIT): SwiftPM links it as a framework next to the executable.
+mkdir -p "$APP/Contents/Frameworks"
+[[ -d "$BIN_DIR/Sparkle.framework" ]] || fail "Sparkle.framework was not built"
+cp -R "$BIN_DIR/Sparkle.framework" "$APP/Contents/Frameworks/"
+otool -l "$APP/Contents/MacOS/$EXE" | grep -q "@executable_path/../Frameworks" \
+  || install_name_tool -add_rpath "@executable_path/../Frameworks" "$APP/Contents/MacOS/$EXE"
+
 PLIST="$APP/Contents/Info.plist"
 cp Resources/Info.plist "$PLIST"
 PB=/usr/libexec/PlistBuddy
@@ -97,6 +104,7 @@ mkdir -p "$APP/Contents/Resources/Upscayl" "$APP/Contents/Resources/Licenses"
 cp -R Vendor/Upscayl/models "$APP/Contents/Resources/Upscayl/models"
 cp Vendor/Upscayl/LICENSE-AGPL-3.0.txt "$APP/Contents/Resources/Licenses/upscayl-LICENSE-AGPL-3.0.txt"
 cp Resources/THIRD-PARTY-NOTICES.txt "$APP/Contents/Resources/Licenses/THIRD-PARTY-NOTICES.txt"
+[[ -f .build/checkouts/Sparkle/LICENSE ]] && cp .build/checkouts/Sparkle/LICENSE "$APP/Contents/Resources/Licenses/Sparkle-LICENSE-MIT.txt"
 
 if [[ -n "$SIGN_IDENTITY" ]]; then
   codesign --force --options runtime --timestamp --sign "$SIGN_IDENTITY" "$APP/Contents/MacOS/upscayl-bin"

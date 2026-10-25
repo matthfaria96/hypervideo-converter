@@ -7,6 +7,15 @@ Copyright (C) 2026 Matheus Faria. Source code: https://github.com/matthfaria96/h
 Video encoding and decoding use Apple's own frameworks (AVFoundation, VideoToolbox, Core Image).
 No FFmpeg code is included.
 
+In-app updates
+--------------
+Sparkle 2 (Contents/Frameworks/Sparkle.framework), https://sparkle-project.org ,
+https://github.com/sparkle-project/Sparkle . License: MIT.
+Copyright (c) 2006-2013 Andy Matuschak, Copyright (c) 2009-2013 Elgato Systems GmbH,
+Copyright (c) 2011-2014 Kornel Lesiński, Copyright (c) 2015-2017 Mayur Pawashe,
+Copyright (c) 2014 C.W. Betts, Copyright (c) 2014 Petroules Corporation,
+Copyright (c) 2014 Big Nerd Ranch. All rights reserved.
+
 AI Upscale engine
 -----------------
 upscayl-bin (Contents/MacOS/upscayl-bin), from Upscayl's upscayl-ncnn, release 20251207-174704.
