@@ -5,7 +5,7 @@ milestone_name: milestone
 status: completed
 stopped_at: Initialization complete
 last_updated: "2026-10-23T12:35:15.781Z"
-last_activity: 2026-10-23 — Settings panel standardised (one header, one row layout, safe-area bar) — e61429d
+last_activity: 2026-10-24 — Release 1.0.0 prepared on master (panel pass, icon, universal build, READMEs, tag v1.0.0)
 progress:
   total_phases: 7
   completed_phases: 3
@@ -24,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-10-19)
 
 ## Current Position
 
-Phase: 4 (Release) is next; Phase 3 still needs its 03-03 VM verification
-Plan: Not started
-Status: Phase 03.1.2 (premium native design) complete, 322 + 199 tests green; 03.1-HUMAN-UAT.md still has 6 manual checks; phase 3 VM check pending
-Last activity: 2026-10-23 — Settings panel standardised (one header, one row layout, safe-area bar) — e61429d
+Phase: 4 (Release) done — 1.0.0 tagged locally (v1.0.0) on master, DMG HyperVideo-1.0.0 in ~/Documents/witchmymac-release/dist; the coordinator pushes and publishes
+Plan: see .planning/phases/04-release/04-SUMMARY.md
+Status: 340 + 241 tests green; universal app, min macOS 15.0 (never run on macOS 15); 03.1-HUMAN-UAT.md still has manual checks
+Last activity: 2026-10-24 — Release 1.0.0 prepared on master (panel pass, icon, universal build, READMEs)
 
 Progress: [█████░░░░░] 50%
 

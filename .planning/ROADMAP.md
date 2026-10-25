@@ -5,7 +5,7 @@
 - [x] **Phase 2: Queue & responsiveness** — correct remove/sweep, nothing blocking the main thread
 - [ ] **Phase 3: macOS 15 support** — deployment target 15.0 with compat helpers, verified in VM
 - [x] **Phase 03.1: HandBrake parity in the new layout** (INSERTED) — every feasible HandBrake setting inline in the new window (completed 2026-10-23; human UAT pending in 03.1-HUMAN-UAT.md)
-- [ ] **Phase 4: Release** — docs, DMG, GitHub release, site link
+- [x] **Phase 4: Release** — docs, DMG, GitHub release, site link (1.0.0 built 2026-10-24; publishing by the site coordinator)
 
 ## Phase Details
 
