@@ -74,7 +74,7 @@ CAR="${CAR[1]:-}"
 [[ -n "$CAR" && -f "$CAR" ]] || fail "Assets.car was not built from Sources/HyperVideoConverter/Resources/Colors.xcassets"
 cp "$CAR" "$APP/Contents/Resources/Assets.car"
 
-if [[ ! -f "$WORK/AppIcon.icns" || Resources/AppIcon.png -nt "$WORK/AppIcon.icns" ]]; then
+if [[ ! -f "$WORK/AppIcon.icns" || Resources/AppIcon.png -nt "$WORK/AppIcon.icns" || Scripts/make-icon.swift -nt "$WORK/AppIcon.icns" ]]; then
   ICONSET="$WORK/AppIcon.iconset"
   rm -rf "$ICONSET"; mkdir -p "$ICONSET"
   swift Scripts/make-icon.swift "$WORK/icon-1024.png" $( [[ -f Resources/AppIcon.png ]] && echo Resources/AppIcon.png )

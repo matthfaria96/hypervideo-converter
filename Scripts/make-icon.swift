@@ -1,36 +1,80 @@
-// Renders the 1024px app icon. With a source image, fits it into the standard
-// macOS icon squircle (824px with 100px margins) and adds a soft drop shadow.
+// Renders the 1024 px app icon on Apple's icon grid, the same way as the sibling app HyperImage:
+// the artwork masked into an 824 px continuous-corner squircle (superellipse n = 5) centred on the
+// 1024 px canvas, a soft drop shadow, and a thin glass highlight on the rim.
+// Usage: swift Scripts/make-icon.swift <output.png> [source.png]
+// Without a source it draws a placeholder gradient.
 import AppKit
 
 let args = CommandLine.arguments
+guard args.count >= 2 else {
+    FileHandle.standardError.write(Data("usage: make-icon.swift <output.png> [source.png]\n".utf8))
+    exit(1)
+}
 let output = args[1]
-let source = args.count > 2 ? NSImage(contentsOfFile: args[2]) : nil
-
-let image = NSImage(size: NSSize(width: 1024, height: 1024), flipped: false) { rect in
-    let tile = rect.insetBy(dx: 100, dy: 100)
-    let shape = NSBezierPath(roundedRect: tile, xRadius: 185, yRadius: 185)
-
-    NSGraphicsContext.saveGraphicsState()
-    let shadow = NSShadow()
-    shadow.shadowColor = .black.withAlphaComponent(0.35)
-    shadow.shadowBlurRadius = 24
-    shadow.shadowOffset = NSSize(width: 0, height: -10)
-    shadow.set()
-    NSColor.black.setFill()
-    shape.fill()
-    NSGraphicsContext.restoreGraphicsState()
-
-    NSGraphicsContext.saveGraphicsState()
-    shape.addClip()
-    if let source {
-        source.draw(in: tile, from: .zero, operation: .sourceOver, fraction: 1)
-    } else {
-        NSGradient(colors: [.systemIndigo, .systemPink, .systemOrange])!.draw(in: shape, angle: -55)
-    }
-    NSGraphicsContext.restoreGraphicsState()
-    return true
+let source = args.count > 2
+    ? NSImage(contentsOfFile: args[2])?.cgImage(forProposedRect: nil, context: nil, hints: nil)
+    : nil
+if args.count > 2 && source == nil {
+    FileHandle.standardError.write(Data("could not read \(args[2])\n".utf8))
+    exit(1)
 }
 
-guard let tiff = image.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff),
-      let png = rep.representation(using: .png, properties: [:]) else { exit(1) }
+/// Continuous-corner squircle (superellipse n = 5), the corner profile of Apple's icons.
+func squircle(in rect: CGRect, exponent n: CGFloat = 5, steps: Int = 1440) -> CGPath {
+    let path = CGMutablePath()
+    let a = rect.width / 2, b = rect.height / 2
+    for i in 0...steps {
+        let t = CGFloat(i) / CGFloat(steps) * 2 * .pi
+        let c = cos(t), s = sin(t)
+        let point = CGPoint(x: rect.midX + pow(abs(c), 2 / n) * a * (c < 0 ? -1 : 1),
+                            y: rect.midY + pow(abs(s), 2 / n) * b * (s < 0 ? -1 : 1))
+        i == 0 ? path.move(to: point) : path.addLine(to: point)
+    }
+    path.closeSubpath()
+    return path
+}
+
+let canvas = 1024
+let body = CGRect(x: 100, y: 100, width: 824, height: 824)
+let shape = squircle(in: body)
+let sRGB = CGColorSpace(name: CGColorSpace.sRGB)!
+guard let ctx = CGContext(data: nil, width: canvas, height: canvas, bitsPerComponent: 8, bytesPerRow: 0,
+                          space: sRGB, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { exit(1) }
+
+ctx.saveGState()
+ctx.setShadow(offset: CGSize(width: 0, height: -10), blur: 24, color: CGColor(gray: 0, alpha: 0.35))
+ctx.addPath(shape)
+ctx.setFillColor(CGColor(gray: 0.1, alpha: 1))
+ctx.fillPath()
+ctx.restoreGState()
+
+ctx.saveGState()
+ctx.addPath(shape)
+ctx.clip()
+ctx.interpolationQuality = .high
+if let source {
+    ctx.draw(source, in: body)
+} else {
+    let placeholder = CGGradient(colorsSpace: sRGB, colors: [
+        CGColor(red: 1, green: 0.71, blue: 0.18, alpha: 1), CGColor(red: 0.85, green: 0.3, blue: 0.1, alpha: 1),
+    ] as CFArray, locations: [0, 1])!
+    ctx.drawLinearGradient(placeholder, start: CGPoint(x: body.minX, y: body.maxY),
+                           end: CGPoint(x: body.maxX, y: body.minY), options: [])
+}
+ctx.restoreGState()
+
+// Thin glass reflection on the rim, strongest at the top.
+ctx.saveGState()
+ctx.addPath(squircle(in: body.insetBy(dx: 4, dy: 4)))
+ctx.setLineWidth(3)
+ctx.replacePathWithStrokedPath()
+ctx.clip()
+let rim = CGGradient(colorsSpace: sRGB, colors: [
+    CGColor(gray: 1, alpha: 0.35), CGColor(gray: 1, alpha: 0.04), CGColor(gray: 1, alpha: 0.10),
+] as CFArray, locations: [0, 0.55, 1])!
+ctx.drawLinearGradient(rim, start: CGPoint(x: body.midX, y: body.maxY), end: CGPoint(x: body.midX, y: body.minY), options: [])
+ctx.restoreGState()
+
+guard let out = ctx.makeImage(),
+      let png = NSBitmapImageRep(cgImage: out).representation(using: .png, properties: [:]) else { exit(1) }
 try png.write(to: URL(fileURLWithPath: output))
