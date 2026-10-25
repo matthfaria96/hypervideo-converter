@@ -1,33 +1,59 @@
+English · [Português](README.pt-BR.md)
+
 # HyperVideo Converter
 
-A native macOS video converter in the spirit of HandBrake, written from scratch in Swift and SwiftUI. It encodes with Apple's own media frameworks (AVFoundation and VideoToolbox), so H.264, HEVC and ProRes run on the Mac's hardware encoders. The interface is in English and Brazilian Portuguese (it follows the Mac's language).
+A native macOS video converter in the spirit of HandBrake, written from scratch in Swift and SwiftUI. It encodes with Apple's own media frameworks (AVFoundation and VideoToolbox), so H.264, HEVC and ProRes run on the Mac's hardware encoders. It also compresses videos to a target size and enlarges them with AI (Real-ESRGAN, through Upscayl). Everything runs on the Mac; nothing is uploaded.
 
-Requires macOS 26 or later.
+The interface is in English and Brazilian Portuguese (it follows the Mac's language).
 
-## Interface
+**Requirements:** macOS 15 Sequoia or later, on Apple silicon or Intel (universal app). The Liquid Glass look needs macOS 26 or later.
 
-One dark window with three columns:
+## Install
 
-- **Sidebar.** *Library*: Conversion (the workspace), History (finished, failed and cancelled conversions, with Show in Finder, Open, Retry and Remove) and Favorites (every preset: apply, make default, save the current settings, rename, delete, import from HyperVideo or HandBrake, export). *Tools*: Compress (the workspace in Compress mode) and Analyze Video (streams, tracks, chapters and file details of a video). The sidebar collapses to icons (⌃⌘S).
-- **Workspace.** A Convert | Compress switch, a drop zone (files or whole folders, or Choose Videos…) that shrinks to a strip once videos are added, and the conversion list: thumbnail, container, codec, resolution and duration, original size and, when the settings make it predictable, the estimated output size. Waiting and running jobs follow in the same list with their progress. Click selects a row (⌘-click adds), drag reorders, right-click offers Advanced Settings, Analyze, Move to Top/Up/Down, Show in Finder, Remove, Edit Settings (puts a waiting job back on the list) and Cancel. The bottom bar shows the destination folder (Change…), Convert Videos (⌘↩: queues every ready video and starts), Stop, and while running a progress bar with “File X of N” and the overall percentage. Finished jobs move to History.
-- **Output settings.** They apply to the selected videos, or to every video when none is selected (the panel says which); with an empty list they become the settings of the next videos added. Output format (MP4, MOV, MKV, M4V), four quality profiles (Balanced, High Quality, Smaller File, Keep Original — built-in presets), video codec, maximum resolution, a constant-quality slider, switches for Keep resolution and frame rate, Keep original audio (passthrough) and Remove metadata, and a size estimate that only shows numbers the settings make predictable (bitrate or passthrough), with the saving in percent. Choosing ProRes switches to MOV; choosing another format with ProRes switches to HEVC.
-- **Advanced Settings** (⌘E) opens every detailed setting of one video: summary with chapters and before → after, video and filters (codec, frame rate, deinterlace, denoise, sharpen, grayscale, quality or bitrate, speed, B-frames, keyframes), size and crop (maximum resolution, rotate, flip, crop), audio (codec, tracks, mixdown, bitrate, extra version), subtitles (tracks, burn-in, added SRT/WebVTT files) and trim with a preview player.
-- **Compress** switches the targets to MP4, the Balanced profile with HEVC.
+1. **Terminal, one line (recommended).**
+
+   ```bash
+   curl -fsSL https://witchmymac.com/install.sh | bash -s hypervideo
+   ```
+
+   It downloads the latest release from GitHub, checks its SHA-256, installs the app in Applications and opens it. There is no Gatekeeper prompt, because files downloaded by `curl` aren't quarantined. Running it again updates the app.
+
+2. **Download the DMG** from [Releases](https://github.com/matthfaria96/hypervideo-converter/releases) or [witchmymac.com](https://witchmymac.com), open it and drag **HyperVideo Converter** to Applications. The app isn't notarized by Apple, so allow it once in Terminal:
+
+   ```bash
+   xattr -dr com.apple.quarantine "/Applications/HyperVideo Converter.app"
+   ```
+
+   This only removes the "downloaded from the internet" mark from the app.
+
+3. **Download the DMG** and allow it in System Settings instead: open the app, click **OK** on the warning, then go to **System Settings → Privacy & Security** and click **Open Anyway**.
+
+## Three modes
+
+The toolbar switches between three modes (⌘1, ⌘2, ⌘3). The video list sits on the left, the settings panel on the right, and the Convert bar is docked at the foot of the panel: destination folder, a status line (progress, what's ready and the size before → after) and the Preview, Convert and Stop buttons.
+
+- **Convert.** HandBrake's eight tabs, inline in the panel: Summary, Dimensions, Filters, Video, Audio, Subtitles, Chapters and Tags. They edit the selected video, or every video at once (trim, crop, track lists, chapter names and the title stay per video). A Preset picker at the top holds the quality profiles, the built-in presets and your own.
+- **Compress.** The everyday choices only. **By quality** uses a quality profile; **By size** keeps every video under a target ("at most 25 MB per video", with Discord, WhatsApp and e-mail shortcuts): the HEVC bitrate fills the target after the audio, and the resolution steps down when the picture would get too few bits.
+- **AI Upscale.** Enlarges videos 2×, 3× or 4× with Real-ESRGAN models on the Mac's GPU, with an optional 4K limit. A Result preview shows the new resolution, the file size (with the growth in percent) and the expected time before anything starts. File weight (Light, Balanced, High quality) and the codec keep the output from getting too heavy. The audio is copied as is.
+
+**Preview** renders a real two-second clip (a few frames for AI Upscale) with a draggable before/after divider and the size projected from the clip, before you commit to the whole batch.
+
+Under the list, the status footer opens **History** (finished, failed and cancelled conversions with Show in Finder, Open, Retry and Remove) and **Presets** (apply, make default, save, rename, delete, import from HyperVideo or HandBrake, export). Right-click a video for **Analyze** (streams, tracks, chapters and file details), Add to Queue, Show in Finder and Remove.
 
 ## Features
 
 - **Video:** H.264, HEVC, HEVC 10-bit (keeps HDR10 and HLG sources in HDR), Apple ProRes 422 / 422 HQ / 4444, or passthrough without re-encoding.
+- **Output:** MP4, M4V, MOV, MKV, or audio only (M4A).
 - **Quality:** constant quality or average bitrate, speed priority, B-frames and keyframe interval.
-- **Picture:** crop, rotate, flip, downscale to a maximum resolution (never upscales; portrait video stays portrait) and frame rate conversion.
-- **Filters:** deinterlacing (automatic for sources tagged as interlaced), denoise, sharpen and grayscale. They run on the GPU through Core Image.
-- **Audio:** AAC with mono, stereo or 5.1 mixdown, Apple Lossless, passthrough or no audio. Keeps the first track or all of them, with their language tags.
-- **Subtitles:** text subtitles and closed captions are copied with their language: none, the first track, or all of them. SRT and WebVTT files are added too: automatically when they sit next to the video and share its name (`Movie.srt`, `Movie.pt-BR.srt`), or with Add Subtitle File…. UTF-8, UTF-16 and Windows-1252 files are all read correctly. One subtitle per video (a source Timed Text track or an added file) can be **burned in**: drawn into the picture in white with a dark outline and shadow, bottom-centered, sized to the output height and wrapped to fit, timed to the trimmed output. The burned track isn't also kept as a soft track, and burn-in needs the video re-encoded (not passthrough).
-- **Chapters and metadata:** chapter markers and tags are kept, adjusted to the trim.
-- **Trim & preview:** a built-in player to set start and end points.
-- **Presets:** 18 built-in presets (four quality profiles, General, 4K & HDR, Apple devices, web, ProRes production and remux). You can also save, rename, import and export your own, and import presets exported from HandBrake. Settings HyperVideo can't reproduce are mapped to the closest option and listed after the import.
-- **Queue:** runs several encodes at once, survives relaunching the app, and shows speed (× realtime and fps) and time left. Pending jobs run from the top of the list down: drag jobs to reorder them, or right-click for Move to Top, Move Up and Move Down; the order is saved with the queue. It also shows progress in the Dock and, when the whole queue is done, posts one notification counting converted and failed videos (permission is asked the first time one is posted). Settings add a notification per job, a Dock bounce and a sound. Notifications are only posted from the bundled app, never under `swift run` or tests. Quitting during encodes cancels them, removes their work folders and requeues them for the next launch; on logout, restart or shutdown this happens at once so the session isn't held up.
-- **Before → after summary:** resolution, codecs, duration, track counts, and an estimated output size when the settings make it predictable.
-- **Adding files:** drop files or whole folders anywhere in the window, use the Open panel, or use Finder's Open With and the Dock icon. Folders are searched recursively. When an import includes folders, a sheet asks which preset their videos get (the default preset is preselected); loose files keep the default preset.
+- **Picture:** crop (custom or detected black bars), rotate, flip, downscale to a maximum resolution (portrait video stays portrait), borders and frame rate conversion.
+- **Filters:** deinterlacing (automatic for sources tagged as interlaced), denoise, chroma smoothing, sharpen, colour space and grayscale, on the GPU through Core Image.
+- **Audio:** AAC with mono, stereo or 5.1 mixdown, HE-AAC, Apple Lossless, passthrough or no audio; first track, all tracks or an explicit track list, an extra version, gain and track names.
+- **Subtitles:** text subtitles and closed captions are copied with their language. SRT and WebVTT files are added automatically when they sit next to the video with its name (`Movie.srt`, `Movie.pt-BR.srt`), or with Add Subtitle File…. One text subtitle per video can be burned into the picture.
+- **Chapters and tags:** chapter markers (cut to the trim), editable chapter names with CSV import/export, and descriptive tags (title, actors, director, release date, genre, description, plot).
+- **Trim:** a built-in player to set start and end points.
+- **Presets:** four quality profiles (Balanced, High Quality, Smaller File, Keep Original) and built-in presets for general use, 4K & HDR, Apple devices, the web, ProRes production and remux. Presets exported from HandBrake can be imported; settings HyperVideo can't reproduce are mapped to the closest option and listed.
+- **Queue:** several encodes at once, survives relaunching the app, shows speed and time left, progress in the Dock and a notification when the queue finishes. Quitting during encodes cancels them cleanly and requeues them for the next launch.
+- **Adding files:** drop files or whole folders anywhere in the window, use Choose Videos…, Finder's Open With or the Dock icon. Unreadable files are flagged in the list with a clear message.
 
 ## Compared with HandBrake
 
@@ -37,85 +63,41 @@ HyperVideo Converter is a new implementation, not a port of HandBrake's code. It
 |---|---|---|
 | Engine | AVFoundation + VideoToolbox | FFmpeg / libav, x264, x265 |
 | Input formats | What macOS can read (MOV, MP4, M4V, many camera formats) | Nearly anything, including MKV, WebM, AVI and DVD/Blu-ray |
-| Output containers | MP4, M4V, MOV, MKV | MP4, MKV, WebM |
+| Output containers | MP4, M4V, MOV, MKV, M4A | MP4, MKV, WebM |
 | Codecs | H.264, HEVC (8/10-bit), ProRes, passthrough | Also AV1, VP9, MPEG-2, Theora and software x264/x265 |
-| Subtitles | Copy text subtitles and captions, import SRT/WebVTT, burn in one text subtitle | Also bitmap (PGS/VobSub) burn-in and foreign audio search |
-| Filters | Crop, scale, rotate, flip, blend deinterlace, denoise, sharpen, grayscale | Also Yadif/Bwdif deinterlace, detelecine, deblock, chroma smoothing and more |
-| Interface | SwiftUI, English and Brazilian Portuguese | Cocoa on Mac, GTK on Linux, WPF on Windows |
+| AI upscaling | Real-ESRGAN (Upscayl) | No |
 
-### Limits that come from using macOS frameworks
-
-- **No MKV, WebM or AV1 input** unless macOS itself can decode the file. Unreadable files are rejected with a clear message when they're added.
-- **No DVD or Blu-ray ripping.**
-- **Output is MP4, M4V, MOV or MKV.** There's no WebM output.
-- **ProRes needs the MOV container**, and so do closed captions. Apple Lossless works in MOV or MKV. The app flags these combinations before encoding.
-
-### MKV output
-
-AVFoundation can't write Matroska, so MKV is made in two steps: the encode goes into a hidden QuickTime movie in the job's work folder, then a small built-in Matroska muxer (pure Swift, no FFmpeg) copies the compressed samples into the `.mkv` without re-encoding. Progress covers both steps, and cancelling or a failure leaves nothing behind.
-
-- **Video:** H.264 or H.265 (8 or 10-bit), encoded or passed through. Passthrough of other codecs (such as ProRes or MPEG-2) is refused with a message. Rotation from a passed-through source is stored as a projection roll, which FFmpeg-based players (VLC, IINA, mpv) honour.
-- **Audio:** AAC and Apple Lossless, plus AC-3, E-AC-3 and MP3 when passed through, with languages and the first track marked default. AAC encoder priming is declared as a codec delay, so audio stays in sync.
-- **Subtitles:** text subtitles (from the source or added SRT/WebVTT files) become SRT-style `S_TEXT/UTF8` tracks with their languages; styling is dropped. Closed captions aren't carried.
-- **Chapters** are kept (cut to the trim range) when Keep Metadata is on; other metadata tags aren't written.
-- The file has a SeekHead and Cues for fast seeking. macOS itself (QuickTime Player, Finder previews) can't open MKV; use VLC, IINA or another Matroska player.
+Limits that come from using macOS frameworks: no MKV, WebM or AV1 input unless macOS itself can decode the file; no DVD or Blu-ray ripping; no WebM output; ProRes and closed captions need MOV. MKV output is made by a small built-in Matroska muxer (pure Swift, no FFmpeg) that copies the encoded samples into the `.mkv` without re-encoding; QuickTime Player can't open MKV, so use VLC, IINA or another Matroska player.
 
 ## Building
 
-Requirements: Xcode 26 or the Command Line Tools for macOS 26, with Swift 6.2.
+Requirements: Xcode 26 or later (Swift 6.2). With only the Command Line Tools, point `DEVELOPER_DIR` at Xcode.
 
 ```bash
-swift build
-```
-
-To build an installable app and disk image (no Xcode project needed):
-
-```bash
-Scripts/build-app.sh            # release build
+export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+Scripts/build-app.sh            # release build: dist/HyperVideo Converter.app and a DMG
 Scripts/build-app.sh debug      # debug build
+swift test                      # unit and integration tests
 ```
 
-This creates `dist/HyperVideo Converter.app` and `dist/HyperVideoConverter-<version>.dmg` (drag the app onto the Applications link inside it). The script:
-
-- builds with `swift build`, assembles the bundle and copies the translations (`.lproj` folders from the SwiftPM resource bundle) into it;
-- takes the version from the latest git tag (`v1.2.0` → `1.2.0`, `0.1.0` when there is none), uses the commit count as the build number and reads `LSMinimumSystemVersion` from `Package.swift`;
-- registers video document types, so Finder's Open With lists the app;
-- builds `AppIcon.icns` from `Resources/AppIcon.png` with `sips` and `iconutil`;
-- signs ad hoc by default. Ad-hoc apps run on the Mac that built them; other Macs need right-click → Open the first time.
-
-To sign for distribution, with the hardened runtime, and optionally notarize and staple:
-
-```bash
-SIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)" Scripts/build-app.sh
-SIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)" NOTARY_PROFILE=my-profile Scripts/build-app.sh
-```
-
-`NOTARY_PROFILE` is a profile saved with `xcrun notarytool store-credentials`. If `notarytool` or `stapler` is missing, the script stops before building and says so; it only checks for them when notarization is requested.
-
-## Testing
-
-```bash
-swift test
-```
-
-The suite covers geometry planning (including a pixel-exact check of the filter path), settings validation and persistence, output naming, subtitle and chapter rules, speed and size estimates, folder scanning, and HandBrake preset import. The integration tests create short synthetic clips (with audio, subtitles, chapters and interlacing) and convert them with the real hardware encoders, including trimming, deinterlacing and cancellation.
-
-With only the Command Line Tools installed, `swift test` sometimes fails to build with "plugin for module 'TestingMacros' not found". That comes from the toolchain, not the code, and running it again works.
+The script builds a universal app (`ARCHS="arm64"` builds one architecture), restamps the real SDK with `vtool` (SwiftPM writes the deployment target as the SDK, which would turn Liquid Glass off), copies the translations and the accent colour into the bundle, renders the icon with `Scripts/make-icon.swift`, downloads the Upscayl engine and models when they're missing (`Scripts/fetch-upscayl.sh`, pinned versions checked with SHA-256) and signs ad hoc. The version comes from the latest git tag (`v1.0.0` → `1.0.0`) and the build number from the commit count. `SIGN_IDENTITY` and `NOTARY_PROFILE` sign with a Developer ID and notarize.
 
 ## Project layout
 
 ```
-Sources/HyperVideoCore        Conversion engine and models (no UI)
-  Engine/                     Transcode pipeline, media inspection, folder discovery
-  Models/                     Settings, presets, jobs, media info, estimates
-Sources/HyperVideoConverter   SwiftUI app
-  Stores/                     App state, queue, presets, persistence
-  Views/                      Sidebar, workspace, output inspector, pages, advanced settings tabs
-  Resources/pt-BR.lproj       Brazilian Portuguese strings (English is the base language)
-Tests/HyperVideoCoreTests     Unit and integration tests
-Scripts/                      App bundle and icon builders
+Sources/HyperVideoCore        Conversion engine and models (no UI): transcode pipeline, Matroska muxer, AI Upscale
+Sources/HyperVideoConverter   SwiftUI app: stores, panel, tabs, list, sheets; pt-BR strings
+Tests/                        Unit and integration tests (real hardware encodes on synthetic clips)
+Scripts/                      App bundle, icon and Upscayl download scripts
 ```
 
-## License
+## License and credits
 
 HyperVideo Converter is free software under the [GNU General Public License v3.0](LICENSE). Copyright (C) 2026 Matheus Faria.
+
+Third-party components shipped in the app (texts in `Contents/Resources/Licenses/` and in Settings → About → Open-source licenses):
+
+- **Upscayl engine** (`upscayl-bin`, from [upscayl-ncnn](https://github.com/upscayl/upscayl-ncnn)): GNU AGPL v3.0. It runs as a separate program that the app starts; its source code is at the link above. It builds on [Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN) (Copyright (c) 2021, Xintao Wang, BSD 3-Clause) and Tencent's ncnn (BSD 3-Clause).
+- **AI models:** Upscayl Standard, Upscayl Lite and Digital Art from the [Upscayl](https://github.com/upscayl/upscayl) project (AGPL v3.0); High Fidelity is [4xHFA2k](https://openmodeldb.info/models/4x-HFA2k) by Helaman (Philip Hofmann), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Models whose licenses forbid commercial use (Remacri, UltraSharp, Ultramix) are not included.
+
+The app contains no FFmpeg code. Demo footage in the website screenshots: *Big Buck Bunny*, *Sintel* and *Tears of Steel* © Blender Foundation, CC BY.

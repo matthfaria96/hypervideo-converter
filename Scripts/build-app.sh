@@ -96,6 +96,7 @@ cp Vendor/Upscayl/upscayl-bin "$APP/Contents/MacOS/upscayl-bin"
 mkdir -p "$APP/Contents/Resources/Upscayl" "$APP/Contents/Resources/Licenses"
 cp -R Vendor/Upscayl/models "$APP/Contents/Resources/Upscayl/models"
 cp Vendor/Upscayl/LICENSE-AGPL-3.0.txt "$APP/Contents/Resources/Licenses/upscayl-LICENSE-AGPL-3.0.txt"
+cp Resources/THIRD-PARTY-NOTICES.txt "$APP/Contents/Resources/Licenses/THIRD-PARTY-NOTICES.txt"
 
 if [[ -n "$SIGN_IDENTITY" ]]; then
   codesign --force --options runtime --timestamp --sign "$SIGN_IDENTITY" "$APP/Contents/MacOS/upscayl-bin"

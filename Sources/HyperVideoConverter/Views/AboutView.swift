@@ -80,6 +80,15 @@ struct OpenSourceLicensesView: View {
     Full license text: https://www.gnu.org/licenses/gpl-3.0.html
     """
 
+    /// Attribution the models' licences ask for (also in Contents/Resources/Licenses/THIRD-PARTY-NOTICES.txt).
+    private static let models = """
+    Upscayl Standard, Upscayl Lite and Digital Art: from the Upscayl project \
+    (github.com/upscayl/upscayl), AGPL-3.0.
+    High Fidelity: 4xHFA2k by Helaman (Philip Hofmann), CC BY 4.0 \
+    (creativecommons.org/licenses/by/4.0), converted to ncnn by Upscayl.
+    Real-ESRGAN: Copyright (c) 2021, Xintao Wang, BSD 3-Clause License.
+    """
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
@@ -117,6 +126,14 @@ struct OpenSourceLicensesView: View {
                             .foregroundStyle(.secondary)
                         Text("AI Upscale runs Upscayl as a separate program. Its licence is in the app (Contents/Resources/Licenses) and its source code is at github.com/upscayl/upscayl-ncnn.")
                             .font(.system(size: 11.5))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(verbatim: "AI models")
+                            .font(.system(size: 13, weight: .semibold))
+                        Text(verbatim: Self.models)
+                            .font(.system(size: 11.5))
+                            .textSelection(.enabled)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }

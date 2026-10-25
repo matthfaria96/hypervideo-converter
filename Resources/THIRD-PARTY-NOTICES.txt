@@ -1,0 +1,26 @@
+HyperVideo Converter — third-party components
+=============================================
+
+HyperVideo Converter itself is free software under the GNU General Public License v3.0.
+Copyright (C) 2026 Matheus Faria. Source code: https://github.com/matthfaria96/hypervideo-converter
+
+Video encoding and decoding use Apple's own frameworks (AVFoundation, VideoToolbox, Core Image).
+No FFmpeg code is included.
+
+AI Upscale engine
+-----------------
+upscayl-bin (Contents/MacOS/upscayl-bin), from Upscayl's upscayl-ncnn, release 20251207-174704.
+License: GNU Affero General Public License v3.0 (upscayl-LICENSE-AGPL-3.0.txt in this folder).
+Source code: https://github.com/upscayl/upscayl-ncnn
+It runs as a separate program; HyperVideo Converter starts it and reads its output files.
+It builds on Real-ESRGAN (Copyright (c) 2021, Xintao Wang, BSD 3-Clause License,
+https://github.com/xinntao/Real-ESRGAN) and Tencent's ncnn (BSD 3-Clause License).
+
+AI models (Contents/Resources/Upscayl/models)
+---------------------------------------------
+- upscayl-standard-4x, upscayl-lite-4x and digital-art-4x: from the Upscayl project,
+  https://github.com/upscayl/upscayl (resources/models), distributed under its AGPL-3.0 license.
+- high-fidelity-4x: 4xHFA2k by Helaman (Philip Hofmann), licensed under Creative Commons
+  Attribution 4.0 International (CC BY 4.0), https://creativecommons.org/licenses/by/4.0/ ;
+  model page: https://openmodeldb.info/models/4x-HFA2k . Converted to ncnn format by Upscayl.
+Models whose licenses forbid commercial use (Remacri, UltraSharp, Ultramix) are not included.
