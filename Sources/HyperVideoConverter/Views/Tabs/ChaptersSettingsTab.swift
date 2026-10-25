@@ -8,13 +8,16 @@ struct ChaptersSettingsTab: View {
     let info: MediaInfo
     @Binding var settings: EncodeSettings
     @State private var problem: ChapterFileProblem?
+    @Environment(\.editsAllVideos) private var editsAllVideos
 
     var body: some View {
         SettingsSection(title: "Chapters", symbol: "list.bullet.indent") {
             SettingRow(title: "Create chapter markers") {
                 Toggle("Create chapter markers", isOn: markers).labelsHidden().toggleStyle(.switch)
             }
-            if info.chapters.isEmpty {
+            if editsAllVideos {
+                PerVideoHint(text: "Chapter names belong to one video. Select it in the list to rename its chapters.")
+            } else if info.chapters.isEmpty {
                 Text("This video has no chapters.").foregroundStyle(.secondary)
             } else {
                 chapterGrid

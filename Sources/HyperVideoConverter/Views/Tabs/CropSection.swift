@@ -6,6 +6,7 @@ struct CropSection: View {
     let info: MediaInfo
     @Binding var settings: EncodeSettings
     @Binding var detectedCrop: Crop?
+    @Environment(\.editsAllVideos) private var editsAllVideos
     @State private var isDetecting = false
     /// Bumped by the Detect button: re-runs the detection task, which SwiftUI cancels
     /// when the video or mode changes, so a stale result never lands.
@@ -26,19 +27,25 @@ struct CropSection: View {
             SettingRow(title: "Flip horizontally") {
                 Toggle("Flip", isOn: $settings.flipHorizontal).labelsHidden().toggleStyle(.switch).controlSize(.small)
             }
-            SettingRow(title: "Cropping") {
-                Picker("Cropping", selection: $settings.pictureOptions.cropMode) {
-                    ForEach(CropMode.allCases) { Text(localizing: $0.displayName).tag($0) }
+            if editsAllVideos {
+                PerVideoHint(text: "Cropping belongs to one video. Select it in the list to crop it.")
+            } else {
+                SettingRow(title: "Cropping") {
+                    Picker("Cropping", selection: $settings.pictureOptions.cropMode) {
+                        ForEach(CropMode.allCases) { Text(localizing: $0.displayName).tag($0) }
+                    }
+                    .labelsHidden()
+                    .fixedSize()
                 }
-                .labelsHidden()
-                .fixedSize()
+                modeDetails
+                    .id(mode)
+                    .motionTransition(.content)
             }
-            modeDetails
-                .id(mode)
-                .motionTransition(.content)
         }
         .motion(value: mode)
-        .task(id: "\(info.url.path)|\(mode.rawValue)|\(detectRun)") { await detect() }
+        .task(id: "\(info.url.path)|\(mode.rawValue)|\(detectRun)|\(editsAllVideos)") {
+            if !editsAllVideos { await detect() }
+        }
     }
 
     @ViewBuilder private var modeDetails: some View {

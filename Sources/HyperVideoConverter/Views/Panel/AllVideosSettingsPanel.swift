@@ -22,6 +22,7 @@ struct AllVideosSettingsPanel: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     SettingsTabContent(allVideos: model.allVideosSettingsBinding, info: model.panelReferenceInfo)
+                        .environment(\.editsAllVideos, true)
                         .id(tab)
                         .motionTransition(.content)
                 }
@@ -33,7 +34,7 @@ struct AllVideosSettingsPanel: View {
     }
 
     /// Tabs whose per-video parts don't change for every video at once.
-    static let perVideoTabs: Set<SettingsTab> = [.dimensions, .audio, .subtitles, .chapters]
+    static let perVideoTabs: Set<SettingsTab> = [.summary, .dimensions, .audio, .subtitles, .chapters]
 
     private var header: some View {
         PanelHeader {

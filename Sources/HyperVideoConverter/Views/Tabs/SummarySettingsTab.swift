@@ -10,13 +10,20 @@ struct SummarySettingsTab: View {
     @Binding var settings: EncodeSettings
     var subtitleFiles: [SubtitleFile] = []
     @Environment(AppModel.self) private var model
+    @Environment(\.editsAllVideos) private var editsAllVideos
 
     var body: some View {
         VStack(spacing: 16) {
             outputSection
             BeforeAfterSection(info: info, settings: settings, subtitleFiles: subtitleFiles)
-            TrimTab(info: info, settings: $settings)
-            if info.chapters.count > 1 { rangeSection }
+            if editsAllVideos {
+                SettingsSection(title: "Trim", symbol: "timeline.selection") {
+                    PerVideoHint(text: "Trim belongs to one video. Select it in the list to preview it and set its start and end.")
+                }
+            } else {
+                TrimTab(info: info, settings: $settings)
+                if info.chapters.count > 1 { rangeSection }
+            }
         }
     }
 

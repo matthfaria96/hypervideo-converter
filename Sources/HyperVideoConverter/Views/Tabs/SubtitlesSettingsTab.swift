@@ -67,18 +67,22 @@ struct SubtitlesSettingsTab: View {
                 Text("No subtitle tracks yet. Add an SRT or WebVTT file, or name one like the video (e.g. Movie.pt-BR.srt) to pick it up automatically.")
                     .foregroundStyle(.secondary)
             }
-            let list = settings.materializedSubtitleTracks(info: info)
-            ForEach(Array(info.subtitleTracks.enumerated()), id: \.element.id) { index, track in
-                SubtitleTrackRow(
-                    track: track, number: index + 1,
-                    setting: list.first { $0.sourceTrackID == track.id } ?? SubtitleTrackSetting(sourceTrackID: track.id),
-                    settings: $settings, info: info)
+            if sourceID == nil {
+                PerVideoHint(text: "Track lists belong to one video. Select it in the list to pick its tracks.")
+            } else {
+                let list = settings.materializedSubtitleTracks(info: info)
+                ForEach(Array(info.subtitleTracks.enumerated()), id: \.element.id) { index, track in
+                    SubtitleTrackRow(
+                        track: track, number: index + 1,
+                        setting: list.first { $0.sourceTrackID == track.id } ?? SubtitleTrackSetting(sourceTrackID: track.id),
+                        settings: $settings, info: info)
+                }
+                Button("Reload from Behavior", systemImage: "arrow.counterclockwise") {
+                    settings = settings.resettingSubtitleTracks()
+                }
+                .compatGlassButtonStyle()
+                .disabled(settings.subtitleOptions.tracks.isEmpty)
             }
-            Button("Reload from Behavior", systemImage: "arrow.counterclockwise") {
-                settings = settings.resettingSubtitleTracks()
-            }
-            .compatGlassButtonStyle()
-            .disabled(settings.subtitleOptions.tracks.isEmpty)
         }
     }
 
