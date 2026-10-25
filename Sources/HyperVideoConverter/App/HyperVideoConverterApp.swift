@@ -27,6 +27,7 @@ struct HyperVideoConverterApp: App {
                 .frame(minWidth: 1000, minHeight: 640)
                 .onAppear { appDelegate.model = model }
                 .modifier(WindowOpener(delegate: appDelegate))
+                .modifier(ScreenshotLookModifier())
         }
         // Opening files must not make SwiftUI re-activate the window with a full layout pass
         // (about a second with dozens of files); AppDelegate adds them to the list itself.
@@ -125,7 +126,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Start watching for logout/shutdown before any quit can arrive.
         MainActor.assumeIsolated { _ = sessionEnd }
-        // Needed when launched as a bare SwiftPM executable rather than an .app bundle.
+        // Needed when launched as a bare SwiftPM executable rather than an .app bundle. A bundled app
+        // is activated by the system when the user opens it, and stays behind on `open -g`.
+        guard Bundle.main.bundleIdentifier == nil else { return }
         NSApp.setActivationPolicy(.regular)
         NSApp.activate()
     }

@@ -14,7 +14,14 @@ struct JSONStore<Value: Codable>: Sendable {
         guard let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
             return nil
         }
-        return base.appendingPathComponent("HyperVideo Converter", isDirectory: true).appendingPathComponent(fileName)
+        return base.appendingPathComponent(Self.folderName, isDirectory: true).appendingPathComponent(fileName)
+    }
+
+    /// "HyperVideo Converter" for the app itself; a copy with another bundle identifier (a test
+    /// build) keeps its queue, history and presets apart, in a folder named after that identifier.
+    static var folderName: String {
+        guard let id = Bundle.main.bundleIdentifier, id != "com.hypervideo.converter" else { return "HyperVideo Converter" }
+        return id
     }
 
     func load() -> Value? {
