@@ -7,6 +7,7 @@
 #   SIGN_IDENTITY   codesign identity ("Developer ID Application: …"). Enables the
 #                   hardened runtime. Default: ad-hoc signature (-).
 #   NOTARY_PROFILE  notarytool keychain profile. Submits, waits and staples.
+#   ARCHS           architectures to build (default "arm64 x86_64", a universal app).
 #                   Requires SIGN_IDENTITY and Xcode's notarytool/stapler.
 set -euo pipefail
 cd "${0:A:h}/.."
@@ -36,8 +37,11 @@ BUILD="$(git rev-list --count HEAD 2>/dev/null || echo 1)"
 MIN_OS="$(sed -nE 's/.*\.macOS\(\.v([0-9]+)\).*/\1.0/p' Package.swift | head -1)"
 [[ -n "$MIN_OS" ]] || fail "could not read the macOS platform from Package.swift"
 
-swift build -c "$CONFIG"
-BIN_DIR="$(swift build -c "$CONFIG" --show-bin-path)"
+# Universal (Apple silicon and Intel) by default; ARCHS="arm64" builds one architecture.
+ARCH_FLAGS=()
+for arch in ${=ARCHS:-arm64 x86_64}; do ARCH_FLAGS+=(--arch "$arch"); done
+swift build -c "$CONFIG" "${ARCH_FLAGS[@]}"
+BIN_DIR="$(swift build -c "$CONFIG" "${ARCH_FLAGS[@]}" --show-bin-path)"
 
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$WORK"
