@@ -28,6 +28,8 @@ struct SettingsTabBar: View {
                 Image(systemName: tab.symbol)
                     .font(.system(size: 14, weight: selected ? .semibold : .regular))
                     .symbolEffect(.bounce, value: selected)
+                    // Symbols differ in height; a fixed box keeps every name on one baseline.
+                    .frame(height: 18)
                 Text(tab.title)
                     .font(.caption.weight(selected ? .semibold : .regular))
                     .lineLimit(1)

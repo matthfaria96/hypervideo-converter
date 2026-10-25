@@ -1,18 +1,30 @@
 import SwiftUI
 
-/// The floating box at the foot of the settings panel: where files go, the run's
-/// progress and the Convert / Stop buttons (HyperImage's summary box).
+/// The bar docked at the foot of the settings panel: where files go, one status line
+/// (progress while running, otherwise what's ready or why Convert is off) and the
+/// Convert / Stop buttons. Every row is always there, so the bar keeps one height in
+/// every mode and state (as in HyperImage).
 struct SummaryBox: View {
     @Environment(AppModel.self) private var model
+
+    /// Height of the status line: progress bar plus its caption.
+    static let statusHeight: CGFloat = 30
 
     var body: some View {
         let progress = model.progress
         let showsProgress = progress.isActive || model.queue.isProcessing && progress.total > 0
         VStack(alignment: .leading, spacing: Spacing.m) {
             destination
-            if showsProgress {
-                ProgressRow(progress: progress).motionTransition(.banner)
+            ZStack(alignment: .leading) {
+                if showsProgress {
+                    ProgressRow(progress: progress).motionTransition(.opacity)
+                } else if let reason = model.convertBlockedReason {
+                    statusLabel(reason, symbol: "info.circle").motionTransition(.opacity)
+                } else {
+                    statusLabel(readyText, symbol: "checkmark.circle").motionTransition(.opacity)
+                }
             }
+            .frame(maxWidth: .infinity, minHeight: Self.statusHeight, maxHeight: Self.statusHeight, alignment: .leading)
             HStack(spacing: Spacing.s) {
                 previewButton
                 convertButton
@@ -29,17 +41,31 @@ struct SummaryBox: View {
                     .motionTransition(.pop)
                 }
             }
-            if let reason = model.convertBlockedReason {
-                Label { Text(verbatim: reason) } icon: { Image(systemName: "info.circle") }
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-                    .motionTransition(.opacity)
-            }
         }
         .motion(value: showsProgress)
         .motion(value: model.convertBlockedReason)
         .motion(value: model.queue.isProcessing)
+    }
+
+    private func statusLabel(_ text: String, symbol: String) -> some View {
+        Label { Text(verbatim: text) } icon: { Image(systemName: symbol) }
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+            .truncationMode(.tail)
+            .help(text)
+    }
+
+    /// "4 videos ready · 32 MB → ≈ 20 MB" (the size only when the settings make it predictable).
+    private var readyText: String {
+        let count = model.readySourceCount
+        if count == 0 { return String(localized: "\(model.queue.pendingCount) waiting") }
+        let ready = count == 1 ? String(localized: "1 video ready") : String(localized: "\(count) videos ready")
+        guard model.mode != .upscale else { return ready }
+        let estimate = SizeEstimate(model.sources.filter { $0.info != nil && $0.settings.isValid })
+        guard let bytes = estimate.estimatedBytes, estimate.originalBytes > 0 else { return ready }
+        let after = SizeEstimate.label(bytes: bytes, kind: estimate.kind)
+        return ready + " · " + Format.bytes(estimate.originalBytes) + " → " + after
     }
 
     /// "Save to  [📁 Movies ▾]": a pop-up with the folder's name, like a save panel's.

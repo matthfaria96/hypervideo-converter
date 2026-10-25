@@ -211,6 +211,9 @@ struct Thumbnail: View {
                         .motionTransition(.opacity)
                 }
             }
+            // A wide picture fills past the frame; clip it here so the badge stays in the corner.
+            .frame(width: size.frame.width, height: size.frame.height)
+            .clipped()
             if let duration, duration > 0 {
                 Text(Format.duration(duration))
                     .font(.system(size: 9, weight: .semibold))

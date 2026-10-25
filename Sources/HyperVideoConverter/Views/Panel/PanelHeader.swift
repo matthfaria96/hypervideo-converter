@@ -15,6 +15,9 @@ struct PanelHeader<Accessory: View, Extra: View>: View {
                 Spacer(minLength: Spacing.s)
                 accessory
             }
+            // One height whether or not the mode has header buttons, so switching modes
+            // doesn't move everything below by a few points.
+            .frame(height: 28)
             ScopeChip()
             extra
         }

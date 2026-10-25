@@ -79,9 +79,13 @@ struct UpscalePanel: View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
             Label("The audio is copied as is. Subtitles, chapters and the settings of the other tabs aren't applied when upscaling.",
                   systemImage: "info.circle")
-            HStack(spacing: Spacing.xs) {
-                Text("Engine: Upscayl (AGPL-3.0) with Real-ESRGAN, on the Mac's GPU.")
-                Link("Source code", destination: URL(string: "https://github.com/upscayl/upscayl-ncnn")!)
+            // Text and link on one baseline, wrapping together; the icon column lines up with the note above.
+            Label {
+                (Text("Engine: Upscayl (AGPL-3.0) with Real-ESRGAN, on the Mac's GPU.") + Text(verbatim: " ")
+                    + Text("[Source code](https://github.com/upscayl/upscayl-ncnn)"))
+                    .tint(Theme.accentText)
+            } icon: {
+                Image(systemName: "cpu")
             }
         }
         .font(.footnote)

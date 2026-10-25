@@ -9,7 +9,7 @@ struct BeforeAfterSection: View {
 
     var body: some View {
         SettingsSection(title: "Before → After", symbol: "arrow.right.circle") {
-            Grid(alignment: .leading, horizontalSpacing: 24, verticalSpacing: 10) {
+            Grid(alignment: .leading, horizontalSpacing: Spacing.m, verticalSpacing: 10) {
                 compareRow("Resolution", info.displaySize.map(Format.size) ?? "—", outputSize.map(Format.size) ?? "—")
                 compareRow("Video", info.videoCodec ?? "—", info.hasVideo ? Self.local(settings.videoCodec.displayName) : "—")
                 compareRow("Frame rate", info.frameRate.map(Format.fps) ?? "—", Self.local(settings.frameRate.displayName))
@@ -111,9 +111,10 @@ struct BeforeAfterSection: View {
 
     private func compareRow(_ title: LocalizedStringKey, _ before: String, _ after: String) -> some View {
         GridRow {
-            Text(title).foregroundStyle(.secondary)
+            // The label keeps one line; the values wrap if they must.
+            Text(title).foregroundStyle(.secondary).fixedSize()
             Text(before).monospacedDigit()
-            Image(systemName: "arrow.right").foregroundStyle(.tertiary)
+            Image(systemName: "arrow.right").font(.caption).foregroundStyle(.tertiary)
             Text(after).monospacedDigit().fontWeight(before == after ? .regular : .semibold)
         }
     }

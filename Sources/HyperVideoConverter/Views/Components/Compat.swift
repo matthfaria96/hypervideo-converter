@@ -58,17 +58,6 @@ extension View {
     func compatSoftScrollEdges() -> some View {
         if #available(macOS 26, *) { scrollEdgeEffectStyle(.soft, for: .all) } else { self }
     }
-
-    /// A bar pinned to the bottom edge. On macOS 26+ it's a safe-area bar, so the scroll
-    /// view under it fades and blurs its content instead of showing it through the glass.
-    @ViewBuilder
-    func compatBottomBar<Bar: View>(@ViewBuilder _ bar: () -> Bar) -> some View {
-        if #available(macOS 26, *) {
-            safeAreaBar(edge: .bottom, spacing: 0, content: bar)
-        } else {
-            safeAreaInset(edge: .bottom, spacing: 0, content: bar)
-        }
-    }
 }
 
 extension ToolbarContent {

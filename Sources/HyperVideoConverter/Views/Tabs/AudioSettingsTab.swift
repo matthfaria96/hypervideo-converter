@@ -5,6 +5,7 @@ import SwiftUI
 struct AudioSettingsTab: View {
     let info: MediaInfo
     @Binding var settings: EncodeSettings
+    @Environment(\.editsAllVideos) private var editsAllVideos
 
     /// The main version as one encoding, so it shares the fields view with tracks.
     private var mainEncoding: Binding<AudioEncoding> {
@@ -51,24 +52,39 @@ struct AudioSettingsTab: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            ForEach(Array(settings.audioOptions.tracks.enumerated()), id: \.element.id) { index, track in
-                AudioTrackCard(setting: trackBinding(track), number: index + 1, sources: info.audioTracks) {
-                    settings = settings.removingAudioTrack(track.id)
+            if editsAllVideos {
+                PerVideoHint(text: "Track lists belong to one video. Select it in the list to pick its tracks.")
+            } else {
+                ForEach(Array(settings.audioOptions.tracks.enumerated()), id: \.element.id) { index, track in
+                    AudioTrackCard(setting: trackBinding(track), number: index + 1, sources: info.audioTracks) {
+                        settings = settings.removingAudioTrack(track.id)
+                    }
                 }
+                trackButtons
             }
-            HStack {
-                Button("Add Track", systemImage: "plus") { settings = settings.addingAudioTrack(from: info) }
-                Button("Add All Tracks", systemImage: "plus.square.on.square") {
-                    settings = settings.addingAllAudioTracks(from: info)
-                }
-                Button("Reload from Behavior", systemImage: "arrow.counterclockwise") {
-                    settings = settings.resettingAudioTracks()
-                }
-                .disabled(settings.audioOptions.tracks.isEmpty)
-            }
-            .compatGlassButtonStyle()
-            .disabled(info.audioTracks.isEmpty)
         }
+    }
+
+    /// Side by side when they fit, otherwise one per line: never cut to "Adicion…".
+    private var trackButtons: some View {
+        let add = Button("Add Track", systemImage: "plus") { settings = settings.addingAudioTrack(from: info) }
+        let addAll = Button("Add All Tracks", systemImage: "plus.square.on.square") {
+            settings = settings.addingAllAudioTracks(from: info)
+        }
+        let reload = Button("Reload from Behavior", systemImage: "arrow.counterclockwise") {
+            settings = settings.resettingAudioTracks()
+        }
+        .disabled(settings.audioOptions.tracks.isEmpty)
+        return ViewThatFits(in: .horizontal) {
+            HStack(spacing: Spacing.s) { add.fixedSize(); addAll.fixedSize(); reload.fixedSize() }
+            VStack(alignment: .leading, spacing: Spacing.s) {
+                HStack(spacing: Spacing.s) { add.fixedSize(); addAll.fixedSize() }
+                reload.fixedSize()
+            }
+            VStack(alignment: .leading, spacing: Spacing.s) { add.fixedSize(); addAll.fixedSize(); reload.fixedSize() }
+        }
+        .compatGlassButtonStyle()
+        .disabled(info.audioTracks.isEmpty)
     }
 
     /// Looks the track up by id on every access, so a field committing after its card

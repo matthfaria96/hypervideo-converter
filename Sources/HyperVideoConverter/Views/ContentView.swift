@@ -100,8 +100,8 @@ extension AppSection: Identifiable {
 }
 
 /// The right column: in Convert the eight HandBrake tabs (one video, or every target),
-/// in Compress the everyday choices, in AI Upscale its panel — with the Convert box
-/// floating in glass at the bottom.
+/// in Compress the everyday choices, in AI Upscale its panel — with the Convert bar
+/// docked at the bottom.
 private struct SettingsColumn: View {
     @Environment(AppModel.self) private var model
 
@@ -124,13 +124,22 @@ private struct SettingsColumn: View {
         }
         .motion(value: model.panelSource?.id)
         .motion(value: model.mode)
-        .compatBottomBar {
-            SummaryBox()
-                .padding(Spacing.m + 2)
-                .compatGlass(in: .rect(cornerRadius: Radius.xl))
-                .padding(.horizontal, Spacing.m + 2)
-                .padding(.bottom, Spacing.m)
-                .padding(.top, Spacing.xs)
+        // Docked, opaque bar: same size in every mode and state, and nothing from the
+        // settings shows through or below it (HyperImage's options panel does the same).
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            VStack(spacing: 0) {
+                Divider()
+                SummaryBox()
+                    .padding(.horizontal, Spacing.l)
+                    .padding(.top, Spacing.m + 2)
+                    .padding(.bottom, Spacing.l)
+            }
+            .background {
+                ZStack {
+                    Theme.background
+                    Rectangle().fill(.background.secondary)
+                }
+            }
         }
     }
 }

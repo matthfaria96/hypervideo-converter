@@ -751,3 +751,13 @@
 "M4A — audio only" = "M4A — só áudio";
 "Audio only output needs an audio track to keep." = "A saída só de áudio precisa manter uma faixa de áudio.";
 "Apple's audio export isn't available for this file." = "A exportação de áudio da Apple não está disponível para este arquivo.";
+
+/* Release polish */
+"1 video ready" = "1 vídeo pronto";
+"%lld videos ready" = "%lld vídeos prontos";
+"Trim belongs to one video. Select it in the list to preview it and set its start and end." = "O corte é de cada vídeo. Selecione um na lista para ver a prévia e marcar o início e o fim.";
+"Cropping belongs to one video. Select it in the list to crop it." = "O recorte é de cada vídeo. Selecione um na lista para recortá-lo.";
+"Track lists belong to one video. Select it in the list to pick its tracks." = "A lista de faixas é de cada vídeo. Selecione um na lista para escolher as faixas.";
+"Chapter names belong to one video. Select it in the list to rename its chapters." = "Os nomes de capítulos são de cada vídeo. Selecione um na lista para renomeá-los.";
+"The title belongs to one video. Select it in the list to name it." = "O título é de cada vídeo. Selecione um na lista para dar um título a ele.";
+"[Source code](https://github.com/upscayl/upscayl-ncnn)" = "[Código-fonte](https://github.com/upscayl/upscayl-ncnn)";
